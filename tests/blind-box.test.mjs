@@ -1,9 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { stat } from "node:fs/promises";
 
 const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
 const script = await readFile(new URL("../script.js", import.meta.url), "utf8");
+const wrangler = await readFile(new URL("../wrangler.jsonc", import.meta.url), "utf8").catch(() => "");
 
 test("atlas exposes the glowing blind-box entry and view", () => {
   assert.match(html, /data-view-target="blind-box"/);
@@ -28,4 +30,19 @@ test("blind-box collection persists with the main state", () => {
   assert.match(script, /blindBoxCollection: \{\}/);
   assert.match(script, /function drawBlindBoxes\(count\)/);
   assert.match(script, /saveState\(\)/);
+});
+
+test("Cloudflare deploy points Wrangler at the static asset root", () => {
+  assert.match(wrangler, /"compatibility_date": "2026-07-17"/);
+  assert.match(wrangler, /"directory": "\."/);
+});
+
+test("three optimized GLB models are lazy-loaded in the blind-box showroom", async () => {
+  const models = ["mystery-wetland-bird", "fork-tailed-sunbird", "red-whiskered-bulbul"];
+  for (const model of models) {
+    assert.match(html, new RegExp(`data-model-src="assets/models/blind-box/${model}\\.glb"`));
+    const file = await stat(new URL(`../assets/models/blind-box/${model}.glb`, import.meta.url));
+    assert.ok(file.size < 25 * 1024 * 1024, `${model}.glb exceeds Cloudflare's 25 MiB asset limit`);
+  }
+  assert.doesNotMatch(html, /<model-viewer[^>]+\ssrc=/);
 });

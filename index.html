@@ -131,6 +131,29 @@
             <p><span></span> 点击开启，让潮汐替你选择</p>
           </div>
         </section>
+        <section class="blind-box-showroom" id="blindBoxShowroom" aria-labelledby="showroomTitle">
+          <header class="showroom-head">
+            <div><span class="eyebrow">INTERACTIVE SPECIMEN ROOM</span><h2 id="showroomTitle">把湿地精灵，转到你眼前。</h2><p>三款高精度模型已完成 50% 减面、Draco 网格压缩与 WebP 纹理优化。拖动观察细节，滚轮或双指缩放。</p></div>
+            <span class="showroom-performance"><i data-lucide="gauge"></i><b>97%</b><small>体积缩减</small></span>
+          </header>
+          <div class="showroom-layout">
+            <div class="showroom-selector" role="tablist" aria-label="选择三维湿地精灵">
+              <button class="is-active" type="button" role="tab" aria-selected="true" data-model-src="assets/models/blind-box/mystery-wetland-bird.glb" data-model-poster="assets/images/blind-box/poster-mystery-wetland-bird.png" data-model-name="神秘湿地精灵" data-model-species="SERIES 01 · 未定名原型"><img src="assets/images/blind-box/poster-mystery-wetland-bird.png" alt=""><span><small>MODEL 01</small><b>神秘湿地精灵</b><em>2.45 MiB</em></span></button>
+              <button type="button" role="tab" aria-selected="false" data-model-src="assets/models/blind-box/fork-tailed-sunbird.glb" data-model-poster="assets/images/blind-box/poster-fork-tailed-sunbird.png" data-model-name="叉尾太阳鸟" data-model-species="Aethopyga christinae"><img src="assets/images/blind-box/poster-fork-tailed-sunbird.png" alt=""><span><small>MODEL 02</small><b>叉尾太阳鸟</b><em>2.49 MiB</em></span></button>
+              <button type="button" role="tab" aria-selected="false" data-model-src="assets/models/blind-box/red-whiskered-bulbul.glb" data-model-poster="assets/images/blind-box/poster-red-whiskered-bulbul.png" data-model-name="红耳鹎" data-model-species="Pycnonotus jocosus"><img src="assets/images/blind-box/poster-red-whiskered-bulbul.png" alt=""><span><small>MODEL 03</small><b>红耳鹎</b><em>2.35 MiB</em></span></button>
+            </div>
+            <div class="showroom-stage">
+              <model-viewer id="blindBoxModelViewer" poster="assets/images/blind-box/poster-mystery-wetland-bird.png" alt="神秘湿地精灵 3D 模型" camera-controls auto-rotate rotation-per-second="16deg" shadow-intensity="1.25" shadow-softness=".85" exposure="1.05" environment-image="neutral" interaction-prompt="none" loading="lazy" reveal="auto"></model-viewer>
+              <div class="showroom-halo" aria-hidden="true"></div>
+              <div class="showroom-loader" id="showroomLoader"><i></i><span id="showroomStatus">滑到这里后加载 3D 模型</span></div>
+              <div class="showroom-tools">
+                <button class="is-active" type="button" id="toggleModelRotation"><i data-lucide="rotate-3d"></i><span>自动巡航</span></button>
+                <button type="button" id="resetModelCamera"><i data-lucide="focus"></i><span>重置视角</span></button>
+              </div>
+              <div class="showroom-caption"><span><small id="showroomSpecies">SERIES 01 · 未定名原型</small><strong id="showroomName">神秘湿地精灵</strong></span><em>DRACO · WEBP · LAZY</em></div>
+            </div>
+          </div>
+        </section>
         <section class="blind-box-cabinet" aria-labelledby="blindBoxCabinetTitle">
           <div class="section-head blind-box-section-head"><div><span class="eyebrow">YOUR TIDAL CABINET</span><h2 id="blindBoxCabinetTitle">湿地精灵收藏柜</h2></div><span><b id="blindBoxOwned">0</b> / 11</span></div>
           <div class="blind-box-summary"><span><i data-lucide="gem"></i><b id="blindBoxFragments">0</b> 生态碎片</span><p>重复 N / R / SR / SSR / CHASE 分别转化为 10 / 20 / 35 / 60 / 100 碎片。</p></div>
@@ -261,6 +284,7 @@
   </div>
 
   <div class="toast" id="toast" role="status" aria-live="polite"><i data-lucide="check-circle-2"></i><span></span></div>
+  <script type="module" src="assets/vendor/model-viewer.min.js"></script>
   <script src="assets/vendor/lucide.min.js"></script>
   <script src="assets/vendor/tf.min.js"></script>
   <script src="assets/vendor/mobilenet.min.js"></script>

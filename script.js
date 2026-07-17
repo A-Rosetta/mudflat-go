@@ -68,6 +68,7 @@ let modelPromise = null;
 let recognitionResult = null;
 let captureSource = null;
 let blindBoxDrawing = false;
+let showroomInitialized = false;
 
 function readState() {
   try {
@@ -197,6 +198,28 @@ function drawBlindBoxes(count) {
     blindBoxDrawing = false;
     icons();
   }, delay);
+}
+
+function selectShowroomModel(button) {
+  const viewer = document.getElementById("blindBoxModelViewer");
+  document.querySelectorAll("[data-model-src]").forEach(item => {
+    const active = item === button;
+    item.classList.toggle("is-active", active);
+    item.setAttribute("aria-selected", String(active));
+  });
+  viewer.setAttribute("poster", button.dataset.modelPoster);
+  viewer.setAttribute("alt", `${button.dataset.modelName} 3D 模型`);
+  document.getElementById("showroomName").textContent = button.dataset.modelName;
+  document.getElementById("showroomSpecies").textContent = button.dataset.modelSpecies;
+  document.getElementById("showroomStatus").textContent = "正在载入高精度模型…";
+  document.getElementById("showroomLoader").style.setProperty("--progress", "0%");
+  viewer.setAttribute("src", button.dataset.modelSrc);
+}
+
+function initializeShowroom() {
+  if (showroomInitialized) return;
+  showroomInitialized = true;
+  customElements.whenDefined("model-viewer").then(() => selectShowroomModel(document.querySelector("[data-model-src].is-active")));
 }
 
 function renderMap() {
@@ -569,6 +592,36 @@ function toast(message) {
 
 document.querySelectorAll("[data-view-target]").forEach(button => button.addEventListener("click", () => navigate(button.dataset.viewTarget)));
 document.querySelectorAll("[data-draw-count]").forEach(button => button.addEventListener("click", () => drawBlindBoxes(Number(button.dataset.drawCount))));
+document.querySelectorAll("[data-model-src]").forEach(button => button.addEventListener("click", () => { initializeShowroom(); selectShowroomModel(button); }));
+const showroomObserver = new IntersectionObserver(entries => {
+  if (!entries.some(entry => entry.isIntersecting)) return;
+  const schedule = window.requestIdleCallback || (callback => window.setTimeout(callback, 80));
+  schedule(initializeShowroom, { timeout: 900 });
+  showroomObserver.disconnect();
+}, { rootMargin: "180px 0px" });
+showroomObserver.observe(document.getElementById("blindBoxShowroom"));
+const blindBoxModelViewer = document.getElementById("blindBoxModelViewer");
+blindBoxModelViewer.addEventListener("progress", event => {
+  const progress = `${Math.round(event.detail.totalProgress * 100)}%`;
+  document.getElementById("showroomLoader").style.setProperty("--progress", progress);
+  document.getElementById("showroomStatus").textContent = `载入模型 ${progress}`;
+});
+blindBoxModelViewer.addEventListener("load", () => {
+  document.getElementById("showroomStatus").textContent = "拖动旋转 · 滚轮缩放";
+  document.getElementById("showroomLoader").classList.add("is-loaded");
+});
+blindBoxModelViewer.addEventListener("error", () => { document.getElementById("showroomStatus").textContent = "模型加载失败，请刷新重试"; });
+document.getElementById("toggleModelRotation").addEventListener("click", event => {
+  const button = event.currentTarget;
+  const active = !blindBoxModelViewer.hasAttribute("auto-rotate");
+  blindBoxModelViewer.toggleAttribute("auto-rotate", active);
+  button.classList.toggle("is-active", active);
+});
+document.getElementById("resetModelCamera").addEventListener("click", () => {
+  blindBoxModelViewer.cameraOrbit = "auto auto auto";
+  blindBoxModelViewer.fieldOfView = "auto";
+  blindBoxModelViewer.jumpCameraToGoal?.();
+});
 document.getElementById("closeBlindBoxReveal").addEventListener("click", closeBlindBoxReveal);
 document.getElementById("finishBlindBoxReveal").addEventListener("click", closeBlindBoxReveal);
 document.querySelectorAll("[data-open-capture]").forEach(button => button.addEventListener("click", openCapture));
