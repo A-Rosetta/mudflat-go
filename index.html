@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#f3f5ed">
   <meta name="description" content="滩涂大冒险 Mudflat Go! 深圳湿地生态探索与图鉴收集平台">
   <title>滩涂大冒险 Mudflat Go!</title>
+  <link rel="icon" type="image/png" href="assets/images/brand-mark.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;600;700&amp;family=Noto+Serif+SC:wght@500;600;700;900&amp;display=swap" rel="stylesheet">
@@ -15,11 +16,12 @@
   <div class="app-shell">
     <header class="topbar">
       <button class="brand" type="button" data-view-target="explore" aria-label="返回探索地图">
-        <span class="brand-mark"><i data-lucide="bird"></i></span>
+        <span class="brand-mark"><img src="assets/images/brand-mark.png" alt=""></span>
         <span><strong>Mudflat Go!</strong><small>滩涂大冒险</small></span>
       </button>
       <div class="top-actions">
         <span class="points-pill"><i data-lucide="sparkles"></i><b data-points>1,280</b></span>
+        <span class="ranking-pill"><i data-lucide="trophy"></i><b>深圳榜 #12</b></span>
         <button class="avatar" type="button" data-view-target="profile" aria-label="打开个人中心">湾</button>
       </div>
     </header>
@@ -28,12 +30,12 @@
       <section class="view is-active" data-view="explore" aria-labelledby="exploreTitle">
         <div class="explore-layout">
           <div class="explore-copy">
-            <span class="eyebrow"><i data-lucide="compass"></i> 深圳湿地生态探索</span>
-            <h1 id="exploreTitle">今天，从<br><em>福田红树林</em><br>出发。</h1>
-            <p>沿着潮水寻找真实生命，用 AI 与 GPS 完成识别，把每一次相遇收入深圳生态图鉴。</p>
+            <span class="hero-kicker"><i data-lucide="compass"></i> 深圳湿地生态 × AI 图鉴收集游戏</span>
+            <h1 id="exploreTitle">让每一次<br>湿地相遇，<br>成为一张<br><em>生命卡片。</em></h1>
+            <p>先看到这里可能出现的鸟，再带着图鉴去寻找。拍下真实生命，通过 AI 与 GPS 校验，把一次散步变成一场可以收集的生态冒险。</p>
             <div class="hero-actions">
-              <button class="button primary" type="button" data-open-capture>开始 AI 捕捉 <i data-lucide="scan-line"></i></button>
-              <button class="button secondary" type="button" data-view-target="collection">打开生态图鉴</button>
+              <button class="button primary" type="button" data-open-capture>从福田红树林出发 <i data-lucide="arrow-right"></i></button>
+              <button class="button secondary" type="button" data-view-target="collection">打开深圳图鉴</button>
             </div>
             <div class="hero-stats" aria-label="探索数据">
               <span><b data-found>2</b><small>已收集物种</small></span>
@@ -43,22 +45,29 @@
             <div class="tide-note"><span></span><b>今日观测</b><p>退潮 16:40 · 候鸟活跃度高</p></div>
           </div>
 
-          <section class="route-board" aria-label="深圳六大湿地探索路线">
+          <section class="route-board" aria-label="深圳六大湿地真实地图">
+            <span class="device-speaker" aria-hidden="true"></span>
             <div class="board-head">
-              <div><small>SHENZHEN WETLAND ROUTE</small><strong id="activeSiteName">福田红树林</strong></div>
-              <span><i data-lucide="navigation"></i> 01 / 06</span>
+              <div><small>REAL TILE MAP · OPENSTREETMAP</small><strong id="activeSiteName">福田红树林</strong></div>
+              <button type="button" id="mapAction"><i data-lucide="locate-fixed"></i> 探索点位</button>
             </div>
             <div class="route-map">
-              <span class="water-name">深圳湾</span>
-              <svg viewBox="0 0 800 510" preserveAspectRatio="none" aria-hidden="true">
-                <path d="M80 365 C170 280 225 405 312 330 S455 218 535 295 S670 380 735 185"></path>
-              </svg>
-              <button class="map-node is-active" type="button" style="--x:10%;--y:72%" data-site="0"><span>01</span><b>福田</b></button>
-              <button class="map-node is-locked" type="button" style="--x:30%;--y:68%" data-site="1"><span><i data-lucide="lock"></i></span><b>深圳湾</b></button>
-              <button class="map-node is-locked" type="button" style="--x:44%;--y:56%" data-site="2"><span><i data-lucide="lock"></i></span><b>西湾</b></button>
-              <button class="map-node is-locked" type="button" style="--x:64%;--y:59%" data-site="3"><span><i data-lucide="lock"></i></span><b>海上田园</b></button>
-              <button class="map-node is-locked" type="button" style="--x:78%;--y:71%" data-site="4"><span><i data-lucide="lock"></i></span><b>坝光</b></button>
-              <button class="map-node is-locked" type="button" style="--x:91%;--y:36%" data-site="5"><span><i data-lucide="lock"></i></span><b>东涌</b></button>
+              <div class="map-tiles" aria-hidden="true">
+                <img src="assets/map/shenzhen-835-445.png" alt=""><img src="assets/map/shenzhen-836-445.png" alt=""><img src="assets/map/shenzhen-837-445.png" alt=""><img src="assets/map/shenzhen-838-445.png" alt="">
+                <img src="assets/map/shenzhen-835-446.png" alt=""><img src="assets/map/shenzhen-836-446.png" alt=""><img src="assets/map/shenzhen-837-446.png" alt=""><img src="assets/map/shenzhen-838-446.png" alt="">
+                <img src="assets/map/shenzhen-835-447.png" alt=""><img src="assets/map/shenzhen-836-447.png" alt=""><img src="assets/map/shenzhen-837-447.png" alt=""><img src="assets/map/shenzhen-838-447.png" alt="">
+              </div>
+              <div class="map-focus-card">
+                <span>当前地图焦点</span><strong id="mapFocusName">福田红树林</strong><small id="mapFocusMeta">22.51187, 114.04258 · 黑脸琵鹭限定</small>
+                <button type="button" id="enterSite">进入福田红树林</button>
+              </div>
+              <button class="map-node is-active" type="button" style="--x:34.69%;--y:41.74%;--accent:#dff47b" data-site="0"><span>1</span><b>福田红树林</b></button>
+              <button class="map-node is-locked" type="button" style="--x:29.72%;--y:41.01%;--accent:#75efd3" data-site="1"><span><i data-lucide="lock"></i></span><b>深圳湾公园</b></button>
+              <button class="map-node is-locked" type="button" style="--x:19.73%;--y:33.07%;--accent:#ffbf73" data-site="2"><span><i data-lucide="lock"></i></span><b>西湾红树林</b></button>
+              <button class="map-node is-locked" type="button" style="--x:15.07%;--y:19.52%;--accent:#ffe071" data-site="3"><span><i data-lucide="lock"></i></span><b>海上田园</b></button>
+              <button class="map-node is-locked" type="button" style="--x:70.35%;--y:26.54%;--accent:#d9efe4" data-site="4"><span><i data-lucide="lock"></i></span><b>坝光银叶树</b></button>
+              <button class="map-node is-locked" type="button" style="--x:73.66%;--y:43.72%;--accent:#91d7ff" data-site="5"><span><i data-lucide="lock"></i></span><b>东涌湿地</b></button>
+              <small class="map-attribution">© OpenStreetMap contributors</small>
             </div>
             <div class="site-strip" id="siteStrip"></div>
             <div class="current-mission">

@@ -14,12 +14,12 @@ const species = [
 ];
 
 const sites = [
-  { name: "福田红树林", short: "福田", feature: "黑脸琵鹭越冬栖息地" },
-  { name: "深圳湾公园", short: "深圳湾", feature: "城市滨海候鸟长廊" },
-  { name: "西湾红树林", short: "西湾", feature: "红树林与海上日落" },
-  { name: "海上田园", short: "田园", feature: "鱼塘红树林生态" },
-  { name: "坝光银叶树", short: "坝光", feature: "深圳古老红树群落" },
-  { name: "东涌湿地", short: "东涌", feature: "原始海岸与潮池" }
+  { name: "福田红树林", short: "福田", feature: "黑脸琵鹭越冬栖息地", lat: 22.51187, lng: 114.04258, limited: "黑脸琵鹭限定" },
+  { name: "深圳湾公园", short: "深圳湾", feature: "城市滨海候鸟长廊", lat: 22.51897, lng: 113.97260, limited: "候鸟观察路线" },
+  { name: "西湾红树林", short: "西湾", feature: "红树林与海上日落", lat: 22.59626, lng: 113.83211, limited: "弹涂鱼限定" },
+  { name: "海上田园", short: "田园", feature: "鱼塘红树林生态", lat: 22.72819, lng: 113.76665, limited: "亲子生态研学" },
+  { name: "坝光银叶树", short: "坝光", feature: "深圳古老红树群落", lat: 22.65986, lng: 114.54395, limited: "银叶树守护卡" },
+  { name: "东涌湿地", short: "东涌", feature: "原始海岸与潮池", lat: 22.49256, lng: 114.59048, limited: "潮池生物限定" }
 ];
 
 const questions = [
@@ -42,6 +42,7 @@ const badges = [
 let state = readState();
 let filter = "all";
 let quizIndex = 0;
+let activeSite = 0;
 let toastTimer;
 let scanTimers = [];
 
@@ -93,10 +94,11 @@ function renderMap() {
     const marker = node.querySelector("span");
     node.classList.toggle("is-locked", index >= unlocked);
     node.classList.toggle("is-complete", index === 0 && siteComplete());
-    node.classList.toggle("is-active", index === 0 && !siteComplete());
+    node.classList.toggle("is-active", index === activeSite);
     marker.innerHTML = index >= unlocked ? icon("lock") : index === 0 && siteComplete() ? icon("check") : String(index + 1).padStart(2, "0");
   });
   document.getElementById("siteStrip").innerHTML = sites.map((site, index) => `<button type="button" data-strip-site="${index}" ${index >= unlocked ? "disabled" : ""}><b>${String(index + 1).padStart(2,"0")} · ${site.name}</b><small>${site.feature}</small></button>`).join("");
+  updateMapFocus();
 }
 
 function renderAtlas() {
@@ -136,9 +138,20 @@ function renderBadges() {
 }
 
 function selectSite(index) {
-  if (index === 0) { toast(siteComplete() ? "福田红树林已完成，下一站已开放" : "福田红树林是当前探索点"); return; }
-  if (index === 1 && siteComplete()) { document.getElementById("activeSiteName").textContent = sites[1].name; toast("深圳湾公园已解锁，正式版将接入路线导航"); return; }
-  toast(`${sites[index].name}尚未解锁`);
+  activeSite = index;
+  renderMap();
+  if (index > 0 && !(index === 1 && siteComplete())) toast(`${sites[index].name}尚未解锁，先完成前序点位`);
+}
+
+function updateMapFocus() {
+  const site = sites[activeSite];
+  const canEnter = activeSite === 0 || (activeSite === 1 && siteComplete());
+  document.getElementById("activeSiteName").textContent = site.name;
+  document.getElementById("mapFocusName").textContent = site.name;
+  document.getElementById("mapFocusMeta").textContent = `${site.lat.toFixed(5)}, ${site.lng.toFixed(5)} · ${site.limited}`;
+  const enter = document.getElementById("enterSite");
+  enter.textContent = canEnter ? `进入${site.name}` : "完成前序任务后解锁";
+  enter.disabled = !canEnter;
 }
 
 function openCapture() {
@@ -252,6 +265,12 @@ document.querySelectorAll("[data-view-target]").forEach(button => button.addEven
 document.querySelectorAll("[data-open-capture]").forEach(button => button.addEventListener("click", openCapture));
 document.querySelectorAll(".map-node").forEach(node => node.addEventListener("click", () => selectSite(Number(node.dataset.site))));
 document.getElementById("siteStrip").addEventListener("click", event => { const button = event.target.closest("[data-strip-site]"); if (button) selectSite(Number(button.dataset.stripSite)); });
+document.getElementById("enterSite").addEventListener("click", () => activeSite === 0 ? openCapture() : toast(`${sites[activeSite].name}已解锁，正式版将接入线下导航`));
+document.getElementById("mapAction").addEventListener("click", () => {
+  const site = sites[activeSite];
+  const url = `https://uri.amap.com/marker?position=${site.lng},${site.lat}&name=${encodeURIComponent(site.name)}&coordinate=gaode&callnative=0`;
+  window.open(url, "_blank", "noopener");
+});
 document.getElementById("closeCapture").addEventListener("click", closeCapture);
 document.getElementById("identifyButton").addEventListener("click", identify);
 document.getElementById("collectButton").addEventListener("click", collect);

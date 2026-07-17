@@ -10,3 +10,9 @@
 - `little-egret.jpg`：Laitche，CC BY-SA 4.0，https://commons.wikimedia.org/wiki/File:Egretta_garzetta_2015-06-17.jpg
 
 物种图片仅用于腾讯青科实训营课题原型展示。若用于公开部署或商业用途，需继续遵守对应许可证的署名、相同方式共享等要求。
+
+## 品牌与地图
+
+- `brand-logo-source.png`：Mudflat Go! 团队品牌图，来自同团队前端仓库 https://github.com/A-Rosetta/MudflatGo 。
+- `brand-mark.png`：由上述品牌图进行非破坏性方形裁切，用于导航栏小尺寸展示。
+- `assets/map/`：OpenStreetMap 标准地图瓦片，© OpenStreetMap contributors，页面内保留可见署名。数据许可见 https://www.openstreetmap.org/copyright 。
