@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#173f35">
+  <meta name="description" content="滩涂大冒险 Mudflat Go! 深圳湿地生态文旅打卡平台交互原型">
+  <title>滩涂大冒险 Mudflat Go!</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&amp;family=Noto+Sans+SC:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <button class="brand" type="button" data-view-target="home" aria-label="返回今日探索">
+        <span class="brand-mark" aria-hidden="true"><i data-lucide="waves"></i></span>
+        <span class="brand-copy">
+          <strong>Mudflat Go!</strong>
+          <small>滩涂大冒险</small>
+        </span>
+      </button>
+
+      <nav class="desktop-nav" aria-label="主导航">
+        <button class="nav-item is-active" type="button" data-view-target="home">
+          <i data-lucide="compass"></i><span>今日探索</span>
+        </button>
+        <button class="nav-item" type="button" data-view-target="map">
+          <i data-lucide="map"></i><span>探索地图</span>
+        </button>
+        <button class="nav-item" type="button" data-view-target="collection">
+          <i data-lucide="panels-top-left"></i><span>生态图鉴</span>
+        </button>
+        <button class="nav-item" type="button" data-view-target="achievements">
+          <i data-lucide="medal"></i><span>我的成就</span>
+        </button>
+      </nav>
+
+      <div class="topbar-actions">
+        <div class="weather-chip" title="福田红树林今日环境">
+          <i data-lucide="cloud-sun"></i>
+          <span><strong>28°C</strong><small>退潮 16:40</small></span>
+        </div>
+        <div class="points-chip" title="生态守护值">
+          <i data-lucide="sprout"></i><strong data-points>1,280</strong>
+        </div>
+        <button class="avatar-button" type="button" id="profileButton" aria-label="打开个人菜单">湾</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="app-view is-active" id="homeView" data-view="home" aria-labelledby="homeTitle">
+        <div class="page-heading home-heading">
+          <div>
+            <p class="eyebrow">7月17日 · 候鸟观察季</p>
+            <h1 id="homeTitle">下午好，林小湾</h1>
+            <p>潮水正在退去，今天很适合在滩涂寻找新朋友。</p>
+          </div>
+          <button class="icon-button mobile-only" type="button" data-open-menu aria-label="更多选项" title="更多选项">
+            <i data-lucide="ellipsis"></i>
+          </button>
+        </div>
+
+        <section class="expedition-layout" aria-label="当前探索">
+          <article class="expedition-hero">
+            <img src="assets/images/shenzhen-mangrove.jpg" alt="深圳湾潮间带中的红树">
+            <div class="hero-shade"></div>
+            <div class="hero-topline">
+              <span class="status-badge"><span class="pulse-dot"></span> 已进入保护区</span>
+              <span class="tide-badge"><i data-lucide="waves"></i> 低潮 · 观察窗口 2小时</span>
+            </div>
+            <div class="hero-content">
+              <p class="location-kicker"><i data-lucide="map-pin"></i> 当前探索地 · 01</p>
+              <h2>福田红树林</h2>
+              <p>国际重要湿地 · 黑脸琵鹭越冬栖息地</p>
+              <div class="hero-actions">
+                <button class="button button-primary" type="button" data-open-capture>
+                  <i data-lucide="scan-line"></i> AI 拍照捕捉
+                </button>
+                <button class="button button-glass" type="button" data-view-target="map">
+                  <i data-lucide="route"></i> 查看探索路线
+                </button>
+              </div>
+            </div>
+          </article>
+
+          <aside class="mission-panel">
+            <div class="panel-heading">
+              <div>
+                <span class="section-label">点位任务</span>
+                <h2>解锁红树林守护者</h2>
+              </div>
+              <span class="mission-count"><strong id="missionCompleted">1</strong>/3</span>
+            </div>
+            <div class="progress-track" aria-label="任务进度"><span id="missionProgress" style="width: 33%"></span></div>
+            <ul class="mission-list">
+              <li class="is-done">
+                <span class="mission-icon"><i data-lucide="check"></i></span>
+                <span><strong>抵达福田红树林</strong><small>GPS 定位验证完成</small></span>
+                <b>+20</b>
+              </li>
+              <li id="captureMission">
+                <span class="mission-icon"><i data-lucide="camera"></i></span>
+                <span><strong>完成 1 次 AI 识物</strong><small>拍摄一只鸟类或一株红树</small></span>
+                <b>+40</b>
+              </li>
+              <li>
+                <span class="mission-icon"><i data-lucide="circle-help"></i></span>
+                <span><strong>湿地知识问答</strong><small>答对 3 道生态问题</small></span>
+                <b>+30</b>
+              </li>
+            </ul>
+            <button class="button button-secondary full-width" type="button" id="quizButton">
+              开始今日问答 <i data-lucide="arrow-right"></i>
+            </button>
+          </aside>
+        </section>
+
+        <section class="stats-strip" aria-label="探索数据">
+          <div><span class="stat-icon green"><i data-lucide="map-pin-check"></i></span><span><strong id="siteStat">0</strong><small>已探索湿地</small></span><em>/ 6</em></div>
+          <div><span class="stat-icon blue"><i data-lucide="bird"></i></span><span><strong data-found-count>2</strong><small>已收集物种</small></span><em>/ 9</em></div>
+          <div><span class="stat-icon yellow"><i data-lucide="award"></i></span><span><strong data-badge-count>2</strong><small>已获得徽章</small></span><em>/ 8</em></div>
+          <div><span class="stat-icon coral"><i data-lucide="flame"></i></span><span><strong>5</strong><small>连续探索</small></span><em>天</em></div>
+        </section>
+
+        <section class="content-section">
+          <div class="section-heading">
+            <div><span class="section-label">继续探索</span><h2>今日推荐</h2></div>
+            <button class="text-button" type="button" data-view-target="map">全部点位 <i data-lucide="arrow-right"></i></button>
+          </div>
+          <div class="recommendation-grid">
+            <article class="recommendation-card featured-card">
+              <img src="assets/images/black-faced-spoonbill.jpg" alt="在浅水区觅食的黑脸琵鹭">
+              <div class="recommendation-copy">
+                <span class="rarity rarity-ssr">SSR · 珍稀</span>
+                <h3>寻找黑脸琵鹭</h3>
+                <p>它们常在退潮后的浅水区觅食。留意那把像汤匙一样的长嘴。</p>
+                <button class="button button-light" type="button" data-open-capture>开始寻找 <i data-lucide="scan-line"></i></button>
+              </div>
+            </article>
+            <article class="recommendation-card route-card">
+              <div class="route-visual">
+                <img src="assets/images/mangrove-wetland.jpg" alt="红树林湿地水道">
+                <span class="mini-pin pin-one"><i data-lucide="map-pin"></i></span>
+                <span class="mini-pin pin-two"><i data-lucide="flag"></i></span>
+              </div>
+              <div class="route-copy">
+                <span class="section-label">1.8 KM · 约 45 分钟</span>
+                <h3>红树林观察环线</h3>
+                <p>科普栈道 → 观鸟屋 → 潮间带</p>
+                <button class="text-button" type="button" data-view-target="map">查看路线 <i data-lucide="arrow-right"></i></button>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="content-section collection-preview-section">
+          <div class="section-heading">
+            <div><span class="section-label">生态图鉴</span><h2>最近发现</h2></div>
+            <button class="text-button" type="button" data-view-target="collection">打开图鉴 <i data-lucide="arrow-right"></i></button>
+          </div>
+          <div class="recent-species" id="recentSpecies">
+            <button class="species-tile" type="button" data-species="kandelia">
+              <img src="assets/images/kandelia-obovata.jpg" alt="秋茄植株">
+              <span class="rarity rarity-r">R</span>
+              <span class="species-copy"><strong>秋茄</strong><small>Kandelia obovata</small></span>
+            </button>
+            <button class="species-tile" type="button" data-species="fiddler-crab">
+              <img src="assets/images/fiddler-crab.jpg" alt="招潮蟹">
+              <span class="rarity rarity-sr">SR</span>
+              <span class="species-copy"><strong>弧边招潮蟹</strong><small>Austruca arcuata</small></span>
+            </button>
+            <button class="species-tile locked-species" type="button" data-open-capture id="homeSpoonbillTile">
+              <img src="assets/images/black-faced-spoonbill.jpg" alt="尚未收集的黑脸琵鹭" class="locked-image">
+              <span class="rarity rarity-ssr">SSR</span>
+              <span class="lock-mark"><i data-lucide="scan-line"></i></span>
+              <span class="species-copy"><strong>等待发现</strong><small>附近有珍稀鸟类踪迹</small></span>
+            </button>
+          </div>
+        </section>
+      </section>
+
+      <section class="app-view" id="mapView" data-view="map" aria-labelledby="mapTitle">
+        <div class="page-heading">
+          <div><p class="eyebrow">深圳山海连城 · 6 大湿地</p><h1 id="mapTitle">探索地图</h1><p>从福田出发，沿海岸线逐站解锁你的湿地冒险。</p></div>
+          <div class="heading-metric"><span>总进度</span><strong id="mapProgressText">0 / 6</strong></div>
+        </div>
+        <div class="map-layout">
+          <section class="map-canvas" aria-label="六大湿地路线图">
+            <div class="map-toolbar">
+              <span><i data-lucide="navigation"></i> 深圳市</span>
+              <div>
+                <button class="icon-button" type="button" id="zoomIn" aria-label="放大地图" title="放大"><i data-lucide="plus"></i></button>
+                <button class="icon-button" type="button" id="zoomOut" aria-label="缩小地图" title="缩小"><i data-lucide="minus"></i></button>
+              </div>
+            </div>
+            <div class="route-map" id="routeMap">
+              <div class="water-label">深圳湾</div>
+              <div class="shoreline shoreline-one"></div>
+              <div class="shoreline shoreline-two"></div>
+              <svg class="route-line" viewBox="0 0 1000 520" preserveAspectRatio="none" aria-hidden="true">
+                <path d="M110 350 C210 290, 250 410, 360 330 S520 230, 600 295 S745 400, 890 200" />
+              </svg>
+              <button class="map-point is-current" type="button" style="--x: 11%; --y: 67%" data-site-index="0"><span>01</span><b>福田红树林</b><small>当前</small></button>
+              <button class="map-point is-locked" type="button" style="--x: 30%; --y: 68%" data-site-index="1"><span><i data-lucide="lock"></i></span><b>深圳湾公园</b><small>完成 1 站解锁</small></button>
+              <button class="map-point is-locked" type="button" style="--x: 43%; --y: 55%" data-site-index="2"><span><i data-lucide="lock"></i></span><b>西湾红树林</b><small>完成 2 站解锁</small></button>
+              <button class="map-point is-locked" type="button" style="--x: 60%; --y: 57%" data-site-index="3"><span><i data-lucide="lock"></i></span><b>海上田园</b><small>完成 3 站解锁</small></button>
+              <button class="map-point is-locked" type="button" style="--x: 76%; --y: 69%" data-site-index="4"><span><i data-lucide="lock"></i></span><b>坝光银叶树</b><small>完成 4 站解锁</small></button>
+              <button class="map-point is-locked" type="button" style="--x: 89%; --y: 38%" data-site-index="5"><span><i data-lucide="lock"></i></span><b>东涌湿地</b><small>完成 5 站解锁</small></button>
+            </div>
+          </section>
+          <aside class="site-detail" id="siteDetail">
+            <img src="assets/images/shenzhen-mangrove.jpg" alt="福田红树林">
+            <div class="site-detail-content">
+              <span class="status-badge dark"><span class="pulse-dot"></span> 当前可探索</span>
+              <p class="section-label">点位 01 / 06</p>
+              <h2>福田红树林</h2>
+              <p>国际重要湿地，深圳湾候鸟迁徙路线上的核心停歇地。</p>
+              <div class="site-facts">
+                <span><i data-lucide="bird"></i><strong>253</strong><small>野生动物</small></span>
+                <span><i data-lucide="footprints"></i><strong>1.8km</strong><small>推荐路线</small></span>
+                <span><i data-lucide="clock-3"></i><strong>2h</strong><small>观察窗口</small></span>
+              </div>
+              <div class="site-targets">
+                <span>推荐观察</span>
+                <div><b>黑脸琵鹭</b><b>秋茄</b><b>招潮蟹</b></div>
+              </div>
+              <button class="button button-primary full-width" type="button" data-open-capture><i data-lucide="navigation"></i> 开始探索</button>
+            </div>
+          </aside>
+        </div>
+        <section class="site-sequence">
+          <div class="section-heading"><div><span class="section-label">逐级解锁</span><h2>六站守护之旅</h2></div></div>
+          <div class="site-list" id="siteList"></div>
+        </section>
+      </section>
+
+      <section class="app-view" id="collectionView" data-view="collection" aria-labelledby="collectionTitle">
+        <div class="page-heading collection-heading">
+          <div><p class="eyebrow">红树林生态伙伴</p><h1 id="collectionTitle">我的生态图鉴</h1><p>每一次真实观察，都会点亮一张深圳湿地名片。</p></div>
+          <div class="collection-score"><strong><span data-found-count>2</span><small>/ 9</small></strong><span>已发现</span></div>
+        </div>
+        <div class="collection-toolbar">
+          <div class="segmented-control" role="group" aria-label="筛选图鉴">
+            <button class="is-active" type="button" data-filter="all">全部 9</button>
+            <button type="button" data-filter="found">已发现</button>
+            <button type="button" data-filter="locked">待发现</button>
+          </div>
+          <div class="rarity-legend"><span><b class="dot ssr"></b> SSR</span><span><b class="dot sr"></b> SR</span><span><b class="dot r"></b> R</span></div>
+        </div>
+        <div class="collection-grid" id="collectionGrid"></div>
+        <section class="knowledge-banner">
+          <div>
+            <span class="knowledge-icon"><i data-lucide="sparkles"></i></span>
+            <div><span class="section-label">AI 生态知识助手</span><h2>有不认识的湿地朋友？</h2><p>拍下它，获取物种识别、趣味讲解和保护等级。</p></div>
+          </div>
+          <button class="button button-primary" type="button" data-open-capture><i data-lucide="camera"></i> 立即识别</button>
+        </section>
+      </section>
+
+      <section class="app-view" id="achievementsView" data-view="achievements" aria-labelledby="achievementTitle">
+        <div class="page-heading">
+          <div><p class="eyebrow">生态守护值 · <span data-points>1,280</span></p><h1 id="achievementTitle">我的成就</h1><p>把每一次探索，积累成看得见的湿地守护行动。</p></div>
+          <button class="button button-outline" type="button" id="sharePoster"><i data-lucide="share-2"></i> 生成成就海报</button>
+        </div>
+        <section class="level-banner">
+          <div class="level-medallion"><span>LV.</span><strong>3</strong></div>
+          <div class="level-copy"><span class="section-label">当前称号</span><h2>潮汐观察员</h2><p>再获得 <strong id="pointsNeeded">720</strong> 守护值，晋级「湿地探索家」</p><div class="level-progress"><span id="levelProgress" style="width: 64%"></span></div><small><b data-points>1,280</b> / 2,000</small></div>
+          <div class="level-flourish"><i data-lucide="telescope"></i></div>
+        </section>
+        <div class="achievement-layout">
+          <section>
+            <div class="section-heading"><div><span class="section-label">成就陈列</span><h2>守护徽章</h2></div><span class="counter"><b data-badge-count>2</b> / 8</span></div>
+            <div class="badge-grid">
+              <button class="badge-card is-earned" type="button"><span class="badge-art coral"><i data-lucide="footprints"></i></span><strong>初次启程</strong><small>完成第一次湿地探索</small></button>
+              <button class="badge-card is-earned" type="button"><span class="badge-art blue"><i data-lucide="camera"></i></span><strong>生态摄影师</strong><small>完成第一次 AI 识物</small></button>
+              <button class="badge-card" id="guardianBadge" type="button"><span class="badge-art green"><i data-lucide="trees"></i></span><strong>红树林守护者</strong><small>完成福田点位全部任务</small></button>
+              <button class="badge-card" type="button"><span class="badge-art yellow"><i data-lucide="bird"></i></span><strong>湾区观鸟人</strong><small>发现 5 种湿地鸟类</small></button>
+              <button class="badge-card" type="button"><span class="badge-art pink"><i data-lucide="sunset"></i></span><strong>西湾追光者</strong><small>完成西湾红树林打卡</small></button>
+              <button class="badge-card" type="button"><span class="badge-art teal"><i data-lucide="leaf"></i></span><strong>田园生态家</strong><small>完成海上田园打卡</small></button>
+              <button class="badge-card" type="button"><span class="badge-art gray"><i data-lucide="tree-pine"></i></span><strong>古树探秘者</strong><small>完成坝光银叶树打卡</small></button>
+              <button class="badge-card" type="button"><span class="badge-art gray"><i data-lucide="mountain"></i></span><strong>荒野探险家</strong><small>完成东涌湿地打卡</small></button>
+            </div>
+          </section>
+          <aside class="points-ledger">
+            <div class="section-heading"><div><span class="section-label">本周</span><h2>守护值记录</h2></div></div>
+            <ul id="pointsLog">
+              <li><span class="log-icon green"><i data-lucide="map-pin-check"></i></span><span><strong>抵达福田红树林</strong><small>今天 14:32</small></span><b>+20</b></li>
+              <li><span class="log-icon coral"><i data-lucide="flame"></i></span><span><strong>连续探索 5 天</strong><small>今天 09:10</small></span><b>+50</b></li>
+              <li><span class="log-icon blue"><i data-lucide="circle-help"></i></span><span><strong>完成生态问答</strong><small>昨天 16:25</small></span><b>+30</b></li>
+            </ul>
+            <div class="weekly-total"><span>本周累计</span><strong id="weeklyTotal">+100</strong></div>
+          </aside>
+        </div>
+      </section>
+    </main>
+
+    <nav class="mobile-nav" aria-label="移动端主导航">
+      <button class="is-active" type="button" data-view-target="home"><i data-lucide="compass"></i><span>探索</span></button>
+      <button type="button" data-view-target="map"><i data-lucide="map"></i><span>地图</span></button>
+      <button class="capture-tab" type="button" data-open-capture aria-label="AI 拍照捕捉"><span><i data-lucide="scan-line"></i></span></button>
+      <button type="button" data-view-target="collection"><i data-lucide="panels-top-left"></i><span>图鉴</span></button>
+      <button type="button" data-view-target="achievements"><i data-lucide="medal"></i><span>成就</span></button>
+    </nav>
+  </div>
+
+  <div class="modal-backdrop" id="captureModal" hidden>
+    <section class="capture-modal" role="dialog" aria-modal="true" aria-labelledby="captureTitle">
+      <div class="modal-header">
+        <div><span class="section-label">腾讯 AI 视觉 · 演示识别</span><h2 id="captureTitle">AI 生态捕捉</h2></div>
+        <button class="icon-button" type="button" data-close-capture aria-label="关闭" title="关闭"><i data-lucide="x"></i></button>
+      </div>
+      <div class="capture-body">
+        <div class="camera-stage" id="cameraStage">
+          <img id="capturePreview" src="assets/images/black-faced-spoonbill.jpg" alt="待识别的湿地鸟类">
+          <div class="viewfinder" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+          <div class="camera-top"><span><span class="live-dot"></span> 生态镜头</span><span><i data-lucide="map-pin"></i> 福田红树林</span></div>
+          <div class="scan-beam" id="scanBeam"></div>
+          <div class="camera-help" id="cameraHelp">将物种置于取景框中央</div>
+        </div>
+        <div class="recognition-panel" id="recognitionPanel">
+          <div class="recognition-idle" id="recognitionIdle">
+            <span class="ai-orbit"><i data-lucide="sparkles"></i></span>
+            <h3>准备识别</h3>
+            <p>保持画面清晰，尽量拍到完整的外形特征。</p>
+            <div class="capture-options">
+              <label class="button button-outline" for="photoInput"><i data-lucide="image-up"></i> 选择照片</label>
+              <input type="file" id="photoInput" accept="image/*" hidden>
+              <button class="button button-primary" type="button" id="identifyButton"><i data-lucide="scan-search"></i> 开始 AI 识别</button>
+            </div>
+          </div>
+          <div class="recognition-loading" id="recognitionLoading" hidden>
+            <span class="loading-ring"></span>
+            <h3>正在分析生态特征</h3>
+            <ul><li class="is-done"><i data-lucide="check"></i> 图像质量检查</li><li id="featureStep"><i data-lucide="loader-circle"></i> 提取喙部与羽色特征</li><li id="locationStep"><i data-lucide="circle"></i> GPS 保护区校验</li></ul>
+          </div>
+          <div class="recognition-result" id="recognitionResult" hidden>
+            <div class="result-heading"><span class="rarity rarity-ssr">SSR · 国家一级保护动物</span><span class="confidence">96.8% 匹配</span></div>
+            <p class="scientific-name">Platalea minor</p>
+            <h3>黑脸琵鹭</h3>
+            <p>全球濒危的珍稀水鸟，因扁平如匙的长嘴而得名。深圳湾是它们重要的越冬地。</p>
+            <div class="verification-row"><span><i data-lucide="badge-check"></i> 物种验证通过</span><span><i data-lucide="map-pin-check"></i> 位置验证通过</span></div>
+            <button class="button button-primary full-width" type="button" id="collectButton"><i data-lucide="sparkles"></i> 收入图鉴 · +40 守护值</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" id="quizModal" hidden>
+    <section class="quiz-modal" role="dialog" aria-modal="true" aria-labelledby="quizTitle">
+      <div class="modal-header"><div><span class="section-label">福田红树林 · 1 / 3</span><h2 id="quizTitle">湿地知识问答</h2></div><button class="icon-button" type="button" data-close-quiz aria-label="关闭"><i data-lucide="x"></i></button></div>
+      <div class="quiz-content">
+        <span class="quiz-illustration"><i data-lucide="bird"></i></span>
+        <p>黑脸琵鹭用什么方式在浅水中寻找食物？</p>
+        <div class="quiz-options">
+          <button type="button" data-quiz-answer="wrong">潜入水底追逐鱼群</button>
+          <button type="button" data-quiz-answer="correct">左右摆动匙状长嘴扫食</button>
+          <button type="button" data-quiz-answer="wrong">站在树枝上俯冲捕食</button>
+        </div>
+        <p class="quiz-feedback" id="quizFeedback" aria-live="polite"></p>
+      </div>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" id="speciesModal" hidden>
+    <section class="species-modal" role="dialog" aria-modal="true" aria-labelledby="speciesTitle">
+      <button class="icon-button modal-close-float" type="button" data-close-species aria-label="关闭"><i data-lucide="x"></i></button>
+      <img id="speciesModalImage" src="assets/images/kandelia-obovata.jpg" alt="">
+      <div class="species-modal-content"><span class="rarity rarity-r" id="speciesModalRarity">R</span><p id="speciesModalLatin">Kandelia obovata</p><h2 id="speciesTitle">秋茄</h2><p id="speciesModalDescription"></p><div class="species-fact"><i data-lucide="lightbulb"></i><span id="speciesModalFact"></span></div></div>
+    </section>
+  </div>
+
+  <div class="profile-menu" id="profileMenu" hidden>
+    <div><strong>林小湾</strong><small>LV.3 潮汐观察员</small></div>
+    <button type="button" id="resetDemo"><i data-lucide="rotate-ccw"></i> 重置演示数据</button>
+    <button type="button" id="creditsButton"><i data-lucide="image"></i> 图片来源</button>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"><i data-lucide="check-circle-2"></i><span></span></div>
+
+  <script src="assets/vendor/lucide.min.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
