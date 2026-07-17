@@ -1,32 +1,36 @@
 const STORAGE_KEY = "mudflat-go-compact-state-v1";
-const initialState = { points: 1280, aiIdentified: false, collectedSpecies: [], quizDone: false };
+const todayKey = () => new Date().toLocaleDateString("en-CA");
+const emptySiteProgress = () => Array.from({ length: 6 }, () => ({ targetsViewed: false, gps: false, identified: false, complete: false }));
+const initialState = {
+  points: 1280,
+  unlockedThrough: 1,
+  siteProgress: emptySiteProgress(),
+  collectedSpecies: [],
+  cardProgress: {},
+  daily: { date: todayKey(), supplyClaimed: false, viewedCard: false, identified: false },
+  supply: { lastClaimDate: "", streak: 0, frameFragments: 0 }
+};
 const MOBILE_NET_MODEL_URL = "assets/models/mobilenet/model.json";
 
 const species = [
-  { id: "kandelia", name: "秋茄", latin: "Kandelia obovata", rarity: "R", image: "assets/images/kandelia-obovata.jpg", found: true, description: "深圳红树林常见的先锋树种，能够在含盐、缺氧的潮间带扎根生长。", fact: "秋茄的种子会在母树上先萌发，成熟后像一支笔一样落入滩涂。" },
-  { id: "fiddler", name: "弧边招潮蟹", latin: "Austruca arcuata", rarity: "SR", image: "assets/images/fiddler-crab.jpg", found: true, description: "生活在潮间带泥滩的招潮蟹，雄蟹拥有一只特别醒目的大螯。", fact: "雄蟹挥动大螯的动作像在呼唤潮水，也用来求偶和守卫洞穴。" },
-  { id: "spoonbill", name: "黑脸琵鹭", latin: "Platalea minor", rarity: "SSR", image: "assets/images/black-faced-spoonbill.jpg", found: "capture", description: "全球濒危的珍稀水鸟，因黑色面部和扁平如匙的长嘴而得名。", fact: "深圳湾是它们的重要越冬地，退潮后的浅水区最容易观察。" },
-  { id: "egret", name: "白鹭", latin: "Egretta garzetta", rarity: "SR", image: "assets/images/little-egret.jpg", found: false, description: "体态轻盈的湿地鸟类，常在浅水和滩涂边缘缓慢寻找鱼虾。", fact: "观察时请保持距离，不追逐、不投喂，也不要进入觅食区域。" },
-  { id: "mudskipper", name: "弹涂鱼", latin: "Boleophthalmus pectinirostris", rarity: "SR", image: "assets/images/mangrove-wetland.jpg", found: false, description: "能在泥滩上活动的两栖型鱼类，是健康潮间带生态系统的重要成员。", fact: "它能利用皮肤和口腔内壁辅助呼吸，因此可短时间离开水面。" },
-  { id: "avicenna", name: "白骨壤", latin: "Avicennia marina", rarity: "R", image: "assets/images/shenzhen-mangrove.jpg", found: false, description: "耐盐能力很强的红树植物，根系能帮助稳定海岸并提供栖息空间。", fact: "它的呼吸根会从泥滩中向上伸出，像一支支短小的铅笔。" },
-  { id: "kingfisher", name: "普通翠鸟", latin: "Alcedo atthis", rarity: "SR", image: "assets/images/mangrove-wetland.jpg", found: false, description: "常在水边停栖，以快速俯冲的方式捕捉小鱼。", fact: "鲜艳蓝色来自羽毛微观结构对光线的散射，而不是蓝色色素。" },
-  { id: "snail", name: "红树拟蟹守螺", latin: "Cerithidea rhizophorarum", rarity: "R", image: "assets/images/kandelia-obovata.jpg", found: false, description: "常见于红树根部和泥滩表面，以藻类和有机碎屑为食。", fact: "退潮后观察红树根部，常能发现它们留下的细小移动痕迹。" },
-  { id: "heron", name: "夜鹭", latin: "Nycticorax nycticorax", rarity: "SSR", image: "assets/images/little-egret.jpg", found: false, description: "黄昏和夜间更活跃的鹭科鸟类，白天常停在水边树丛中。", fact: "幼鸟有褐色纵纹，与成年鸟灰黑相间的羽色差别很大。" }
+  { id: "kandelia", name: "秋茄", latin: "Kandelia obovata", rarity: "R", category: "plant", season: "全年", image: "assets/images/kandelia-obovata.jpg", found: true, description: "深圳红树林常见的先锋树种，能够在含盐、缺氧的潮间带扎根生长。", fact: "秋茄的种子会在母树上先萌发，成熟后像一支笔一样落入滩涂。" },
+  { id: "fiddler", name: "弧边招潮蟹", latin: "Austruca arcuata", rarity: "SR", category: "benthic", season: "4-10月", image: "assets/images/fiddler-crab.jpg", found: true, description: "生活在潮间带泥滩的招潮蟹，雄蟹拥有一只特别醒目的大螯。", fact: "雄蟹挥动大螯的动作像在呼唤潮水，也用来求偶和守卫洞穴。" },
+  { id: "spoonbill", name: "黑脸琵鹭", latin: "Platalea minor", rarity: "SSR", category: "bird", season: "11-3月", image: "assets/images/black-faced-spoonbill.jpg", found: "capture", description: "全球濒危的珍稀水鸟，因黑色面部和扁平如匙的长嘴而得名。", fact: "深圳湾是它们的重要越冬地，退潮后的浅水区最容易观察。" },
+  { id: "egret", name: "白鹭", latin: "Egretta garzetta", rarity: "SR", category: "bird", season: "全年", image: "assets/images/little-egret.jpg", found: false, description: "体态轻盈的湿地鸟类，常在浅水和滩涂边缘缓慢寻找鱼虾。", fact: "观察时请保持距离，不追逐、不投喂，也不要进入觅食区域。" },
+  { id: "mudskipper", name: "弹涂鱼", latin: "Boleophthalmus pectinirostris", rarity: "SR", category: "benthic", season: "4-10月", image: "assets/images/mudskipper.jpg", found: false, description: "能在泥滩上活动的两栖型鱼类，是健康潮间带生态系统的重要成员。", fact: "它能利用皮肤和口腔内壁辅助呼吸，因此可短时间离开水面。" },
+  { id: "avicenna", name: "白骨壤", latin: "Avicennia marina", rarity: "R", category: "plant", season: "全年", image: "assets/images/avicenna-marina.jpg", found: false, description: "耐盐能力很强的红树植物，根系能帮助稳定海岸并提供栖息空间。", fact: "它的呼吸根会从泥滩中向上伸出，像一支支短小的铅笔。" },
+  { id: "kingfisher", name: "普通翠鸟", latin: "Alcedo atthis", rarity: "SR", category: "bird", season: "全年", image: "assets/images/common-kingfisher.jpg", found: false, description: "常在水边停栖，以快速俯冲的方式捕捉小鱼。", fact: "鲜艳蓝色来自羽毛微观结构对光线的散射，而不是蓝色色素。" },
+  { id: "snail", name: "红树拟蟹守螺", latin: "Cerithidea rhizophorarum", rarity: "R", category: "benthic", season: "全年", image: "assets/images/mangrove-snail.jpg", found: false, description: "常见于红树根部和泥滩表面，以藻类和有机碎屑为食。", fact: "退潮后观察红树根部，常能发现它们留下的细小移动痕迹。" },
+  { id: "heron", name: "夜鹭", latin: "Nycticorax nycticorax", rarity: "SSR", category: "bird", season: "全年", image: "assets/images/night-heron.jpg", found: false, description: "黄昏和夜间更活跃的鹭科鸟类，白天常停在水边树丛中。", fact: "幼鸟有褐色纵纹，与成年鸟灰黑相间的羽色差别很大。" }
 ];
 
 const sites = [
-  { name: "福田红树林", short: "福田", feature: "黑脸琵鹭越冬栖息地", lat: 22.51187, lng: 114.04258, limited: "黑脸琵鹭限定" },
-  { name: "深圳湾公园", short: "深圳湾", feature: "城市滨海候鸟长廊", lat: 22.51897, lng: 113.97260, limited: "候鸟观察路线" },
-  { name: "西湾红树林", short: "西湾", feature: "红树林与海上日落", lat: 22.59626, lng: 113.83211, limited: "弹涂鱼限定" },
-  { name: "海上田园", short: "田园", feature: "鱼塘红树林生态", lat: 22.72819, lng: 113.76665, limited: "亲子生态研学" },
-  { name: "坝光银叶树", short: "坝光", feature: "深圳古老红树群落", lat: 22.65986, lng: 114.54395, limited: "银叶树守护卡" },
-  { name: "东涌湿地", short: "东涌", feature: "原始海岸与潮池", lat: 22.49256, lng: 114.59048, limited: "潮池生物限定" }
-];
-
-const questions = [
-  { text: "黑脸琵鹭怎样在浅水中寻找食物？", options: ["潜入水底追鱼", "左右摆动匙状长嘴扫食", "从树枝俯冲捕食"], correct: 1, note: "匙状长嘴能帮助它在浑水中感知并捕捉鱼虾。" },
-  { text: "红树林对深圳海岸的重要作用是什么？", options: ["把海水变成淡水", "固定海岸并提供栖息地", "阻止所有潮水进入"], correct: 1, note: "密集根系能够消浪护岸，也形成丰富的潮间带家园。" },
-  { text: "观察候鸟时，哪种做法更合适？", options: ["保持距离并降低音量", "投喂食物吸引鸟群", "靠近巢区拍摄"], correct: 0, note: "远距离、低干扰观察是对野生动物最基本的尊重。" }
+  { name: "福田红树林", short: "福田", feature: "黑脸琵鹭越冬栖息地", lat: 22.51187, lng: 114.04258, limited: "黑脸琵鹭限定", habitat: "潮间带 · 红树林", season: "候鸟季 11-3月", description: "从红树与浅水交界开始，辨认匙状长嘴、白色涉禽和泥滩上的微小生命。", targets: ["spoonbill", "egret", "kandelia", "fiddler", "snail"] },
+  { name: "深圳湾公园", short: "深圳湾", feature: "城市滨海候鸟长廊", lat: 22.51897, lng: 113.97260, limited: "候鸟观察路线", habitat: "滨海浅水 · 草坡", season: "全年可观察", description: "沿城市海岸寻找停栖与觅食的水鸟，用距离和耐心换取更自然的观察。", targets: ["egret", "spoonbill", "heron", "kingfisher"] },
+  { name: "西湾红树林", short: "西湾", feature: "红树林与海上日落", lat: 22.59626, lng: 113.83211, limited: "弹涂鱼限定", habitat: "泥滩 · 红树边缘", season: "退潮前后", description: "退潮后的开阔泥滩会留下洞穴和爬痕，适合观察弹涂鱼与底栖生物。", targets: ["mudskipper", "fiddler", "snail", "kandelia"] },
+  { name: "海上田园", short: "田园", feature: "鱼塘红树林生态", lat: 22.72819, lng: 113.76665, limited: "亲子生态研学", habitat: "鱼塘 · 芦苇 · 红树", season: "全年可观察", description: "鱼塘、芦苇和红树林形成多层栖息地，留意水边静候的小型鸟类。", targets: ["kingfisher", "egret", "heron", "kandelia", "fiddler"] },
+  { name: "坝光银叶树", short: "坝光", feature: "深圳古老红树群落", lat: 22.65986, lng: 114.54395, limited: "古树守护卡", habitat: "古红树群落", season: "全年可观察", description: "在成熟红树群落里观察叶片、呼吸根和潮水留下的生态分层。", targets: ["avicenna", "kandelia", "snail", "kingfisher"] },
+  { name: "东涌湿地", short: "东涌", feature: "原始海岸与潮池", lat: 22.49256, lng: 114.59048, limited: "潮池生物限定", habitat: "河口 · 潮池 · 海岸", season: "低潮时段", description: "从河口走向潮池，寻找咸淡水交汇处的鸟类、螺类与两栖泥滩生物。", targets: ["mudskipper", "snail", "egret", "kingfisher", "avicenna"] }
 ];
 
 const badges = [
@@ -42,7 +46,9 @@ const badges = [
 
 let state = readState();
 let filter = "all";
-let quizIndex = 0;
+let categoryFilter = "all";
+let rarityFilter = "all";
+let taskMode = "daily";
 let activeSite = 0;
 let toastTimer;
 let scanTimers = [];
@@ -52,33 +58,62 @@ let cameraRequestId = 0;
 let modelPromise = null;
 let recognitionResult = null;
 let captureSource = null;
+let locationResult = null;
+let lastUnlockedItem = null;
+let shareObjectUrl = "";
+let shareBlob = null;
 
 function readState() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
     const migrated = { ...initialState, ...saved };
     const hasLegacyCapture = Object.prototype.hasOwnProperty.call(saved, "captured");
-    if (saved.captured) {
-      migrated.aiIdentified = true;
-      migrated.collectedSpecies = [...new Set([...(saved.collectedSpecies || []), "spoonbill"])];
+    if (saved.captured || saved.aiIdentified) {
+      migrated.siteProgress = emptySiteProgress();
+      migrated.siteProgress[0].identified = true;
+      migrated.collectedSpecies = [...new Set([...(saved.collectedSpecies || []), ...(saved.captured ? ["spoonbill"] : [])])];
     }
+    if (!Array.isArray(migrated.siteProgress) || migrated.siteProgress.length !== sites.length) migrated.siteProgress = emptySiteProgress();
+    migrated.siteProgress = migrated.siteProgress.map(item => ({ targetsViewed: false, gps: false, identified: false, complete: false, ...item }));
     if (!Array.isArray(migrated.collectedSpecies)) migrated.collectedSpecies = [];
+    if (!migrated.cardProgress || typeof migrated.cardProgress !== "object") migrated.cardProgress = {};
+    if (!migrated.daily || migrated.daily.date !== todayKey()) migrated.daily = { date: todayKey(), supplyClaimed: false, viewedCard: false, identified: false };
+    migrated.supply = { ...initialState.supply, ...(migrated.supply || {}) };
+    migrated.unlockedThrough = Math.max(1, Math.min(sites.length - 1, Number(migrated.unlockedThrough) || 1));
+    delete migrated.aiIdentified;
+    delete migrated.quizDone;
     delete migrated.captured;
-    if (hasLegacyCapture) localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
+    if (hasLegacyCapture || Object.prototype.hasOwnProperty.call(saved, "aiIdentified")) localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
     return migrated;
   }
   catch { return { ...initialState }; }
 }
 
 function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
-function siteComplete() { return state.aiIdentified && state.quizDone; }
+function siteComplete(index = activeSite) { return Boolean(state.siteProgress[index]?.complete); }
 function found(item) { return item.found === true || state.collectedSpecies.includes(item.id); }
 function foundCount() { return species.filter(found).length; }
-function taskCount() { return 1 + Number(state.aiIdentified) + Number(state.quizDone); }
-function badgeCount() { return 2 + Number(siteComplete()); }
+function siteTaskCount(index = activeSite) {
+  const progress = state.siteProgress[index];
+  return Number(progress.targetsViewed) + Number(progress.gps) + Number(progress.identified);
+}
+function dailyTaskCount() { return Number(state.daily.viewedCard) + Number(state.daily.identified) + Number(state.daily.supplyClaimed); }
+function completedSiteCount() { return state.siteProgress.filter(item => item.complete).length; }
+function badgeCount() { return Math.min(badges.length, 2 + completedSiteCount()); }
 function formatNumber(value) { return new Intl.NumberFormat("zh-CN").format(value); }
 function icon(name) { return `<i data-lucide="${name}"></i>`; }
 function icons() { if (window.lucide) window.lucide.createIcons({ attrs: { "stroke-width": 1.9 } }); }
+function cardProgress(item) { return { xp: 0, observations: 0, ...(state.cardProgress[item.id] || {}) }; }
+function cardLevel(item) {
+  const progress = cardProgress(item);
+  const thresholds = [0, 60, 140, 240, 380];
+  const names = ["初遇", "认识", "观察", "记录", "守护"];
+  let level = 1;
+  thresholds.forEach((threshold, index) => { if (progress.xp >= threshold) level = index + 1; });
+  const current = thresholds[level - 1];
+  const next = thresholds[level] ?? thresholds[4];
+  return { ...progress, level, name: names[level - 1], current, next, percent: level === 5 ? 100 : Math.round((progress.xp - current) / (next - current) * 100) };
+}
 
 function navigate(name) {
   document.querySelectorAll(".view").forEach(view => view.classList.toggle("is-active", view.dataset.view === name));
@@ -87,19 +122,20 @@ function navigate(name) {
 }
 
 function updateUI() {
-  const tasks = taskCount();
+  const tasks = siteTaskCount();
   const complete = siteComplete();
   document.querySelectorAll("[data-points]").forEach(node => node.textContent = formatNumber(state.points));
   document.querySelectorAll("[data-found]").forEach(node => node.textContent = foundCount());
   document.querySelectorAll("[data-badges]").forEach(node => node.textContent = badgeCount());
-  document.getElementById("completedSites").textContent = complete ? "1" : "0";
+  document.getElementById("completedSites").textContent = completedSiteCount();
   document.getElementById("missionCount").textContent = `${tasks} / 3`;
   document.getElementById("missionBar").style.width = `${Math.round(tasks / 3 * 100)}%`;
-  document.getElementById("missionTitle").textContent = complete ? "深圳湾公园已解锁" : "解锁红树林守护者";
-  document.getElementById("missionHint").textContent = complete ? "福田点位任务全部完成" : state.aiIdentified ? "还需完成湿地知识问答" : state.quizDone ? "还需完成一次 AI 识物" : "还需完成 AI 识物和湿地问答";
-  document.getElementById("taskRingValue").textContent = tasks;
+  document.getElementById("missionTitle").textContent = complete ? `${sites[activeSite].short}观察完成` : `完成${sites[activeSite].short}的三项观察`;
+  document.getElementById("missionHint").textContent = complete ? (activeSite < sites.length - 1 ? "下一段深圳湿地路线已点亮" : "六站湿地路线已经完成") : "查看目标、验证点位、完成一次有效识别";
+  document.getElementById("taskRingValue").textContent = taskMode === "daily" ? dailyTaskCount() : tasks;
   document.getElementById("levelBar").style.width = `${Math.min(100, state.points / 2000 * 100)}%`;
   document.getElementById("pointsNeeded").textContent = Math.max(0, 2000 - state.points);
+  document.getElementById("streakCount").textContent = state.supply.streak;
   renderMap();
   renderAtlas();
   renderTasks();
@@ -108,63 +144,114 @@ function updateUI() {
 }
 
 function renderMap() {
-  const unlocked = siteComplete() ? 2 : 1;
   document.querySelectorAll(".map-node").forEach((node, index) => {
     const marker = node.querySelector("span");
-    node.classList.toggle("is-locked", index >= unlocked);
-    node.classList.toggle("is-complete", index === 0 && siteComplete());
+    const locked = index > state.unlockedThrough;
+    node.classList.toggle("is-locked", locked);
+    node.classList.toggle("is-complete", siteComplete(index));
     node.classList.toggle("is-active", index === activeSite);
-    marker.innerHTML = index >= unlocked ? icon("lock") : index === 0 && siteComplete() ? icon("check") : String(index + 1).padStart(2, "0");
+    marker.innerHTML = locked ? icon("lock") : siteComplete(index) ? icon("check") : String(index + 1).padStart(2, "0");
   });
-  document.getElementById("siteStrip").innerHTML = sites.map((site, index) => `<button type="button" data-strip-site="${index}" ${index >= unlocked ? "disabled" : ""}><b>${String(index + 1).padStart(2,"0")} · ${site.name}</b><small>${site.feature}</small></button>`).join("");
+  document.querySelectorAll("[data-route-segment]").forEach((segment, index) => segment.classList.toggle("is-open", index + 1 <= state.unlockedThrough));
+  document.getElementById("siteStrip").innerHTML = sites.map((site, index) => `<button type="button" data-strip-site="${index}" ${index > state.unlockedThrough ? "disabled" : ""}><b>${String(index + 1).padStart(2,"0")} · ${site.name}</b><small>${index > state.unlockedThrough ? "尚未解锁" : site.feature}</small></button>`).join("");
   updateMapFocus();
 }
 
 function renderAtlas() {
-  const visible = species.filter(item => filter === "all" || (filter === "found" ? found(item) : !found(item)));
+  const visible = species.filter(item =>
+    (filter === "all" || (filter === "found" ? found(item) : !found(item))) &&
+    (categoryFilter === "all" || item.category === categoryFilter) &&
+    (rarityFilter === "all" || item.rarity === rarityFilter)
+  );
   document.getElementById("atlasGrid").innerHTML = visible.map(item => {
     const isFound = found(item);
+    const level = cardLevel(item);
     return `<button class="species-card ${isFound ? "" : "is-locked"}" type="button" data-species="${item.id}">
       <img src="${item.image}" alt="${isFound ? item.name : "待发现物种剪影"}">
       <span class="rarity ${item.rarity.toLowerCase()}">${item.rarity}</span>
       ${isFound ? "" : `<span class="card-lock">${icon("lock")}</span>`}
-      <span class="species-card-copy"><h2>${isFound ? item.name : "等待发现"}</h2><em>${isFound ? item.latin : "Field observation required"}</em><p>${isFound ? item.description : "前往对应湿地完成 AI 识别，点亮这张生态卡片。"}</p></span>
+      <span class="species-card-copy"><h2>${item.name}</h2><em>${isFound ? item.latin : `${item.season} · 等待发现`}</em><p>${isFound ? item.description : "前往对应湿地完成 AI 识别，点亮这张生态卡片。"}</p>${isFound ? `<span class="mini-level"><b>Lv.${level.level} · ${level.name}</b><i><em style="width:${level.percent}%"></em></i></span>` : ""}</span>
     </button>`;
   }).join("");
   document.querySelectorAll("[data-species]").forEach(card => card.addEventListener("click", () => {
     const item = species.find(entry => entry.id === card.dataset.species);
     if (found(item)) openSpecies(item);
-    else if (item.id === "spoonbill") openCapture();
-    else toast("继续探索对应湿地，完成 AI 识别即可点亮");
+    else toast("在点位目标中找到它，再用 AI 完成观察记录");
   }));
   icons();
 }
 
 function renderTasks() {
-  const tasks = [
-    { icon: "map-pin-check", title: "抵达福田红树林", note: "GPS 定位验证完成", done: true, reward: "+20" },
-    { icon: "camera", title: "完成一次 AI 识物", note: "相机或相册识别湿地物种", done: state.aiIdentified, action: "capture", reward: "+40" },
-    { icon: "circle-help", title: "湿地知识问答", note: "答对 3 道生态问题", done: state.quizDone, action: "quiz", reward: "+30" }
+  const progress = state.siteProgress[activeSite];
+  const nextTarget = species.find(item => item.id === sites[activeSite].targets[0]);
+  const tasks = taskMode === "daily" ? [
+    { icon: "layers-3", title: "翻看一张卡背", note: "打开已发现卡片，阅读生态知识", done: state.daily.viewedCard, action: "atlas", reward: "+5" },
+    { icon: "scan-line", title: "完成一次有效识别", note: "相机或相册均可，本地完成推理", done: state.daily.identified, action: "capture", reward: "+10" },
+    { icon: "package-open", title: "领取今日生态补给", note: "连续第 7 天含稀有卡框碎片", done: state.daily.supplyClaimed, action: "supply", reward: "+20" }
+  ] : [
+    { icon: "panels-top-left", title: `查看${sites[activeSite].short}目标`, note: "先认识这里可能遇见的物种", done: progress.targetsViewed, action: "site", reward: "+10" },
+    { icon: "map-pin-check", title: `抵达${sites[activeSite].name}`, note: progress.gps ? "浏览器定位已通过点位校验" : "需在点位附近授权 GPS 校验", done: progress.gps, action: "site", reward: "+20" },
+    { icon: "camera", title: "完成一次有效 AI 识物", note: "识别结果需属于当前点位目标库", done: progress.identified, action: "capture", reward: "+40" }
   ];
   document.getElementById("taskList").innerHTML = tasks.map(task => `<article class="task-item ${task.done ? "is-done" : ""}"><span>${icon(task.done ? "check" : task.icon)}</span><div><b>${task.title}</b><small>${task.note}</small></div>${task.done ? `<em>${task.reward}</em>` : `<button type="button" data-task-action="${task.action}" aria-label="开始${task.title}">${icon("arrow-right")}</button>`}</article>`).join("");
-  document.querySelectorAll("[data-task-action]").forEach(button => button.addEventListener("click", () => button.dataset.taskAction === "capture" ? openCapture() : openQuiz()));
+  document.getElementById("taskRingValue").textContent = taskMode === "daily" ? dailyTaskCount() : siteTaskCount();
+  document.getElementById("tasksSubtitle").textContent = taskMode === "daily" ? "三件小事，保持今天的湿地观察节奏。" : `完成${sites[activeSite].name}的三项观察，推进深圳湿地路线。`;
+  document.getElementById("nextTargetImage").src = nextTarget.image;
+  document.getElementById("nextTargetImage").alt = nextTarget.name;
+  document.getElementById("nextTargetMeta").textContent = `${nextTarget.season} · ${nextTarget.rarity}`;
+  document.getElementById("nextTargetTitle").textContent = `寻找${nextTarget.name}`;
+  document.getElementById("nextTargetHint").textContent = nextTarget.fact;
+  document.querySelectorAll("[data-task-action]").forEach(button => button.addEventListener("click", () => {
+    const action = button.dataset.taskAction;
+    if (action === "capture") openSite();
+    if (action === "atlas") navigate("collection");
+    if (action === "supply") claimSupply();
+    if (action === "site") openSite();
+  }));
+  renderSupply();
   icons();
 }
 
+function renderSupply() {
+  const claimed = state.daily.supplyClaimed;
+  const day = claimed ? Math.max(1, state.supply.streak) : state.supply.streak % 7 + 1;
+  document.getElementById("supplyDays").innerHTML = Array.from({ length: 7 }, (_, index) => `<span class="${index < state.supply.streak ? "is-claimed" : index + 1 === day && !claimed ? "is-next" : ""}"><b>${index + 1}</b><small>${index === 6 ? "稀有" : "+20"}</small></span>`).join("");
+  document.getElementById("supplyTitle").textContent = claimed ? `第 ${state.supply.streak} 天补给已领取` : `今日补给 · 第 ${day} 天`;
+  document.getElementById("supplyHint").textContent = claimed ? `生态能量已入账${state.supply.frameFragments ? ` · 卡框碎片 ${state.supply.frameFragments}` : ""}` : day === 7 ? "今日包含稀有卡框碎片" : "生态能量 +20 · 连续第 7 天获得稀有奖励";
+  const button = document.getElementById("claimSupply");
+  button.disabled = claimed;
+  button.textContent = claimed ? "今日已领取" : "领取补给";
+}
+
+function claimSupply() {
+  if (state.daily.supplyClaimed) return;
+  const previous = state.supply.lastClaimDate ? new Date(`${state.supply.lastClaimDate}T00:00:00`) : null;
+  const today = new Date(`${todayKey()}T00:00:00`);
+  const gap = previous ? Math.round((today - previous) / 86400000) : 1;
+  state.supply.streak = gap === 1 ? state.supply.streak % 7 + 1 : 1;
+  state.supply.lastClaimDate = todayKey();
+  state.daily.supplyClaimed = true;
+  state.points += 20;
+  if (state.supply.streak === 7) state.supply.frameFragments += 1;
+  saveState();
+  updateUI();
+  toast(state.supply.streak === 7 ? "第 7 日补给 · 生态能量 +20 · 稀有卡框碎片 +1" : `第 ${state.supply.streak} 日补给 · 生态能量 +20`);
+}
+
 function renderBadges() {
-  document.getElementById("badgeGrid").innerHTML = badges.map((badge, index) => `<article class="badge ${index < 2 || (index === 2 && siteComplete()) ? "is-earned" : ""}"><span>${icon(badge[0])}</span><b>${badge[1]}</b><small>${badge[2]}</small></article>`).join("");
+  document.getElementById("badgeGrid").innerHTML = badges.map((badge, index) => `<article class="badge ${index < 2 + completedSiteCount() ? "is-earned" : ""}"><span>${icon(badge[0])}</span><b>${badge[1]}</b><small>${badge[2]}</small></article>`).join("");
   icons();
 }
 
 function selectSite(index) {
+  if (index > state.unlockedThrough) { toast(`${sites[index].name}尚未解锁，先完成前序点位`); return; }
   activeSite = index;
   renderMap();
-  if (index > 0 && !(index === 1 && siteComplete())) toast(`${sites[index].name}尚未解锁，先完成前序点位`);
 }
 
 function updateMapFocus() {
   const site = sites[activeSite];
-  const canEnter = activeSite === 0 || (activeSite === 1 && siteComplete());
+  const canEnter = activeSite <= state.unlockedThrough;
   document.getElementById("activeSiteName").textContent = site.name;
   document.getElementById("mapFocusName").textContent = site.name;
   document.getElementById("mapFocusMeta").textContent = `${site.lat.toFixed(5)}, ${site.lng.toFixed(5)} · ${site.limited}`;
@@ -173,8 +260,51 @@ function updateMapFocus() {
   enter.disabled = !canEnter;
 }
 
+function openSite() {
+  if (activeSite > state.unlockedThrough) return;
+  const site = sites[activeSite];
+  state.siteProgress[activeSite].targetsViewed = true;
+  saveState();
+  document.getElementById("siteSequence").textContent = `${String(activeSite + 1).padStart(2, "0")} / ${String(sites.length).padStart(2, "0")}`;
+  document.getElementById("siteTitle").textContent = site.name;
+  document.getElementById("siteDescription").textContent = site.description;
+  document.getElementById("siteSeason").textContent = site.season;
+  document.getElementById("siteHabitat").textContent = site.habitat;
+  renderSiteTargets();
+  document.getElementById("siteView").hidden = false;
+  document.body.style.overflow = "hidden";
+  updateUI();
+}
+
+function closeSite() {
+  document.getElementById("siteView").hidden = true;
+  document.body.style.overflow = "";
+}
+
+function renderSiteTargets() {
+  const site = sites[activeSite];
+  const targets = site.targets.map(id => species.find(item => item.id === id));
+  const foundTargets = targets.filter(found).length;
+  document.getElementById("targetFoundCount").textContent = foundTargets;
+  document.getElementById("targetTotalCount").textContent = targets.length;
+  document.getElementById("targetRail").innerHTML = targets.map(item => `<button class="target-card" type="button" data-target="${item.id}"><img src="${item.image}" alt="${item.name}"><span class="rarity ${item.rarity.toLowerCase()}">${item.rarity}</span><div><small>${item.season} · ${sites[activeSite].short}</small><h3>${item.name}</h3><p>${item.latin}</p><em>${found(item) ? `${icon("check")} 已记录` : "等待观察"}</em></div></button>`).join("");
+  const progress = state.siteProgress[activeSite];
+  document.getElementById("siteTaskSummary").innerHTML = [
+    ["targetsViewed", "目标", "先认识可能遇见的物种"],
+    ["gps", "点位", "到达附近后完成 GPS 校验"],
+    ["identified", "记录", "完成一次有效 AI 识物"]
+  ].map(([key, title, note], index) => `<span class="${progress[key] ? "is-done" : ""}"><i>${progress[key] ? icon("check") : index + 1}</i><b>${title}</b><small>${note}</small></span>`).join("");
+  document.querySelectorAll("[data-target]").forEach(card => card.addEventListener("click", () => {
+    const item = species.find(entry => entry.id === card.dataset.target);
+    if (found(item)) openSpecies(item);
+    else toast(`${item.name} · ${item.season} · 留意参考照片中的关键轮廓`);
+  }));
+  icons();
+}
+
 function openCapture() {
   resetCapture();
+  locationResult = null;
   document.getElementById("captureView").hidden = false;
   document.body.style.overflow = "hidden";
   startCamera();
@@ -195,12 +325,62 @@ function resetCapture() {
   document.getElementById("scanner").classList.remove("is-running");
   document.getElementById("captureResult").hidden = true;
   document.getElementById("cameraStatus").textContent = "浏览器端 AI 生态识别";
+  document.getElementById("scanProgress").hidden = true;
+  document.getElementById("locationReadout").classList.remove("is-complete", "is-warning");
+  document.getElementById("locationReadout").innerHTML = `<span>${icon("map-pin")}</span><p><b>GPS 点位校验</b><small>拍照后请求定位</small></p><em>GPS</em>`;
+  document.getElementById("sceneReadout").classList.remove("is-complete", "is-warning");
+  document.getElementById("sceneReadout").innerHTML = `<span>${icon("trees")}</span><p><b>生态场景匹配</b><small>${sites[activeSite].short}目标库已就绪</small></p><em>ECO</em>`;
   document.getElementById("featureReadout").classList.remove("is-complete");
   document.getElementById("featureReadout").innerHTML = `<span>${icon("scan-search")}</span><p><b>物种特征</b><small>等待实时照片</small></p><em>AI</em>`;
   document.getElementById("collectButton").hidden = true;
   document.getElementById("identifyButton").hidden = false;
   setCaptureReady(false, "等待画面");
   icons();
+}
+
+function updateScanProgress(percent, label) {
+  document.getElementById("scanProgress").hidden = false;
+  document.getElementById("scanProgressBar").style.width = `${percent}%`;
+  document.getElementById("scanStage").textContent = label;
+  document.getElementById("scanPercent").textContent = `${percent}%`;
+}
+
+function distanceInMeters(lat1, lng1, lat2, lng2) {
+  const rad = value => value * Math.PI / 180;
+  const a = Math.sin(rad(lat2 - lat1) / 2) ** 2 + Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(rad(lng2 - lng1) / 2) ** 2;
+  return 6371000 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function verifyLocation() {
+  return new Promise(resolve => {
+    let settled = false;
+    const finish = result => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(fallbackTimer);
+      resolve(result);
+    };
+    const fallbackTimer = setTimeout(() => finish({ status: "unavailable" }), 6000);
+    if (!navigator.geolocation) { finish({ status: "unavailable" }); return; }
+    navigator.geolocation.getCurrentPosition(position => {
+      const site = sites[activeSite];
+      const distance = Math.round(distanceInMeters(position.coords.latitude, position.coords.longitude, site.lat, site.lng));
+      finish({ status: distance <= 3000 ? "verified" : "far", distance });
+    }, error => finish({ status: error.code === 1 ? "denied" : "unavailable" }), { enableHighAccuracy: true, timeout: 5000, maximumAge: 60000 });
+  });
+}
+
+function showLocationResult(result) {
+  const readout = document.getElementById("locationReadout");
+  readout.classList.toggle("is-complete", result.status === "verified");
+  readout.classList.toggle("is-warning", result.status !== "verified");
+  const messages = {
+    verified: `位于${sites[activeSite].short}附近 · ${result.distance}m`,
+    far: `距目标点约 ${(result.distance / 1000).toFixed(1)}km`,
+    denied: "未授权定位 · 不计点位抵达",
+    unavailable: "暂时无法定位 · 不计点位抵达"
+  };
+  readout.innerHTML = `<span>${icon(result.status === "verified" ? "check" : "map-pin-off")}</span><p><b>GPS 点位校验</b><small>${messages[result.status]}</small></p><em>GPS</em>`;
 }
 
 function setCaptureReady(ready, label) {
@@ -339,12 +519,27 @@ async function identify() {
   readout.querySelector("small").textContent = "正在加载模型并分析画面";
   document.getElementById("cameraStatus").textContent = "本地 AI 分析中";
   try {
+    updateScanProgress(8, "正在检查照片清晰度");
     let input = document.getElementById("captureImage");
     if (captureSource === "camera") input = await snapshotCamera();
     if (input.hidden || !input.naturalWidth) throw new Error("没有可识别的照片");
-    const model = await loadRecognitionModel();
+    updateScanProgress(22, "照片就绪 · 正在校验 GPS");
+    const [model, location] = await Promise.all([loadRecognitionModel(), verifyLocation()]);
+    locationResult = location;
+    showLocationResult(location);
+    updateScanProgress(48, "正在匹配当前点位生态场景");
     const predictions = await model.classify(input, 5);
+    updateScanProgress(88, "正在核对物种特征");
     recognitionResult = resolveWetlandPrediction(predictions);
+    const sceneMatch = recognitionResult && sites[activeSite].targets.includes(recognitionResult.speciesId);
+    const sceneReadout = document.getElementById("sceneReadout");
+    sceneReadout.classList.toggle("is-complete", Boolean(sceneMatch));
+    sceneReadout.classList.toggle("is-warning", Boolean(recognitionResult && !sceneMatch));
+    sceneReadout.innerHTML = sceneMatch
+      ? `<span>${icon("check")}</span><p><b>生态场景匹配</b><small>${recognitionResult.title}属于${sites[activeSite].short}目标库</small></p><em>ECO</em>`
+      : `<span>${icon("circle-alert")}</span><p><b>生态场景匹配</b><small>${recognitionResult ? "识别有效，但不属于当前点位目标" : "等待可靠物种结果"}</small></p><em>ECO</em>`;
+    recognitionResult = sceneMatch ? recognitionResult : null;
+    updateScanProgress(100, recognitionResult ? "扫描完成 · 发现有效目标" : "扫描完成 · 暂未确认目标");
     showRecognitionResult(predictions, recognitionResult);
     readout.classList.toggle("is-complete", Boolean(recognitionResult));
     readout.innerHTML = recognitionResult
@@ -354,6 +549,7 @@ async function identify() {
     recognitionResult = null;
     showRecognitionError(error.message || "模型加载失败，请稍后重试");
     readout.innerHTML = `<span>${icon("triangle-alert")}</span><p><b>物种特征</b><small>识别失败，请重试</small></p><em>AI</em>`;
+    updateScanProgress(100, "扫描未完成");
   } finally {
     document.getElementById("scanner").classList.remove("is-running");
     document.getElementById("cameraStatus").textContent = "识别完成 · 结果仅供辅助观察";
@@ -376,15 +572,15 @@ function showRecognitionResult(predictions, result) {
     document.getElementById("captureTitle").textContent = result.title;
     document.getElementById("resultDescription").textContent = result.description;
     collectButton.hidden = false;
-    collectButton.disabled = alreadyFound && state.aiIdentified;
-    collectButton.innerHTML = alreadyFound && state.aiIdentified ? `${icon("check")} 已记录` : `${icon("sparkles")} ${alreadyFound ? "确认识别" : "收入图鉴"} · +40`;
+    collectButton.disabled = false;
+    collectButton.innerHTML = alreadyFound ? `${icon("sparkles")} 再次记录 · +20 XP` : `${icon("sparkles")} 收入图鉴 · +40`;
   } else {
     document.getElementById("resultRarity").className = "rarity";
     document.getElementById("resultRarity").textContent = "未确认";
     document.getElementById("resultConfidence").textContent = "未达到湿地类别阈值";
     document.getElementById("resultLatin").textContent = "General model result";
     document.getElementById("captureTitle").textContent = "暂时无法确认物种";
-    document.getElementById("resultDescription").textContent = "请靠近目标、保持画面清晰后重试。当前通用模型不支持秋茄等具体红树植物，未确认结果不会收入图鉴。";
+    document.getElementById("resultDescription").textContent = "请靠近目标、保持画面清晰后重试。结果还必须属于当前点位目标库；未确认内容不会收入图鉴。";
     collectButton.hidden = true;
   }
   panel.hidden = false;
@@ -406,53 +602,68 @@ function showRecognitionError(message) {
 function collect() {
   if (!recognitionResult) return;
   const item = species.find(entry => entry.id === recognitionResult.speciesId);
-  const firstTask = !state.aiIdentified;
-  state.aiIdentified = true;
+  const firstDiscovery = !state.collectedSpecies.includes(item.id) && item.found !== true;
+  const previous = cardProgress(item);
+  state.cardProgress[item.id] = { xp: previous.xp + (firstDiscovery ? 40 : 20), observations: previous.observations + 1, lastSite: activeSite, lastObservedAt: new Date().toISOString() };
   state.collectedSpecies = [...new Set([...state.collectedSpecies, item.id])];
-  if (firstTask) state.points += 40;
+  state.siteProgress[activeSite].identified = true;
+  if (locationResult?.status === "verified") state.siteProgress[activeSite].gps = true;
+  state.daily.identified = true;
+  state.points += firstDiscovery ? 40 : 10;
+  const completedNow = siteTaskCount(activeSite) === 3 && !state.siteProgress[activeSite].complete;
+  let routeAdvanced = false;
+  if (completedNow) {
+    state.siteProgress[activeSite].complete = true;
+    state.points += 30;
+    if (activeSite === state.unlockedThrough && activeSite < sites.length - 1) {
+      state.unlockedThrough = activeSite + 1;
+      routeAdvanced = true;
+    }
+  }
   saveState();
   updateUI();
-  toast(`${item.name}已记录${firstTask ? " · 守护值 +40" : ""}`);
   closeCapture();
+  showUnlock(item, firstDiscovery, completedNow, routeAdvanced);
 }
 
-function openQuiz() {
-  if (state.quizDone) { toast("今日湿地问答已经完成"); return; }
-  quizIndex = 0;
-  renderQuiz();
-  document.getElementById("quizModal").hidden = false;
+function showUnlock(item, firstDiscovery, completedNow, routeAdvanced) {
+  lastUnlockedItem = item;
+  const level = cardLevel(item);
+  const overlay = document.getElementById("unlockOverlay");
+  overlay.className = `unlock-overlay rarity-${item.rarity.toLowerCase()} ${completedNow ? "site-completed" : ""} ${routeAdvanced ? "route-unlocked" : ""}`;
+  document.getElementById("unlockKicker").textContent = firstDiscovery ? (item.rarity === "SSR" ? "守护级发现 · GUARDIAN CLASS" : "NEW FIELD CARD") : "FIELD RECORD UPDATED";
+  document.getElementById("unlockImage").src = item.image;
+  document.getElementById("unlockImage").alt = item.name;
+  document.getElementById("unlockRarity").className = `rarity ${item.rarity.toLowerCase()}`;
+  document.getElementById("unlockRarity").textContent = item.rarity;
+  document.getElementById("unlockSite").textContent = `${sites[activeSite].name} · ${new Date().toLocaleDateString("zh-CN")}`;
+  document.getElementById("unlockTitle").textContent = item.name;
+  document.getElementById("unlockLatin").textContent = item.latin;
+  document.getElementById("unlockMessage").textContent = `${level.level === 5 ? "守护级" : level.name} · Lv.${level.level}`;
+  document.getElementById("unlockLevelBar").style.width = `${level.percent}%`;
+  document.getElementById("unlockLevelHint").textContent = routeAdvanced ? `${sites[activeSite].short}三项观察完成 · 下一段路线已点亮` : completedNow ? `${sites[activeSite].short}三项观察已经完成` : firstDiscovery ? "生态卡已经收入深圳湿地图鉴" : `第 ${level.observations} 次有效观察 · 卡片经验 +20`;
+  document.getElementById("acceptUnlock").textContent = routeAdvanced ? "查看下一站" : "收下卡片";
+  overlay.hidden = false;
   document.body.style.overflow = "hidden";
+  requestAnimationFrame(() => overlay.classList.add("is-visible"));
+  icons();
 }
 
-function closeQuiz() { document.getElementById("quizModal").hidden = true; document.body.style.overflow = ""; }
-
-function renderQuiz() {
-  const item = questions[quizIndex];
-  document.getElementById("quizStep").textContent = `湿地问答 · ${quizIndex + 1} / ${questions.length}`;
-  document.getElementById("quizQuestion").textContent = item.text;
-  document.getElementById("quizFeedback").textContent = "";
-  document.getElementById("quizOptions").innerHTML = item.options.map((option, index) => `<button type="button" data-answer="${index}">${option}</button>`).join("");
-  document.querySelectorAll("[data-answer]").forEach(button => button.addEventListener("click", () => answerQuiz(Number(button.dataset.answer), button)));
-}
-
-function answerQuiz(answer, button) {
-  const item = questions[quizIndex];
-  if (answer !== item.correct) { button.classList.add("is-wrong"); document.getElementById("quizFeedback").textContent = "再想一想：留意物种特征和无干扰观察原则。"; return; }
-  button.classList.add("is-correct");
-  document.querySelectorAll("[data-answer]").forEach(option => option.disabled = true);
-  document.getElementById("quizFeedback").textContent = item.note;
-  setTimeout(() => {
-    if (quizIndex < questions.length - 1) { quizIndex += 1; renderQuiz(); return; }
-    state.quizDone = true;
-    state.points += 30;
-    saveState();
+function closeUnlock() {
+  const overlay = document.getElementById("unlockOverlay");
+  const goNext = overlay.classList.contains("route-unlocked") && activeSite < sites.length - 1;
+  overlay.classList.remove("is-visible");
+  setTimeout(() => { overlay.hidden = true; }, 350);
+  document.body.style.overflow = "";
+  if (goNext) {
+    activeSite += 1;
     updateUI();
-    closeQuiz();
-    toast("问答完成 · 深圳湾公园已解锁 · 守护值 +30");
-  }, 700);
+    openSite();
+  }
 }
 
 function openSpecies(item) {
+  const level = cardLevel(item);
   document.getElementById("speciesImage").src = item.image;
   document.getElementById("speciesImage").alt = item.name;
   document.getElementById("speciesRarity").className = `rarity ${item.rarity.toLowerCase()}`;
@@ -460,12 +671,132 @@ function openSpecies(item) {
   document.getElementById("speciesLatin").textContent = item.latin;
   document.getElementById("speciesName").textContent = item.name;
   document.getElementById("speciesDescription").textContent = item.description;
+  document.getElementById("speciesLevel").textContent = `Lv.${level.level} · ${level.name}`;
+  document.getElementById("speciesXp").textContent = level.level === 5 ? `${level.xp} XP · 已达守护级` : `${level.xp} / ${level.next} XP`;
+  document.getElementById("speciesLevelBar").style.width = `${level.percent}%`;
   document.getElementById("speciesFact").textContent = item.fact;
+  document.getElementById("speciesShare").dataset.species = item.id;
+  state.daily.viewedCard = true;
+  saveState();
+  renderTasks();
   document.getElementById("speciesModal").hidden = false;
   document.body.style.overflow = "hidden";
 }
 
-function closeSpecies() { document.getElementById("speciesModal").hidden = true; document.body.style.overflow = ""; }
+function closeSpecies() {
+  document.getElementById("speciesModal").hidden = true;
+  document.body.style.overflow = document.getElementById("siteView").hidden ? "" : "hidden";
+}
+
+function loadImage(url) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = reject;
+    image.src = url;
+  });
+}
+
+function drawCover(context, image, x, y, width, height) {
+  const scale = Math.max(width / image.naturalWidth, height / image.naturalHeight);
+  const drawWidth = image.naturalWidth * scale;
+  const drawHeight = image.naturalHeight * scale;
+  context.drawImage(image, x + (width - drawWidth) / 2, y + (height - drawHeight) / 2, drawWidth, drawHeight);
+}
+
+function wrapCanvasText(context, text, x, y, maxWidth, lineHeight, maxLines = 3) {
+  const characters = [...text];
+  let line = "";
+  let row = 0;
+  characters.forEach(character => {
+    const test = line + character;
+    if (context.measureText(test).width > maxWidth && line) {
+      if (row < maxLines) context.fillText(line, x, y + row * lineHeight);
+      line = character;
+      row += 1;
+    } else line = test;
+  });
+  if (row < maxLines) context.fillText(line, x, y + row * lineHeight);
+}
+
+async function generateShareCard(item) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 1080;
+  canvas.height = 1440;
+  const context = canvas.getContext("2d");
+  const image = await loadImage(item.image);
+  const progress = cardProgress(item);
+  const observedSite = sites[progress.lastSite] || sites[activeSite];
+  const observedAt = progress.lastObservedAt ? new Date(progress.lastObservedAt) : new Date();
+  context.fillStyle = "#f4f5ed";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  drawCover(context, image, 0, 0, 1080, 790);
+  const shade = context.createLinearGradient(0, 430, 0, 800);
+  shade.addColorStop(0, "rgba(4,35,29,0)");
+  shade.addColorStop(1, "rgba(4,35,29,.82)");
+  context.fillStyle = shade;
+  context.fillRect(0, 420, 1080, 380);
+  context.fillStyle = item.rarity === "SSR" ? "#f0c95a" : item.rarity === "SR" ? "#74e1ce" : "#dff47b";
+  context.fillRect(70, 64, 162, 58);
+  context.fillStyle = "#06352c";
+  context.font = "700 30px sans-serif";
+  context.textAlign = "center";
+  context.fillText(item.rarity, 151, 103);
+  context.textAlign = "left";
+  context.fillStyle = "#ffffff";
+  context.font = "700 86px serif";
+  context.fillText(item.name, 70, 665);
+  context.font = "italic 30px sans-serif";
+  context.fillStyle = "#d9e8e1";
+  context.fillText(item.latin, 72, 720);
+  context.fillStyle = "#073a31";
+  context.font = "700 25px sans-serif";
+  context.fillText("MUDFLAT GO! · 深圳湿地观察记录", 70, 880);
+  context.font = "700 44px serif";
+  context.fillText(observedSite.name, 70, 955);
+  context.font = "400 27px sans-serif";
+  context.fillStyle = "#557067";
+  context.fillText(`${observedAt.toLocaleString("zh-CN", { dateStyle: "long", timeStyle: "short" })} · ${observedSite.habitat}`, 70, 1010);
+  context.fillStyle = "#d8ded4";
+  context.fillRect(70, 1065, 940, 2);
+  context.font = "600 34px serif";
+  context.fillStyle = "#173f36";
+  wrapCanvasText(context, item.fact, 70, 1140, 900, 55, 3);
+  context.fillStyle = "#073a31";
+  context.fillRect(70, 1342, 940, 4);
+  context.font = "600 24px sans-serif";
+  context.fillStyle = "#557067";
+  context.fillText("观察不是占有。保持距离，让真实生命继续生活。", 70, 1390);
+  shareBlob = await new Promise(resolve => canvas.toBlob(resolve, "image/png"));
+  if (shareObjectUrl) URL.revokeObjectURL(shareObjectUrl);
+  shareObjectUrl = URL.createObjectURL(shareBlob);
+  document.getElementById("sharePreview").src = shareObjectUrl;
+  document.getElementById("shareModal").hidden = false;
+  document.body.style.overflow = "hidden";
+}
+
+function downloadShareCard() {
+  if (!shareObjectUrl || !lastUnlockedItem) return;
+  const link = document.createElement("a");
+  link.href = shareObjectUrl;
+  link.download = `Mudflat-Go-${lastUnlockedItem.name}-${todayKey()}.png`;
+  link.click();
+}
+
+async function systemShareCard() {
+  if (!shareBlob || !lastUnlockedItem) return;
+  const file = new File([shareBlob], `Mudflat-Go-${lastUnlockedItem.name}.png`, { type: "image/png" });
+  if (navigator.canShare?.({ files: [file] })) {
+    const observedSite = sites[cardProgress(lastUnlockedItem).lastSite] || sites[activeSite];
+    await navigator.share({ title: `我在${observedSite.name}发现了${lastUnlockedItem.name}`, files: [file] });
+  } else downloadShareCard();
+}
+
+function closeShare() {
+  document.getElementById("shareModal").hidden = true;
+  const blockingViewOpen = !document.getElementById("unlockOverlay").hidden || !document.getElementById("speciesModal").hidden || !document.getElementById("siteView").hidden;
+  document.body.style.overflow = blockingViewOpen ? "hidden" : "";
+}
 
 function toast(message) {
   const element = document.getElementById("toast");
@@ -476,15 +807,18 @@ function toast(message) {
 }
 
 document.querySelectorAll("[data-view-target]").forEach(button => button.addEventListener("click", () => navigate(button.dataset.viewTarget)));
-document.querySelectorAll("[data-open-capture]").forEach(button => button.addEventListener("click", openCapture));
+document.querySelectorAll("[data-open-site]").forEach(button => button.addEventListener("click", openSite));
 document.querySelectorAll(".map-node").forEach(node => node.addEventListener("click", () => selectSite(Number(node.dataset.site))));
 document.getElementById("siteStrip").addEventListener("click", event => { const button = event.target.closest("[data-strip-site]"); if (button) selectSite(Number(button.dataset.stripSite)); });
-document.getElementById("enterSite").addEventListener("click", () => activeSite === 0 ? openCapture() : toast(`${sites[activeSite].name}已解锁，正式版将接入线下导航`));
+document.getElementById("enterSite").addEventListener("click", openSite);
 document.getElementById("mapAction").addEventListener("click", () => {
   const site = sites[activeSite];
   const url = `https://uri.amap.com/marker?position=${site.lng},${site.lat}&name=${encodeURIComponent(site.name)}&coordinate=gaode&callnative=0`;
   window.open(url, "_blank", "noopener");
 });
+document.getElementById("closeSite").addEventListener("click", closeSite);
+document.getElementById("startObservation").addEventListener("click", () => { closeSite(); openCapture(); });
+document.getElementById("siteNavigation").addEventListener("click", () => document.getElementById("mapAction").click());
 document.getElementById("closeCapture").addEventListener("click", closeCapture);
 document.getElementById("startCamera").addEventListener("click", startCamera);
 document.getElementById("reopenCamera").addEventListener("click", startCamera);
@@ -500,8 +834,17 @@ document.getElementById("retryCapture").addEventListener("click", () => {
   if (captureSource === "camera") startCamera();
   else setCaptureReady(true, "重新识别");
 });
-document.getElementById("closeQuiz").addEventListener("click", closeQuiz);
 document.getElementById("closeSpecies").addEventListener("click", closeSpecies);
+document.getElementById("acceptUnlock").addEventListener("click", closeUnlock);
+document.getElementById("unlockShare").addEventListener("click", () => generateShareCard(lastUnlockedItem));
+document.getElementById("speciesShare").addEventListener("click", event => {
+  lastUnlockedItem = species.find(item => item.id === event.currentTarget.dataset.species);
+  generateShareCard(lastUnlockedItem);
+});
+document.getElementById("closeShare").addEventListener("click", closeShare);
+document.getElementById("downloadShare").addEventListener("click", downloadShareCard);
+document.getElementById("systemShare").addEventListener("click", () => systemShareCard().catch(() => {}));
+document.getElementById("claimSupply").addEventListener("click", claimSupply);
 document.getElementById("photoInput").addEventListener("change", event => {
   const file = event.target.files[0];
   if (!file) return;
@@ -533,11 +876,27 @@ document.querySelectorAll("[data-filter]").forEach(button => button.addEventList
   document.querySelectorAll("[data-filter]").forEach(item => item.classList.toggle("is-active", item === button));
   renderAtlas();
 }));
-document.getElementById("posterButton").addEventListener("click", () => toast("成就海报入口已准备，正式版将接入微信分享"));
+document.getElementById("categoryFilter").addEventListener("change", event => { categoryFilter = event.target.value; renderAtlas(); });
+document.getElementById("rarityFilter").addEventListener("change", event => { rarityFilter = event.target.value; renderAtlas(); });
+document.querySelectorAll("[data-task-mode]").forEach(button => button.addEventListener("click", () => {
+  taskMode = button.dataset.taskMode;
+  document.querySelectorAll("[data-task-mode]").forEach(item => item.classList.toggle("is-active", item === button));
+  updateUI();
+}));
+document.getElementById("posterButton").addEventListener("click", () => {
+  const item = species.find(found);
+  if (!item) { toast("先完成一次生态观察，再生成分享卡"); return; }
+  lastUnlockedItem = item;
+  generateShareCard(item);
+});
 document.getElementById("creditsButton").addEventListener("click", () => window.open("CREDITS.md", "_blank", "noopener"));
-document.getElementById("resetButton").addEventListener("click", () => { state = { ...initialState, collectedSpecies: [] }; localStorage.removeItem(STORAGE_KEY); updateUI(); toast("演示进度已重置"); });
-document.querySelectorAll(".modal-backdrop").forEach(backdrop => backdrop.addEventListener("click", event => { if (event.target === backdrop) backdrop.id === "quizModal" ? closeQuiz() : closeSpecies(); }));
-document.addEventListener("keydown", event => { if (event.key === "Escape") { closeCapture(); closeQuiz(); closeSpecies(); } });
+document.getElementById("resetButton").addEventListener("click", () => { state = { ...initialState, siteProgress: emptySiteProgress(), collectedSpecies: [], cardProgress: {}, daily: { ...initialState.daily }, supply: { ...initialState.supply } }; localStorage.removeItem(STORAGE_KEY); activeSite = 0; updateUI(); toast("演示进度已重置"); });
+document.querySelectorAll(".modal-backdrop").forEach(backdrop => backdrop.addEventListener("click", event => {
+  if (event.target !== backdrop) return;
+  if (backdrop.id === "speciesModal") closeSpecies();
+  if (backdrop.id === "shareModal") closeShare();
+}));
+document.addEventListener("keydown", event => { if (event.key === "Escape") { closeCapture(); closeSite(); closeSpecies(); closeShare(); } });
 window.addEventListener("pagehide", stopCamera);
 
 updateUI();
