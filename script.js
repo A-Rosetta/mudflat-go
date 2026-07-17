@@ -1,6 +1,7 @@
 const STORAGE_KEY = "mudflat-go-compact-state-v1";
-const initialState = { points: 1280, aiIdentified: false, collectedSpecies: [], quizDone: false };
+const initialState = { points: 1280, aiIdentified: false, collectedSpecies: [], quizDone: false, blindBoxCollection: {}, blindBoxFragments: 0 };
 const MOBILE_NET_MODEL_URL = "assets/models/mobilenet/model.json";
+const BLIND_BOX_COSTS = { 1: 500, 5: 2000 };
 
 const species = [
   { id: "kandelia", name: "秋茄", latin: "Kandelia obovata", rarity: "R", image: "assets/images/kandelia-obovata.jpg", found: true, description: "深圳红树林常见的先锋树种，能够在含盐、缺氧的潮间带扎根生长。", fact: "秋茄的种子会在母树上先萌发，成熟后像一支笔一样落入滩涂。" },
@@ -12,6 +13,20 @@ const species = [
   { id: "kingfisher", name: "普通翠鸟", latin: "Alcedo atthis", rarity: "SR", image: "assets/images/mangrove-wetland.jpg", found: false, description: "常在水边停栖，以快速俯冲的方式捕捉小鱼。", fact: "鲜艳蓝色来自羽毛微观结构对光线的散射，而不是蓝色色素。" },
   { id: "snail", name: "红树拟蟹守螺", latin: "Cerithidea rhizophorarum", rarity: "R", image: "assets/images/kandelia-obovata.jpg", found: false, description: "常见于红树根部和泥滩表面，以藻类和有机碎屑为食。", fact: "退潮后观察红树根部，常能发现它们留下的细小移动痕迹。" },
   { id: "heron", name: "夜鹭", latin: "Nycticorax nycticorax", rarity: "SSR", image: "assets/images/little-egret.jpg", found: false, description: "黄昏和夜间更活跃的鹭科鸟类，白天常停在水边树丛中。", fact: "幼鸟有褐色纵纹，与成年鸟灰黑相间的羽色差别很大。" }
+];
+
+const blindBoxPool = [
+  { id: "spoonbill", name: "琵小鹭", species: "黑脸琵鹭", rarity: "SSR", weight: 3, fragments: 60, image: "assets/images/blind-box/03-spoonbill-ssr.webp" },
+  { id: "kingfisher", name: "翠小翠", species: "普通翠鸟", rarity: "SR", weight: 3, fragments: 35, image: "assets/images/blind-box/04-kingfisher-sr.webp" },
+  { id: "avocet", name: "鹬小镜", species: "反嘴鹬", rarity: "SR", weight: 4, fragments: 35, image: "assets/images/blind-box/05-avocet-sr.webp" },
+  { id: "mudskipper", name: "跳跳鱼", species: "弹涂鱼", rarity: "R", weight: 7, fragments: 20, image: "assets/images/blind-box/06-mudskipper-r.webp" },
+  { id: "greenshank", name: "鹬小青", species: "青脚鹬", rarity: "R", weight: 6, fragments: 20, image: "assets/images/blind-box/07-greenshank-r.webp" },
+  { id: "stilt", name: "鹬长腿", species: "黑翅长脚鹬", rarity: "R", weight: 5, fragments: 20, image: "assets/images/blind-box/08-stilt-r.webp" },
+  { id: "fiddler", name: "蟹大钳", species: "弧边招潮蟹", rarity: "N", weight: 24, fragments: 10, image: "assets/images/blind-box/09-fiddler-crab-n.webp" },
+  { id: "egret", name: "鹭小白", species: "白鹭", rarity: "N", weight: 20, fragments: 10, image: "assets/images/blind-box/10-egret-n.webp" },
+  { id: "stint", name: "鹬小圆", species: "红颈滨鹬", rarity: "N", weight: 15, fragments: 10, image: "assets/images/blind-box/11-red-necked-stint-n.webp" },
+  { id: "pond-heron", name: "鹭小红", species: "池鹭", rarity: "N", weight: 12, fragments: 10, image: "assets/images/blind-box/12-pond-heron-n.webp" },
+  { id: "golden-spoonbill", name: "金琵小鹭", species: "黑脸琵鹭金色变体", rarity: "CHASE", weight: 1, fragments: 100, image: "assets/images/blind-box/13-golden-spoonbill-chase.webp" }
 ];
 
 const sites = [
@@ -52,6 +67,7 @@ let cameraRequestId = 0;
 let modelPromise = null;
 let recognitionResult = null;
 let captureSource = null;
+let blindBoxDrawing = false;
 
 function readState() {
   try {
@@ -63,6 +79,8 @@ function readState() {
       migrated.collectedSpecies = [...new Set([...(saved.collectedSpecies || []), "spoonbill"])];
     }
     if (!Array.isArray(migrated.collectedSpecies)) migrated.collectedSpecies = [];
+    if (!migrated.blindBoxCollection || typeof migrated.blindBoxCollection !== "object" || Array.isArray(migrated.blindBoxCollection)) migrated.blindBoxCollection = {};
+    if (!Number.isFinite(migrated.blindBoxFragments)) migrated.blindBoxFragments = 0;
     delete migrated.captured;
     if (hasLegacyCapture) localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
     return migrated;
@@ -104,7 +122,81 @@ function updateUI() {
   renderAtlas();
   renderTasks();
   renderBadges();
+  renderBlindBoxCollection();
   icons();
+}
+
+function pickBlindBox() {
+  let roll = Math.random() * 100;
+  for (const item of blindBoxPool) {
+    roll -= item.weight;
+    if (roll < 0) return item;
+  }
+  return blindBoxPool[blindBoxPool.length - 1];
+}
+
+function renderBlindBoxCollection() {
+  const grid = document.getElementById("blindBoxGrid");
+  if (!grid) return;
+  const owned = blindBoxPool.filter(item => state.blindBoxCollection[item.id]).length;
+  document.getElementById("blindBoxOwned").textContent = owned;
+  document.getElementById("blindBoxFragments").textContent = formatNumber(state.blindBoxFragments);
+  grid.innerHTML = blindBoxPool.map((item, index) => {
+    const unlocked = Boolean(state.blindBoxCollection[item.id]);
+    return `<article class="blind-box-card rarity-${item.rarity.toLowerCase()} ${unlocked ? "is-unlocked" : "is-locked"}" style="--delay:${index * 35}ms">
+      <div><span>${item.rarity}</span><img src="${item.image}" alt="${unlocked ? `${item.name} · ${item.species}` : "未解锁湿地精灵"}"></div>
+      <small>NO.${String(index + 1).padStart(2, "0")}</small><h3>${unlocked ? item.name : "等待潮汐揭晓"}</h3><p>${unlocked ? item.species : `${item.weight}% 获取概率`}</p>
+    </article>`;
+  }).join("");
+}
+
+function buildBlindBoxConfetti(rarity) {
+  const confetti = document.getElementById("blindBoxConfetti");
+  confetti.innerHTML = Array.from({ length: rarity === "CHASE" ? 72 : 42 }, (_, index) => `<i style="--x:${(index * 47) % 100}%;--r:${(index * 83) % 360}deg;--d:${(index % 9) * 60}ms;--h:${index % 5}"></i>`).join("");
+}
+
+function renderBlindBoxResults(results) {
+  const highest = results.find(result => result.item.rarity === "CHASE") || results.find(result => result.item.rarity === "SSR") || results[0];
+  document.getElementById("blindBoxResults").innerHTML = results.map(({ item, duplicate }, index) => `<article class="reveal-card rarity-${item.rarity.toLowerCase()}" style="--delay:${index * 110}ms">
+    <div><span>${item.rarity}</span><img src="${item.image}" alt="${item.name} · ${item.species}"></div>
+    <small>${duplicate ? `重复款 · +${item.fragments} 碎片` : "NEW · 新伙伴"}</small><h3>${item.name}</h3><p>${item.species}</p>
+  </article>`).join("");
+  buildBlindBoxConfetti(highest.item.rarity);
+  document.getElementById("blindBoxReveal").dataset.rarity = highest.item.rarity.toLowerCase();
+}
+
+function closeBlindBoxReveal() {
+  document.getElementById("blindBoxReveal").hidden = true;
+  document.body.style.overflow = "";
+}
+
+function drawBlindBoxes(count) {
+  const cost = BLIND_BOX_COSTS[count];
+  if (blindBoxDrawing || !cost) return;
+  if (state.points < cost) { toast(`还差 ${formatNumber(cost - state.points)} 积分，完成任务后再来`); return; }
+  blindBoxDrawing = true;
+  document.querySelectorAll("[data-draw-count]").forEach(button => button.disabled = true);
+  document.getElementById("blindBoxStage").classList.add("is-drawing");
+  state.points -= cost;
+  const results = Array.from({ length: count }, () => {
+    const item = pickBlindBox();
+    const duplicate = Boolean(state.blindBoxCollection[item.id]);
+    if (duplicate) state.blindBoxFragments += item.fragments;
+    else state.blindBoxCollection[item.id] = 1;
+    return { item, duplicate };
+  });
+  saveState();
+  updateUI();
+  const delay = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 120 : 1850;
+  window.setTimeout(() => {
+    renderBlindBoxResults(results);
+    document.getElementById("blindBoxReveal").hidden = false;
+    document.body.style.overflow = "hidden";
+    document.getElementById("blindBoxStage").classList.remove("is-drawing");
+    document.querySelectorAll("[data-draw-count]").forEach(button => button.disabled = false);
+    blindBoxDrawing = false;
+    icons();
+  }, delay);
 }
 
 function renderMap() {
@@ -476,6 +568,9 @@ function toast(message) {
 }
 
 document.querySelectorAll("[data-view-target]").forEach(button => button.addEventListener("click", () => navigate(button.dataset.viewTarget)));
+document.querySelectorAll("[data-draw-count]").forEach(button => button.addEventListener("click", () => drawBlindBoxes(Number(button.dataset.drawCount))));
+document.getElementById("closeBlindBoxReveal").addEventListener("click", closeBlindBoxReveal);
+document.getElementById("finishBlindBoxReveal").addEventListener("click", closeBlindBoxReveal);
 document.querySelectorAll("[data-open-capture]").forEach(button => button.addEventListener("click", openCapture));
 document.querySelectorAll(".map-node").forEach(node => node.addEventListener("click", () => selectSite(Number(node.dataset.site))));
 document.getElementById("siteStrip").addEventListener("click", event => { const button = event.target.closest("[data-strip-site]"); if (button) selectSite(Number(button.dataset.stripSite)); });
@@ -535,9 +630,9 @@ document.querySelectorAll("[data-filter]").forEach(button => button.addEventList
 }));
 document.getElementById("posterButton").addEventListener("click", () => toast("成就海报入口已准备，正式版将接入微信分享"));
 document.getElementById("creditsButton").addEventListener("click", () => window.open("CREDITS.md", "_blank", "noopener"));
-document.getElementById("resetButton").addEventListener("click", () => { state = { ...initialState, collectedSpecies: [] }; localStorage.removeItem(STORAGE_KEY); updateUI(); toast("演示进度已重置"); });
+document.getElementById("resetButton").addEventListener("click", () => { state = { ...initialState, collectedSpecies: [], blindBoxCollection: {} }; localStorage.removeItem(STORAGE_KEY); closeBlindBoxReveal(); updateUI(); toast("演示进度已重置"); });
 document.querySelectorAll(".modal-backdrop").forEach(backdrop => backdrop.addEventListener("click", event => { if (event.target === backdrop) backdrop.id === "quizModal" ? closeQuiz() : closeSpecies(); }));
-document.addEventListener("keydown", event => { if (event.key === "Escape") { closeCapture(); closeQuiz(); closeSpecies(); } });
+document.addEventListener("keydown", event => { if (event.key === "Escape") { closeCapture(); closeQuiz(); closeSpecies(); closeBlindBoxReveal(); } });
 window.addEventListener("pagehide", stopCamera);
 
 updateUI();
