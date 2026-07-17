@@ -34,7 +34,7 @@
             <h1 id="exploreTitle">让每一次<br>湿地相遇，<br>成为一张<br><em>生命卡片。</em></h1>
             <p>先看到这里可能出现的鸟，再带着图鉴去寻找。拍下真实生命，通过 AI 与 GPS 校验，把一次散步变成一场可以收集的生态冒险。</p>
             <div class="hero-actions">
-              <button class="button primary" type="button" data-open-capture>从福田红树林出发 <i data-lucide="arrow-right"></i></button>
+              <button class="button primary" type="button" data-open-site>查看当前点位 <i data-lucide="arrow-right"></i></button>
               <button class="button secondary" type="button" data-view-target="collection">打开深圳图鉴</button>
             </div>
             <div class="hero-stats" aria-label="探索数据">
@@ -57,6 +57,13 @@
                 <img src="assets/map/shenzhen-835-446.png" alt=""><img src="assets/map/shenzhen-836-446.png" alt=""><img src="assets/map/shenzhen-837-446.png" alt=""><img src="assets/map/shenzhen-838-446.png" alt="">
                 <img src="assets/map/shenzhen-835-447.png" alt=""><img src="assets/map/shenzhen-836-447.png" alt=""><img src="assets/map/shenzhen-837-447.png" alt=""><img src="assets/map/shenzhen-838-447.png" alt="">
               </div>
+              <svg class="route-lines" viewBox="0 0 1000 600" preserveAspectRatio="none" aria-hidden="true">
+                <path data-route-segment="1" d="M347 250 L297 246"></path>
+                <path data-route-segment="2" d="M297 246 L197 198"></path>
+                <path data-route-segment="3" d="M197 198 L151 117"></path>
+                <path data-route-segment="4" d="M151 117 C330 60 520 90 704 159"></path>
+                <path data-route-segment="5" d="M704 159 L737 262"></path>
+              </svg>
               <div class="map-focus-card">
                 <span>当前地图焦点</span><strong id="mapFocusName">福田红树林</strong><small id="mapFocusMeta">22.51187, 114.04258 · 黑脸琵鹭限定</small>
                 <button type="button" id="enterSite">进入福田红树林</button>
@@ -101,7 +108,20 @@
             <button type="button" data-filter="found">已发现</button>
             <button type="button" data-filter="locked">待发现</button>
           </div>
-          <span>SSR · SR · R</span>
+          <div class="atlas-filters">
+            <select id="categoryFilter" aria-label="按物种类别筛选">
+              <option value="all">全部类别</option>
+              <option value="bird">鸟类</option>
+              <option value="benthic">底栖生物</option>
+              <option value="plant">红树植物</option>
+            </select>
+            <select id="rarityFilter" aria-label="按稀有度筛选">
+              <option value="all">全部稀有度</option>
+              <option value="SSR">SSR</option>
+              <option value="SR">SR</option>
+              <option value="R">R</option>
+            </select>
+          </div>
         </div>
         <div class="atlas-grid" id="atlasGrid"></div>
       </section>
@@ -168,18 +188,27 @@
 
       <section class="view" data-view="tasks" aria-labelledby="tasksTitle">
         <header class="page-head compact-head">
-          <div><span class="eyebrow">TODAY'S FIELD NOTES</span><h1 id="tasksTitle">今日任务</h1><p>完成福田红树林的三项观察，下一站深圳湾公园将自动解锁。</p></div>
-          <div class="task-ring"><strong id="taskRingValue">1</strong><span>/ 3</span></div>
+          <div><span class="eyebrow">TODAY'S FIELD NOTES</span><h1 id="tasksTitle">今日任务</h1><p id="tasksSubtitle">三件小事，保持今天的湿地观察节奏。</p></div>
+          <div class="task-ring"><strong id="taskRingValue">0</strong><span>/ 3</span></div>
         </header>
+        <section class="supply-strip" id="supplyStrip">
+          <div><span class="supply-icon"><i data-lucide="package-open"></i></span><p><small>DAILY FIELD SUPPLY</small><b id="supplyTitle">今日生态补给</b><em id="supplyHint">连续领取，第 7 天获得稀有卡框碎片</em></p></div>
+          <div class="supply-days" id="supplyDays" aria-label="七日补给进度"></div>
+          <button class="button primary" type="button" id="claimSupply">领取补给</button>
+        </section>
+        <div class="task-tabs segmented" role="group" aria-label="任务类型">
+          <button class="is-active" type="button" data-task-mode="daily">每日任务</button>
+          <button type="button" data-task-mode="site">点位任务</button>
+        </div>
         <div class="task-layout">
           <section class="task-list" id="taskList"></section>
           <aside class="next-stop">
-            <img src="assets/images/black-faced-spoonbill.jpg" alt="浅水中觅食的黑脸琵鹭">
+            <img id="nextTargetImage" src="assets/images/black-faced-spoonbill.jpg" alt="浅水中觅食的黑脸琵鹭">
             <div>
-              <span class="eyebrow">本季限定 · SSR</span>
-              <h2>寻找黑脸琵鹭</h2>
-              <p>退潮后的浅水区最容易看到它们。留意像汤匙一样的长嘴。</p>
-              <button class="button light" type="button" data-open-capture>开始寻找 <i data-lucide="scan-line"></i></button>
+              <span class="eyebrow" id="nextTargetMeta">本季限定 · SSR</span>
+              <h2 id="nextTargetTitle">寻找黑脸琵鹭</h2>
+              <p id="nextTargetHint">退潮后的浅水区最容易看到它们。留意像汤匙一样的长嘴。</p>
+              <button class="button light" type="button" data-open-site>查看目标 <i data-lucide="scan-line"></i></button>
             </div>
           </aside>
         </div>
@@ -199,7 +228,7 @@
             <div class="profile-stats">
               <span><b data-points>1,280</b><small>生态守护值</small></span>
               <span><b data-found>2</b><small>图鉴收集</small></span>
-              <span><b>5</b><small>连续探索天数</small></span>
+              <span><b id="streakCount">0</b><small>连续补给天数</small></span>
             </div>
           </section>
           <aside class="profile-menu">
@@ -214,7 +243,7 @@
     <nav class="bottom-nav" aria-label="主导航">
       <button class="is-active" type="button" data-view-target="explore"><i data-lucide="map"></i><span>探索</span></button>
       <button type="button" data-view-target="collection"><i data-lucide="panels-top-left"></i><span>图鉴</span></button>
-      <button class="capture-shortcut" type="button" data-open-capture aria-label="AI 捕捉"><i data-lucide="scan-line"></i></button>
+      <button class="capture-shortcut" type="button" data-open-site aria-label="查看当前点位目标"><i data-lucide="scan-line"></i></button>
       <button type="button" data-view-target="tasks"><i data-lucide="list-checks"></i><span>任务</span></button>
       <button type="button" data-view-target="profile"><i data-lucide="user-round"></i><span>我的</span></button>
     </nav>
@@ -226,6 +255,28 @@
       <div class="reveal-head"><span><small>TIDAL SIGNAL RECEIVED</small><h2 id="blindBoxRevealTitle">潮汐送来了新伙伴</h2></span><button type="button" id="closeBlindBoxReveal" aria-label="关闭开奖结果"><i data-lucide="x"></i></button></div>
       <div class="reveal-grid" id="blindBoxResults"></div>
       <button class="reveal-done" type="button" id="finishBlindBoxReveal">收入收藏柜 <i data-lucide="arrow-right"></i></button>
+    </div>
+  </section>
+
+  <section class="site-view" id="siteView" hidden aria-labelledby="siteTitle">
+    <header class="site-view-head">
+      <button type="button" id="closeSite"><i data-lucide="arrow-left"></i> 返回地图</button>
+      <span id="siteSequence">01 / 06</span>
+      <button type="button" id="siteNavigation"><i data-lucide="navigation"></i> 导航</button>
+    </header>
+    <div class="site-view-body">
+      <div class="site-intro">
+        <span class="eyebrow" id="siteEyebrow">CURRENT FIELD SITE</span>
+        <h1 id="siteTitle">福田红树林</h1>
+        <p id="siteDescription"></p>
+        <div class="site-meta"><span><i data-lucide="calendar-days"></i><b id="siteSeason"></b></span><span><i data-lucide="waves"></i><b id="siteHabitat"></b></span></div>
+      </div>
+      <div class="site-task-summary" id="siteTaskSummary"></div>
+      <section class="target-section">
+        <div class="section-head"><div><span class="eyebrow">FIELD TARGETS</span><h2>这里可能遇见什么</h2></div><span><b id="targetFoundCount">0</b> / <b id="targetTotalCount">5</b></span></div>
+        <div class="target-rail" id="targetRail"></div>
+      </section>
+        <div class="site-primary-action"><p><b>带着目标去观察</b><span>保持距离，不追逐、不投喂、不进入栖息区域。</span></p><button class="button primary" type="button" id="startObservation">开始观察 <i data-lucide="camera"></i></button></div>
     </div>
   </section>
 
@@ -249,9 +300,11 @@
       <div class="camera-shade"></div>
       <div class="scanner" id="scanner"><i></i><i></i><i></i><i></i><span></span></div>
       <div class="capture-readout" id="captureReadout">
-        <div class="is-complete"><span><i data-lucide="check"></i></span><p><b>拍摄位置</b><small>福田红树林保护区</small></p><em>GPS</em></div>
+        <div id="locationReadout"><span><i data-lucide="map-pin"></i></span><p><b>GPS 点位校验</b><small>拍照后请求定位</small></p><em>GPS</em></div>
+        <div id="sceneReadout"><span><i data-lucide="trees"></i></span><p><b>生态场景匹配</b><small>等待当前点位目标库</small></p><em>ECO</em></div>
         <div id="featureReadout"><span><i data-lucide="scan-search"></i></span><p><b>物种特征</b><small>等待实时照片</small></p><em>AI</em></div>
       </div>
+      <div class="scan-progress" id="scanProgress" hidden><div><span id="scanProgressBar"></span></div><p><b id="scanStage">准备分析</b><em id="scanPercent">0%</em></p></div>
       <div class="camera-tools">
         <button type="button" id="switchCamera" aria-label="切换前后摄像头" title="切换摄像头" hidden><i data-lucide="switch-camera"></i></button>
         <button type="button" id="reopenCamera" aria-label="重新打开相机" title="重新打开相机" hidden><i data-lucide="video"></i></button>
@@ -268,10 +321,14 @@
     </div>
   </section>
 
-  <div class="modal-backdrop" id="quizModal" hidden>
-    <section class="quiz-modal" role="dialog" aria-modal="true" aria-labelledby="quizTitle">
-      <header><div><span class="eyebrow" id="quizStep">湿地问答 · 1 / 3</span><h2 id="quizTitle">生态知识挑战</h2></div><button type="button" id="closeQuiz" aria-label="关闭"><i data-lucide="x"></i></button></header>
-      <div class="quiz-body"><span class="quiz-icon"><i data-lucide="bird"></i></span><h3 id="quizQuestion"></h3><div id="quizOptions"></div><p id="quizFeedback"></p></div>
+  <div class="unlock-overlay" id="unlockOverlay" hidden>
+    <div class="unlock-rings" aria-hidden="true"><i></i><i></i><i></i></div>
+    <div class="unlock-route" aria-hidden="true"><span></span><i></i><b></b></div>
+    <section class="unlock-content" role="dialog" aria-modal="true" aria-labelledby="unlockTitle">
+      <span class="unlock-kicker" id="unlockKicker">NEW FIELD CARD</span>
+      <div class="unlock-card"><div class="unlock-card-inner"><div class="unlock-card-front"><img id="unlockImage" alt=""><span class="rarity" id="unlockRarity"></span><small id="unlockSite"></small><h2 id="unlockTitle"></h2><p id="unlockLatin"></p></div><div class="unlock-card-back"><img src="assets/images/brand-mark.png" alt=""><b>Mudflat Go!</b><span>深圳湿地观察记录</span></div></div></div>
+      <div class="unlock-copy"><strong id="unlockMessage">初遇 · Lv.1</strong><div class="card-level-line"><span id="unlockLevelBar"></span></div><p id="unlockLevelHint"></p></div>
+      <div class="unlock-actions"><button class="button secondary" type="button" id="unlockShare"><i data-lucide="share-2"></i> 生成分享卡</button><button class="button primary" type="button" id="acceptUnlock">收下卡片</button></div>
     </section>
   </div>
 
@@ -279,7 +336,15 @@
     <section class="species-modal" role="dialog" aria-modal="true" aria-labelledby="speciesName">
       <button type="button" id="closeSpecies" aria-label="关闭"><i data-lucide="x"></i></button>
       <img id="speciesImage" src="assets/images/kandelia-obovata.jpg" alt="">
-      <div><span class="rarity" id="speciesRarity">R</span><p id="speciesLatin"></p><h2 id="speciesName"></h2><p id="speciesDescription"></p><blockquote id="speciesFact"></blockquote></div>
+      <div><span class="rarity" id="speciesRarity">R</span><p id="speciesLatin"></p><h2 id="speciesName"></h2><p id="speciesDescription"></p><div class="species-level"><p><b id="speciesLevel">Lv.1 · 初遇</b><span id="speciesXp">0 / 40 XP</span></p><div><span id="speciesLevelBar"></span></div></div><blockquote id="speciesFact"></blockquote><button class="button secondary wide" type="button" id="speciesShare"><i data-lucide="share-2"></i> 生成分享卡</button></div>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" id="shareModal" hidden>
+    <section class="share-modal" role="dialog" aria-modal="true" aria-labelledby="shareTitle">
+      <header><div><span class="eyebrow">FIELD CARD POSTER</span><h2 id="shareTitle">生态观察分享卡</h2></div><button type="button" id="closeShare" aria-label="关闭"><i data-lucide="x"></i></button></header>
+      <img id="sharePreview" alt="生成的生态观察分享卡">
+      <div><button class="button secondary" type="button" id="downloadShare"><i data-lucide="download"></i> 下载图片</button><button class="button primary" type="button" id="systemShare"><i data-lucide="share-2"></i> 分享</button></div>
     </section>
   </div>
 

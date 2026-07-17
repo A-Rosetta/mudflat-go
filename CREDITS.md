@@ -16,6 +16,11 @@
 - `brand-logo-source.png`：Mudflat Go! 团队品牌图，来自同团队前端仓库 https://github.com/A-Rosetta/MudflatGo 。
 - `brand-mark.png`：由上述品牌图进行非破坏性方形裁切，用于导航栏小尺寸展示。
 - `assets/map/`：OpenStreetMap 标准地图瓦片，© OpenStreetMap contributors，页面内保留可见署名。数据许可见 https://www.openstreetmap.org/copyright 。
+- `mudskipper.jpg`：`Boleophthalmus pectinirostris in Hong Kong Wetlands`，TWKnowledge，CC BY-SA 4.0，Wikimedia Commons。
+- `avicenna-marina.jpg`：`Avicennia marina (grey mangrove)`，AntanO，CC BY-SA 3.0，Wikimedia Commons。
+- `common-kingfisher.jpg`：`Common kingfisher (Alcedo atthis ispida) female`，Charles J. Sharp，CC BY-SA 4.0，Wikimedia Commons。
+- `mangrove-snail.jpg`：`Cerithidea rhizophorarum`，M Cheung，CC BY 2.0，Wikimedia Commons。
+- `night-heron.jpg`：`Black-crowned night heron at Tennōji Park in Osaka, March 2016`，Laitche，CC BY-SA 4.0，Wikimedia Commons。
 
 ## 浏览器端机器学习
 
