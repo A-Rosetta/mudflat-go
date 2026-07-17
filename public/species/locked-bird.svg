@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1200">
+<defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#273a33"/><stop offset=".55" stop-color="#b9c1b5"/><stop offset="1" stop-color="#182d27"/></linearGradient><pattern id="grain" width="36" height="36" patternUnits="userSpaceOnUse"><path d="M0 36 36 0" stroke="#fff" stroke-opacity=".035"/></pattern></defs>
+<rect width="900" height="1200" rx="46" fill="url(#bg)"/><rect width="900" height="1200" fill="url(#grain)"/>
+<g fill="none" stroke="#f4f7ee" stroke-width="11" stroke-linecap="round" stroke-linejoin="round" opacity=".92">
+<path d="M234 747c112-20 183-72 229-174 24-53 37-104 82-128 44-23 104-2 135 42 24 35 27 78 8 122"/>
+<path d="M546 444c-34 51-25 127 38 186 48 45 116 61 188 45-44 51-102 85-169 96"/>
+<path d="M245 748c56 109 177 166 304 136 80-19 137-65 171-134"/>
+<path d="M321 744c71-3 139 16 205 57"/>
+<path d="M426 615c-55 11-111 7-168-12 67-29 118-75 153-139"/>
+<path d="M676 507c41 1 78 13 111 35-40 18-77 22-112 12"/>
+<path d="M532 876c-17 53-14 96 9 129M451 883c-28 47-38 91-30 132"/>
+<path d="M531 1004c30 8 63 8 100 1M421 1014c-31 10-65 10-101 0"/>
+<circle cx="607" cy="473" r="9" fill="#f4f7ee" stroke="none"/>
+</g>
+</svg>
