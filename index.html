@@ -157,24 +157,38 @@
   <section class="capture-view" id="captureView" hidden aria-labelledby="captureTitle">
     <header class="capture-head">
       <button type="button" id="closeCapture"><i data-lucide="arrow-left"></i> 返回</button>
-      <span>AI 生态识别 · 演示模式</span>
+      <span id="cameraStatus">浏览器端 AI 生态识别</span>
       <label for="photoInput"><i data-lucide="image-up"></i> 相册</label>
       <input id="photoInput" type="file" accept="image/*" hidden>
     </header>
     <div class="camera">
-      <img id="captureImage" src="assets/images/black-faced-spoonbill.jpg" alt="待识别的黑脸琵鹭">
+      <video id="cameraVideo" autoplay muted playsinline hidden></video>
+      <img id="captureImage" alt="待识别的生态照片" hidden>
+      <canvas id="captureCanvas" hidden></canvas>
+      <div class="camera-empty" id="cameraEmpty">
+        <span><i data-lucide="camera"></i></span>
+        <h2>打开相机开始观察</h2>
+        <p>相机画面和照片只在当前设备中处理，不会上传。</p>
+        <button type="button" id="startCamera"><i data-lucide="video"></i> 打开相机</button>
+      </div>
       <div class="camera-shade"></div>
       <div class="scanner" id="scanner"><i></i><i></i><i></i><i></i><span></span></div>
       <div class="capture-readout" id="captureReadout">
         <div class="is-complete"><span><i data-lucide="check"></i></span><p><b>拍摄位置</b><small>福田红树林保护区</small></p><em>GPS</em></div>
-        <div id="featureReadout"><span><i data-lucide="scan-search"></i></span><p><b>物种特征</b><small>等待提取喙部与羽色</small></p><em>AI</em></div>
+        <div id="featureReadout"><span><i data-lucide="scan-search"></i></span><p><b>物种特征</b><small>等待实时照片</small></p><em>AI</em></div>
       </div>
-      <button class="shutter" type="button" id="identifyButton"><span><i data-lucide="scan-line"></i></span><small>开始识别</small></button>
+      <div class="camera-tools">
+        <button type="button" id="switchCamera" aria-label="切换前后摄像头" title="切换摄像头" hidden><i data-lucide="switch-camera"></i></button>
+        <button type="button" id="reopenCamera" aria-label="重新打开相机" title="重新打开相机" hidden><i data-lucide="video"></i></button>
+      </div>
+      <button class="shutter" type="button" id="identifyButton" disabled><span><i data-lucide="scan-line"></i></span><small>等待画面</small></button>
       <div class="capture-result" id="captureResult" hidden>
-        <div><span class="rarity ssr">SSR · 国家一级保护动物</span><small>96.8% 匹配</small></div>
-        <p>Platalea minor</p><h2 id="captureTitle">黑脸琵鹭</h2>
-        <p>全球濒危的珍稀水鸟。深圳湾是它们重要的越冬地。</p>
-        <button class="button primary wide" type="button" id="collectButton"><i data-lucide="sparkles"></i> 收入图鉴 · +40</button>
+        <div><span class="rarity" id="resultRarity">识别结果</span><small id="resultConfidence"></small></div>
+        <p id="resultLatin"></p><h2 id="captureTitle">识别中</h2>
+        <p id="resultDescription"></p>
+        <ul class="prediction-list" id="predictionList"></ul>
+        <button class="button primary wide" type="button" id="collectButton" hidden><i data-lucide="sparkles"></i> 收入图鉴</button>
+        <button class="button secondary wide" type="button" id="retryCapture"><i data-lucide="refresh-cw"></i> 重新拍摄</button>
       </div>
     </div>
   </section>
@@ -196,6 +210,8 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"><i data-lucide="check-circle-2"></i><span></span></div>
   <script src="assets/vendor/lucide.min.js"></script>
+  <script src="assets/vendor/tf.min.js"></script>
+  <script src="assets/vendor/mobilenet.min.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

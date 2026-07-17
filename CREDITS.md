@@ -16,3 +16,9 @@
 - `brand-logo-source.png`：Mudflat Go! 团队品牌图，来自同团队前端仓库 https://github.com/A-Rosetta/MudflatGo 。
 - `brand-mark.png`：由上述品牌图进行非破坏性方形裁切，用于导航栏小尺寸展示。
 - `assets/map/`：OpenStreetMap 标准地图瓦片，© OpenStreetMap contributors，页面内保留可见署名。数据许可见 https://www.openstreetmap.org/copyright 。
+
+## 浏览器端机器学习
+
+- TensorFlow.js 4.22.0，Apache License 2.0，https://github.com/tensorflow/tfjs 。
+- TensorFlow.js MobileNet 2.1.1，Apache License 2.0，https://github.com/tensorflow/tfjs-models/tree/master/mobilenet 。
+- MobileNet V2 0.5 ImageNet classification 模型来自 Google TensorFlow Hub/Kaggle Models；模型文件保存在 `assets/models/mobilenet/`，仅在浏览器本地执行推理。

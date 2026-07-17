@@ -1,5 +1,6 @@
 const STORAGE_KEY = "mudflat-go-compact-state-v1";
-const initialState = { points: 1280, captured: false, quizDone: false };
+const initialState = { points: 1280, aiIdentified: false, collectedSpecies: [], quizDone: false };
+const MOBILE_NET_MODEL_URL = "assets/models/mobilenet/model.json";
 
 const species = [
   { id: "kandelia", name: "秋茄", latin: "Kandelia obovata", rarity: "R", image: "assets/images/kandelia-obovata.jpg", found: true, description: "深圳红树林常见的先锋树种，能够在含盐、缺氧的潮间带扎根生长。", fact: "秋茄的种子会在母树上先萌发，成熟后像一支笔一样落入滩涂。" },
@@ -45,17 +46,35 @@ let quizIndex = 0;
 let activeSite = 0;
 let toastTimer;
 let scanTimers = [];
+let cameraStream = null;
+let cameraFacingMode = "environment";
+let cameraRequestId = 0;
+let modelPromise = null;
+let recognitionResult = null;
+let captureSource = null;
 
 function readState() {
-  try { return { ...initialState, ...JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}") }; }
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+    const migrated = { ...initialState, ...saved };
+    const hasLegacyCapture = Object.prototype.hasOwnProperty.call(saved, "captured");
+    if (saved.captured) {
+      migrated.aiIdentified = true;
+      migrated.collectedSpecies = [...new Set([...(saved.collectedSpecies || []), "spoonbill"])];
+    }
+    if (!Array.isArray(migrated.collectedSpecies)) migrated.collectedSpecies = [];
+    delete migrated.captured;
+    if (hasLegacyCapture) localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
+    return migrated;
+  }
   catch { return { ...initialState }; }
 }
 
 function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
-function siteComplete() { return state.captured && state.quizDone; }
-function found(item) { return item.found === true || (item.found === "capture" && state.captured); }
+function siteComplete() { return state.aiIdentified && state.quizDone; }
+function found(item) { return item.found === true || state.collectedSpecies.includes(item.id); }
 function foundCount() { return species.filter(found).length; }
-function taskCount() { return 1 + Number(state.captured) + Number(state.quizDone); }
+function taskCount() { return 1 + Number(state.aiIdentified) + Number(state.quizDone); }
 function badgeCount() { return 2 + Number(siteComplete()); }
 function formatNumber(value) { return new Intl.NumberFormat("zh-CN").format(value); }
 function icon(name) { return `<i data-lucide="${name}"></i>`; }
@@ -77,7 +96,7 @@ function updateUI() {
   document.getElementById("missionCount").textContent = `${tasks} / 3`;
   document.getElementById("missionBar").style.width = `${Math.round(tasks / 3 * 100)}%`;
   document.getElementById("missionTitle").textContent = complete ? "深圳湾公园已解锁" : "解锁红树林守护者";
-  document.getElementById("missionHint").textContent = complete ? "福田点位任务全部完成" : state.captured ? "还需完成湿地知识问答" : state.quizDone ? "还需完成一次 AI 识物" : "还需完成 AI 识物和湿地问答";
+  document.getElementById("missionHint").textContent = complete ? "福田点位任务全部完成" : state.aiIdentified ? "还需完成湿地知识问答" : state.quizDone ? "还需完成一次 AI 识物" : "还需完成 AI 识物和湿地问答";
   document.getElementById("taskRingValue").textContent = tasks;
   document.getElementById("levelBar").style.width = `${Math.min(100, state.points / 2000 * 100)}%`;
   document.getElementById("pointsNeeded").textContent = Math.max(0, 2000 - state.points);
@@ -124,7 +143,7 @@ function renderAtlas() {
 function renderTasks() {
   const tasks = [
     { icon: "map-pin-check", title: "抵达福田红树林", note: "GPS 定位验证完成", done: true, reward: "+20" },
-    { icon: "camera", title: "完成一次 AI 识物", note: "拍摄鸟类或红树", done: state.captured, action: "capture", reward: "+40" },
+    { icon: "camera", title: "完成一次 AI 识物", note: "相机或相册识别湿地物种", done: state.aiIdentified, action: "capture", reward: "+40" },
     { icon: "circle-help", title: "湿地知识问答", note: "答对 3 道生态问题", done: state.quizDone, action: "quiz", reward: "+30" }
   ];
   document.getElementById("taskList").innerHTML = tasks.map(task => `<article class="task-item ${task.done ? "is-done" : ""}"><span>${icon(task.done ? "check" : task.icon)}</span><div><b>${task.title}</b><small>${task.note}</small></div>${task.done ? `<em>${task.reward}</em>` : `<button type="button" data-task-action="${task.action}" aria-label="开始${task.title}">${icon("arrow-right")}</button>`}</article>`).join("");
@@ -158,11 +177,13 @@ function openCapture() {
   resetCapture();
   document.getElementById("captureView").hidden = false;
   document.body.style.overflow = "hidden";
+  startCamera();
 }
 
 function closeCapture() {
   scanTimers.forEach(clearTimeout);
   scanTimers = [];
+  stopCamera();
   document.getElementById("captureView").hidden = true;
   document.body.style.overflow = "";
 }
@@ -170,35 +191,228 @@ function closeCapture() {
 function resetCapture() {
   scanTimers.forEach(clearTimeout);
   scanTimers = [];
+  recognitionResult = null;
   document.getElementById("scanner").classList.remove("is-running");
   document.getElementById("captureResult").hidden = true;
-  document.getElementById("identifyButton").hidden = false;
+  document.getElementById("cameraStatus").textContent = "浏览器端 AI 生态识别";
   document.getElementById("featureReadout").classList.remove("is-complete");
-  document.getElementById("featureReadout").innerHTML = `<span>${icon("scan-search")}</span><p><b>物种特征</b><small>等待提取喙部与羽色</small></p><em>AI</em>`;
-  const collect = document.getElementById("collectButton");
-  collect.disabled = state.captured;
-  collect.innerHTML = state.captured ? `${icon("check")} 已收入图鉴` : `${icon("sparkles")} 收入图鉴 · +40`;
+  document.getElementById("featureReadout").innerHTML = `<span>${icon("scan-search")}</span><p><b>物种特征</b><small>等待实时照片</small></p><em>AI</em>`;
+  document.getElementById("collectButton").hidden = true;
+  document.getElementById("identifyButton").hidden = false;
+  setCaptureReady(false, "等待画面");
   icons();
 }
 
-function identify() {
-  document.getElementById("identifyButton").hidden = true;
+function setCaptureReady(ready, label) {
+  const button = document.getElementById("identifyButton");
+  button.disabled = !ready;
+  button.querySelector("small").textContent = label;
+}
+
+function stopCamera() {
+  cameraRequestId += 1;
+  if (cameraStream) cameraStream.getTracks().forEach(track => track.stop());
+  cameraStream = null;
+  const video = document.getElementById("cameraVideo");
+  video.srcObject = null;
+}
+
+async function startCamera() {
+  const empty = document.getElementById("cameraEmpty");
+  const video = document.getElementById("cameraVideo");
+  const image = document.getElementById("captureImage");
+  const reopen = document.getElementById("reopenCamera");
+  if (!navigator.mediaDevices?.getUserMedia) {
+    empty.hidden = false;
+    empty.querySelector("h2").textContent = "当前浏览器不支持相机";
+    empty.querySelector("p").textContent = "请使用相册选择照片，或换用最新版 Chrome、Safari、Edge。";
+    reopen.hidden = true;
+    return;
+  }
+  stopCamera();
+  const requestId = cameraRequestId;
+  empty.hidden = false;
+  empty.querySelector("h2").textContent = "正在请求相机权限";
+  empty.querySelector("p").textContent = "请选择允许。画面只在当前设备中处理。";
+  image.hidden = true;
+  video.hidden = true;
+  setCaptureReady(false, "等待相机");
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: cameraFacingMode }, width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: false
+    });
+    if (requestId !== cameraRequestId) {
+      stream.getTracks().forEach(track => track.stop());
+      return;
+    }
+    cameraStream = stream;
+    video.srcObject = cameraStream;
+    await video.play();
+    captureSource = "camera";
+    empty.hidden = true;
+    video.hidden = false;
+    reopen.hidden = true;
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    document.getElementById("switchCamera").hidden = devices.filter(device => device.kind === "videoinput").length < 2;
+    document.getElementById("cameraStatus").textContent = cameraFacingMode === "environment" ? "后置相机 · 本地 AI" : "前置相机 · 本地 AI";
+    document.getElementById("featureReadout").querySelector("small").textContent = "相机就绪，拍照后识别";
+    setCaptureReady(true, "拍照并识别");
+  } catch (error) {
+    if (requestId !== cameraRequestId) return;
+    stopCamera();
+    empty.hidden = false;
+    empty.querySelector("h2").textContent = error.name === "NotAllowedError" ? "没有获得相机权限" : "相机暂时无法打开";
+    empty.querySelector("p").textContent = error.name === "NotAllowedError" ? "可在浏览器地址栏重新允许相机，或直接从相册选择照片。" : "请确认摄像头未被其他应用占用，或从相册选择照片。";
+    reopen.hidden = false;
+    document.getElementById("switchCamera").hidden = true;
+    document.getElementById("cameraStatus").textContent = "相机不可用 · 可使用相册";
+  }
+  icons();
+}
+
+async function snapshotCamera() {
+  const video = document.getElementById("cameraVideo");
+  const canvas = document.getElementById("captureCanvas");
+  const image = document.getElementById("captureImage");
+  canvas.width = video.videoWidth || 1280;
+  canvas.height = video.videoHeight || 720;
+  canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
+  image.src = canvas.toDataURL("image/jpeg", .92);
+  await image.decode();
+  image.hidden = false;
+  video.hidden = true;
+  stopCamera();
+  document.getElementById("switchCamera").hidden = true;
+  document.getElementById("reopenCamera").hidden = false;
+  return image;
+}
+
+async function loadRecognitionModel() {
+  if (!modelPromise) {
+    modelPromise = (async () => {
+      if (!window.tf || !window.mobilenet) throw new Error("识别组件未加载");
+      await tf.ready();
+      return mobilenet.load({ version: 2, alpha: .5, modelUrl: MOBILE_NET_MODEL_URL, inputRange: [-1, 1] });
+    })().catch(error => {
+      modelPromise = null;
+      throw error;
+    });
+  }
+  return modelPromise;
+}
+
+function resolveWetlandPrediction(predictions) {
+  const top = predictions[0];
+  if (!top) return null;
+  const name = top.className.toLowerCase();
+  const mappings = [
+    { match: value => value === "spoonbill", threshold: .45, speciesId: "spoonbill", title: "琵鹭类（疑似黑脸琵鹭）", description: "模型确认画面属于琵鹭类。请结合黑色脸部、匙状长嘴和深圳湾观察地点进一步人工确认。" },
+    { match: value => value.includes("egret") || value.includes("heron"), threshold: .35, speciesId: "egret", title: "鹭类（接近白鹭）", description: "模型识别到鹭科鸟类特征。请继续观察羽色、腿色和嘴部形态。" },
+    { match: value => value === "fiddler crab", threshold: .55, speciesId: "fiddler", title: "招潮蟹", description: "模型识别到招潮蟹特征，雄蟹常有一只特别醒目的大螯。" },
+    { match: value => value === "snail", threshold: .55, speciesId: "snail", title: "湿地螺类", description: "模型识别到螺类特征，具体种类仍需结合壳形和栖息环境判断。" }
+  ];
+  const mapping = mappings.find(item => item.match(name) && top.probability >= item.threshold);
+  if (!mapping) return null;
+  return { ...mapping, probability: top.probability, rawClass: top.className };
+}
+
+const predictionLabels = [
+  ["spoonbill", "琵鹭类"], ["egret", "白鹭类"], ["heron", "鹭类"], ["fiddler crab", "招潮蟹"],
+  ["snail", "螺类"], ["crab", "蟹类"], ["lakeside", "湖岸场景"], ["seashore", "海岸场景"], ["valley", "山谷场景"]
+];
+
+function displayPredictionName(className) {
+  const lower = className.toLowerCase();
+  const label = predictionLabels.find(([key]) => lower.includes(key));
+  return label ? label[1] : className.split(",")[0];
+}
+
+async function identify() {
+  const button = document.getElementById("identifyButton");
+  if (button.disabled) return;
+  button.hidden = true;
+  document.getElementById("captureResult").hidden = true;
   document.getElementById("scanner").classList.add("is-running");
   const readout = document.getElementById("featureReadout");
-  readout.querySelector("small").textContent = "正在匹配喙部与羽色";
-  scanTimers.push(setTimeout(() => {
-    readout.classList.add("is-complete");
-    readout.innerHTML = `<span>${icon("check")}</span><p><b>物种特征</b><small>黑脸琵鹭 · 96.8%</small></p><em>AI</em>`;
-    icons();
-  }, 850));
-  scanTimers.push(setTimeout(() => {
+  readout.classList.remove("is-complete");
+  readout.querySelector("small").textContent = "正在加载模型并分析画面";
+  document.getElementById("cameraStatus").textContent = "本地 AI 分析中";
+  try {
+    let input = document.getElementById("captureImage");
+    if (captureSource === "camera") input = await snapshotCamera();
+    if (input.hidden || !input.naturalWidth) throw new Error("没有可识别的照片");
+    const model = await loadRecognitionModel();
+    const predictions = await model.classify(input, 5);
+    recognitionResult = resolveWetlandPrediction(predictions);
+    showRecognitionResult(predictions, recognitionResult);
+    readout.classList.toggle("is-complete", Boolean(recognitionResult));
+    readout.innerHTML = recognitionResult
+      ? `<span>${icon("check")}</span><p><b>物种特征</b><small>${recognitionResult.title} · ${(recognitionResult.probability * 100).toFixed(1)}%</small></p><em>AI</em>`
+      : `<span>${icon("circle-alert")}</span><p><b>物种特征</b><small>当前模型无法可靠确认</small></p><em>AI</em>`;
+  } catch (error) {
+    recognitionResult = null;
+    showRecognitionError(error.message || "模型加载失败，请稍后重试");
+    readout.innerHTML = `<span>${icon("triangle-alert")}</span><p><b>物种特征</b><small>识别失败，请重试</small></p><em>AI</em>`;
+  } finally {
     document.getElementById("scanner").classList.remove("is-running");
-    document.getElementById("captureResult").hidden = false;
-  }, 1650));
+    document.getElementById("cameraStatus").textContent = "识别完成 · 结果仅供辅助观察";
+    icons();
+  }
+}
+
+function showRecognitionResult(predictions, result) {
+  document.getElementById("toast").classList.remove("is-visible");
+  const panel = document.getElementById("captureResult");
+  const collectButton = document.getElementById("collectButton");
+  document.getElementById("predictionList").innerHTML = predictions.slice(0, 3).map(item => `<li><span>${displayPredictionName(item.className)}</span><b>${(item.probability * 100).toFixed(1)}%</b></li>`).join("");
+  if (result) {
+    const item = species.find(entry => entry.id === result.speciesId);
+    const alreadyFound = found(item);
+    document.getElementById("resultRarity").className = `rarity ${item.rarity.toLowerCase()}`;
+    document.getElementById("resultRarity").textContent = `${item.rarity} · 模型支持类别`;
+    document.getElementById("resultConfidence").textContent = `${(result.probability * 100).toFixed(1)}% 匹配`;
+    document.getElementById("resultLatin").textContent = item.latin;
+    document.getElementById("captureTitle").textContent = result.title;
+    document.getElementById("resultDescription").textContent = result.description;
+    collectButton.hidden = false;
+    collectButton.disabled = alreadyFound && state.aiIdentified;
+    collectButton.innerHTML = alreadyFound && state.aiIdentified ? `${icon("check")} 已记录` : `${icon("sparkles")} ${alreadyFound ? "确认识别" : "收入图鉴"} · +40`;
+  } else {
+    document.getElementById("resultRarity").className = "rarity";
+    document.getElementById("resultRarity").textContent = "未确认";
+    document.getElementById("resultConfidence").textContent = "未达到湿地类别阈值";
+    document.getElementById("resultLatin").textContent = "General model result";
+    document.getElementById("captureTitle").textContent = "暂时无法确认物种";
+    document.getElementById("resultDescription").textContent = "请靠近目标、保持画面清晰后重试。当前通用模型不支持秋茄等具体红树植物，未确认结果不会收入图鉴。";
+    collectButton.hidden = true;
+  }
+  panel.hidden = false;
+}
+
+function showRecognitionError(message) {
+  document.getElementById("toast").classList.remove("is-visible");
+  document.getElementById("resultRarity").className = "rarity";
+  document.getElementById("resultRarity").textContent = "模型不可用";
+  document.getElementById("resultConfidence").textContent = "未产生识别结果";
+  document.getElementById("resultLatin").textContent = "Local inference error";
+  document.getElementById("captureTitle").textContent = "识别没有完成";
+  document.getElementById("resultDescription").textContent = message;
+  document.getElementById("predictionList").innerHTML = "";
+  document.getElementById("collectButton").hidden = true;
+  document.getElementById("captureResult").hidden = false;
 }
 
 function collect() {
-  if (!state.captured) { state.captured = true; state.points += 40; saveState(); updateUI(); toast("SSR 黑脸琵鹭已收入图鉴 · 守护值 +40"); }
+  if (!recognitionResult) return;
+  const item = species.find(entry => entry.id === recognitionResult.speciesId);
+  const firstTask = !state.aiIdentified;
+  state.aiIdentified = true;
+  state.collectedSpecies = [...new Set([...state.collectedSpecies, item.id])];
+  if (firstTask) state.points += 40;
+  saveState();
+  updateUI();
+  toast(`${item.name}已记录${firstTask ? " · 守护值 +40" : ""}`);
   closeCapture();
 }
 
@@ -272,18 +486,47 @@ document.getElementById("mapAction").addEventListener("click", () => {
   window.open(url, "_blank", "noopener");
 });
 document.getElementById("closeCapture").addEventListener("click", closeCapture);
+document.getElementById("startCamera").addEventListener("click", startCamera);
+document.getElementById("reopenCamera").addEventListener("click", startCamera);
+document.getElementById("switchCamera").addEventListener("click", async () => {
+  cameraFacingMode = cameraFacingMode === "environment" ? "user" : "environment";
+  await startCamera();
+});
 document.getElementById("identifyButton").addEventListener("click", identify);
 document.getElementById("collectButton").addEventListener("click", collect);
+document.getElementById("retryCapture").addEventListener("click", () => {
+  recognitionResult = null;
+  document.getElementById("captureResult").hidden = true;
+  if (captureSource === "camera") startCamera();
+  else setCaptureReady(true, "重新识别");
+});
 document.getElementById("closeQuiz").addEventListener("click", closeQuiz);
 document.getElementById("closeSpecies").addEventListener("click", closeSpecies);
 document.getElementById("photoInput").addEventListener("change", event => {
   const file = event.target.files[0];
   if (!file) return;
+  stopCamera();
+  captureSource = "image";
+  recognitionResult = null;
   const image = document.getElementById("captureImage");
   if (image.dataset.localUrl) URL.revokeObjectURL(image.dataset.localUrl);
   image.dataset.localUrl = URL.createObjectURL(file);
+  const activateImage = () => {
+    image.hidden = false;
+    document.getElementById("cameraVideo").hidden = true;
+    document.getElementById("cameraEmpty").hidden = true;
+    document.getElementById("switchCamera").hidden = true;
+    document.getElementById("reopenCamera").hidden = false;
+    document.getElementById("captureResult").hidden = true;
+    document.getElementById("cameraStatus").textContent = "相册照片 · 本地 AI";
+    document.getElementById("featureReadout").querySelector("small").textContent = "照片就绪，可以开始识别";
+    setCaptureReady(true, "识别这张照片");
+    toast("照片只在当前浏览器本地处理，不会上传");
+  };
+  image.onload = activateImage;
+  image.onerror = () => toast("无法读取这张照片，请换一张图片");
   image.src = image.dataset.localUrl;
-  toast("照片只在当前浏览器本地预览，不会上传");
+  image.decode().then(activateImage).catch(() => {});
 });
 document.querySelectorAll("[data-filter]").forEach(button => button.addEventListener("click", () => {
   filter = button.dataset.filter;
@@ -292,9 +535,10 @@ document.querySelectorAll("[data-filter]").forEach(button => button.addEventList
 }));
 document.getElementById("posterButton").addEventListener("click", () => toast("成就海报入口已准备，正式版将接入微信分享"));
 document.getElementById("creditsButton").addEventListener("click", () => window.open("CREDITS.md", "_blank", "noopener"));
-document.getElementById("resetButton").addEventListener("click", () => { state = { ...initialState }; localStorage.removeItem(STORAGE_KEY); updateUI(); toast("演示进度已重置"); });
+document.getElementById("resetButton").addEventListener("click", () => { state = { ...initialState, collectedSpecies: [] }; localStorage.removeItem(STORAGE_KEY); updateUI(); toast("演示进度已重置"); });
 document.querySelectorAll(".modal-backdrop").forEach(backdrop => backdrop.addEventListener("click", event => { if (event.target === backdrop) backdrop.id === "quizModal" ? closeQuiz() : closeSpecies(); }));
 document.addEventListener("keydown", event => { if (event.key === "Escape") { closeCapture(); closeQuiz(); closeSpecies(); } });
+window.addEventListener("pagehide", stopCamera);
 
 updateUI();
 icons();
