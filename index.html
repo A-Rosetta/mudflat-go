@@ -94,7 +94,13 @@
       <section class="view" data-view="collection" aria-labelledby="collectionTitle">
         <header class="page-head">
           <div><span class="eyebrow">SHENZHEN FIELD ATLAS</span><h1 id="collectionTitle">深圳生态图鉴</h1><p>观察不是占有。每一张点亮的卡片，都来自一次保持距离的真实相遇。</p></div>
-          <div class="atlas-count"><strong data-found>2</strong><span>/ 9 已发现</span></div>
+          <div class="atlas-head-actions">
+            <button class="blind-box-entry" type="button" data-view-target="blind-box" aria-label="打开湿地盲盒">
+              <span class="blind-box-entry-glow" aria-hidden="true"></span><i data-lucide="gift"></i>
+              <span><small>积分主要用途</small><strong>湿地盲盒</strong></span><i data-lucide="sparkles"></i>
+            </button>
+            <div class="atlas-count"><strong data-found>2</strong><span>/ 9 已发现</span></div>
+          </div>
         </header>
         <div class="filter-row">
           <div class="segmented" role="group" aria-label="图鉴筛选">
@@ -118,6 +124,66 @@
           </div>
         </div>
         <div class="atlas-grid" id="atlasGrid"></div>
+      </section>
+
+      <section class="view blind-box-view" data-view="blind-box" aria-labelledby="blindBoxTitle">
+        <div class="blind-box-ambient" aria-hidden="true"><span></span><span></span><span></span></div>
+        <header class="blind-box-nav">
+          <button type="button" data-view-target="collection"><i data-lucide="arrow-left"></i> 返回图鉴</button>
+          <span><i data-lucide="sparkles"></i><b data-points>1,280</b> 积分</span>
+        </header>
+        <section class="blind-box-hero">
+          <div class="blind-box-copy">
+            <span class="blind-box-kicker">WETLAND SPIRITS · SERIES 01</span>
+            <h1 id="blindBoxTitle">把探索积分，<br>变成一场<em>潮汐惊喜。</em></h1>
+            <p>每次开启都会获得一款湿地精灵手办。普通款、稀有款与隐藏 CHASE 均已公示概率，重复款自动转化为生态碎片。</p>
+            <div class="blind-box-actions">
+              <button type="button" data-draw-count="1"><span>开启 1 盒</span><b><i data-lucide="sparkles"></i> 500</b></button>
+              <button class="is-featured" type="button" data-draw-count="5"><span>潮汐 5 连</span><b><i data-lucide="sparkles"></i> 2,000</b><small>节省 500</small></button>
+            </div>
+            <div class="blind-box-odds"><span><b>3%</b> SSR</span><span><b>1%</b> CHASE</span><span><b>11</b> 全系列</span></div>
+          </div>
+          <div class="blind-box-stage" id="blindBoxStage" aria-live="polite">
+            <img class="blind-box-stage-art" src="assets/images/blind-box/01-unboxing-hero.webp" alt="湿地盲盒开盒展示">
+            <div class="blind-box-stage-vignette"></div>
+            <div class="mystery-box" aria-hidden="true"><img src="assets/images/blind-box/02-package-flatlay.webp" alt=""><span></span></div>
+            <div class="stage-orbit" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></div>
+            <p><span></span> 点击开启，让潮汐替你选择</p>
+          </div>
+        </section>
+        <section class="blind-box-showroom" id="blindBoxShowroom" aria-labelledby="showroomTitle">
+          <header class="showroom-head">
+            <div><span class="eyebrow">INTERACTIVE SPECIMEN ROOM</span><h2 id="showroomTitle">把湿地精灵，转到你眼前。</h2><p>三款高精度模型已完成 50% 减面、Draco 网格压缩与 WebP 纹理优化。拖动观察细节，滚轮或双指缩放。</p></div>
+            <span class="showroom-performance"><i data-lucide="gauge"></i><b>97%</b><small>体积缩减</small></span>
+          </header>
+          <div class="showroom-layout">
+            <div class="showroom-selector" role="tablist" aria-label="选择三维湿地精灵">
+              <button class="is-active" type="button" role="tab" aria-selected="true" data-model-src="assets/models/blind-box/mystery-wetland-bird.glb" data-model-poster="assets/images/blind-box/poster-mystery-wetland-bird.png" data-model-name="神秘湿地精灵" data-model-species="SERIES 01 · 未定名原型"><img src="assets/images/blind-box/poster-mystery-wetland-bird.png" alt=""><span><small>MODEL 01</small><b>神秘湿地精灵</b><em>2.45 MiB</em></span></button>
+              <button type="button" role="tab" aria-selected="false" data-model-src="assets/models/blind-box/fork-tailed-sunbird.glb" data-model-poster="assets/images/blind-box/poster-fork-tailed-sunbird.png" data-model-name="叉尾太阳鸟" data-model-species="Aethopyga christinae"><img src="assets/images/blind-box/poster-fork-tailed-sunbird.png" alt=""><span><small>MODEL 02</small><b>叉尾太阳鸟</b><em>2.49 MiB</em></span></button>
+              <button type="button" role="tab" aria-selected="false" data-model-src="assets/models/blind-box/red-whiskered-bulbul.glb" data-model-poster="assets/images/blind-box/poster-red-whiskered-bulbul.png" data-model-name="红耳鹎" data-model-species="Pycnonotus jocosus"><img src="assets/images/blind-box/poster-red-whiskered-bulbul.png" alt=""><span><small>MODEL 03</small><b>红耳鹎</b><em>2.35 MiB</em></span></button>
+            </div>
+            <div class="showroom-stage">
+              <model-viewer id="blindBoxModelViewer" poster="assets/images/blind-box/poster-mystery-wetland-bird.png" alt="神秘湿地精灵 3D 模型" camera-controls auto-rotate rotation-per-second="16deg" shadow-intensity="1.25" shadow-softness=".85" exposure="1.05" environment-image="neutral" interaction-prompt="none" loading="lazy" reveal="auto"></model-viewer>
+              <div class="showroom-halo" aria-hidden="true"></div>
+              <div class="showroom-loader" id="showroomLoader"><i></i><span id="showroomStatus">滑到这里后加载 3D 模型</span></div>
+              <div class="showroom-tools">
+                <button class="is-active" type="button" id="toggleModelRotation"><i data-lucide="rotate-3d"></i><span>自动巡航</span></button>
+                <button type="button" id="resetModelCamera"><i data-lucide="focus"></i><span>重置视角</span></button>
+              </div>
+              <div class="showroom-caption"><span><small id="showroomSpecies">SERIES 01 · 未定名原型</small><strong id="showroomName">神秘湿地精灵</strong></span><em>DRACO · WEBP · LAZY</em></div>
+            </div>
+          </div>
+        </section>
+        <section class="blind-box-cabinet" aria-labelledby="blindBoxCabinetTitle">
+          <div class="section-head blind-box-section-head"><div><span class="eyebrow">YOUR TIDAL CABINET</span><h2 id="blindBoxCabinetTitle">湿地精灵收藏柜</h2></div><span><b id="blindBoxOwned">0</b> / 11</span></div>
+          <div class="blind-box-summary"><span><i data-lucide="gem"></i><b id="blindBoxFragments">0</b> 生态碎片</span><p>重复 N / R / SR / SSR / CHASE 分别转化为 10 / 20 / 35 / 60 / 100 碎片。</p></div>
+          <img class="cabinet-collection-art" src="assets/images/blind-box/14-complete-collection.webp" alt="湿地精灵完整系列陈列">
+          <div class="blind-box-grid" id="blindBoxGrid"></div>
+        </section>
+        <section class="blind-box-probability">
+          <div><span class="eyebrow">FAIR DRAW</span><h2>概率透明，惊喜不藏规则。</h2><p>每次抽取相互独立；动画仅用于呈现，不影响抽取结果。</p></div>
+          <div class="probability-bars"><span style="--rate:1"><b>CHASE</b><i></i><em>1%</em></span><span style="--rate:3"><b>SSR</b><i></i><em>3%</em></span><span style="--rate:7"><b>SR</b><i></i><em>7%</em></span><span style="--rate:18"><b>R</b><i></i><em>18%</em></span><span style="--rate:71"><b>N</b><i></i><em>71%</em></span></div>
+        </section>
       </section>
 
       <section class="view" data-view="tasks" aria-labelledby="tasksTitle">
@@ -183,6 +249,15 @@
     </nav>
   </div>
 
+  <section class="blind-box-reveal" id="blindBoxReveal" hidden aria-modal="true" role="dialog" aria-labelledby="blindBoxRevealTitle">
+    <div class="reveal-flash" aria-hidden="true"></div><div class="reveal-rays" aria-hidden="true"></div><div class="reveal-confetti" id="blindBoxConfetti" aria-hidden="true"></div>
+    <div class="reveal-panel">
+      <div class="reveal-head"><span><small>TIDAL SIGNAL RECEIVED</small><h2 id="blindBoxRevealTitle">潮汐送来了新伙伴</h2></span><button type="button" id="closeBlindBoxReveal" aria-label="关闭开奖结果"><i data-lucide="x"></i></button></div>
+      <div class="reveal-grid" id="blindBoxResults"></div>
+      <button class="reveal-done" type="button" id="finishBlindBoxReveal">收入收藏柜 <i data-lucide="arrow-right"></i></button>
+    </div>
+  </section>
+
   <section class="site-view" id="siteView" hidden aria-labelledby="siteTitle">
     <header class="site-view-head">
       <button type="button" id="closeSite"><i data-lucide="arrow-left"></i> 返回地图</button>
@@ -201,7 +276,7 @@
         <div class="section-head"><div><span class="eyebrow">FIELD TARGETS</span><h2>这里可能遇见什么</h2></div><span><b id="targetFoundCount">0</b> / <b id="targetTotalCount">5</b></span></div>
         <div class="target-rail" id="targetRail"></div>
       </section>
-      <div class="site-primary-action"><p><b>带着目标去观察</b><span>保持距离，不追逐、不投喂、不进入栖息区域。</span></p><button class="button primary" type="button" id="startObservation">开始观察 <i data-lucide="camera"></i></button></div>
+        <div class="site-primary-action"><p><b>带着目标去观察</b><span>保持距离，不追逐、不投喂、不进入栖息区域。</span></p><button class="button primary" type="button" id="startObservation">开始观察 <i data-lucide="camera"></i></button></div>
     </div>
   </section>
 
@@ -274,6 +349,7 @@
   </div>
 
   <div class="toast" id="toast" role="status" aria-live="polite"><i data-lucide="check-circle-2"></i><span></span></div>
+  <script type="module" src="assets/vendor/model-viewer.min.js"></script>
   <script src="assets/vendor/lucide.min.js"></script>
   <script src="assets/vendor/tf.min.js"></script>
   <script src="assets/vendor/mobilenet.min.js"></script>
