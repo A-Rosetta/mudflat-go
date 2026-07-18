@@ -8,6 +8,7 @@ import {
   normalizeArenaProgress,
   performArenaAction,
   performArenaEnemyTurn,
+  previewArenaAction,
   previewArenaEnemyTurn
 } from "../arena-engine.mjs";
 
@@ -16,6 +17,39 @@ const team = [
   { id: "kingfisher", name: "普通翠鸟", maxHp: 82, attack: 18, skillDamage: 39 },
   { id: "egret", name: "白鹭", maxHp: 93, attack: 13, skillDamage: 29 }
 ];
+
+const levelForVariant = (name, levelId = 1) => {
+  for (let day = 1; day <= 31; day++) {
+    const level = dailyArenaLevel(levelId, `2026-07-${String(day).padStart(2, "0")}`);
+    if (level.dailyVariant === name) return level;
+  }
+  throw new Error(`Missing arena variant: ${name}`);
+};
+
+const chargeSkill = (battle, playerId) => ({
+  ...battle,
+  players: battle.players.map(unit => unit.id === playerId ? { ...unit, mp: 100 } : unit)
+});
+
+function simulateArena(level, lineup) {
+  let battle = createArenaBattle(level, lineup);
+  while (battle.status === "player" && battle.round <= 20) {
+    for (const slot of battle.players.filter(unit => unit.hp > 0 && !battle.acted.includes(unit.id))) {
+      const intent = previewArenaEnemyTurn(battle);
+      const enemy = battle.enemies.find(unit => unit.id === intent?.attackerId && unit.hp > 0)
+        || battle.enemies.filter(unit => unit.hp > 0).sort((left, right) => left.hp / left.maxHp - right.hp / right.maxHp)[0];
+      if (!enemy) break;
+      const player = battle.players.find(unit => unit.id === slot.id);
+      const needsRecovery = battle.players.some(unit => unit.hp > 0 && (unit.hp / unit.maxHp < .78 || unit.debuff));
+      const skillReady = player.mp >= 100 && (player.id !== "egret" || needsRecovery) && (player.id !== "heron" || intent.action === "skill");
+      const action = skillReady ? "skill" : "attack";
+      battle = performArenaAction(battle, { playerId: player.id, enemyId: enemy.id, action });
+      if (battle.status !== "player") break;
+    }
+    if (battle.status === "enemy") battle = performArenaEnemyTurn(battle);
+  }
+  return battle;
+}
 
 test("arena preserves ten sequential wetland stages", () => {
   assert.equal(ARENA_LEVELS.length, 10);
@@ -32,6 +66,202 @@ test("daily arena modifiers and rewards are deterministic", () => {
   assert.deepEqual(first, repeated);
   assert.notEqual(first.dailyVariant, nextDay.dailyVariant);
   assert.ok(first.dailyReward >= first.reward);
+});
+
+test("every daily variant changes a battle rule", () => {
+  const migration = createArenaBattle(levelForVariant("候鸟活跃"), team);
+  assert.ok(migration.players.every(unit => unit.mp === 50));
+
+  const breeze = createArenaBattle(levelForVariant("微风潮沟"), team);
+  const breezeAction = performArenaAction(breeze, { playerId: "spoonbill", enemyId: breeze.enemies[0].id, action: "attack" });
+  assert.equal(breezeAction.players.find(unit => unit.id === "spoonbill").mp, 35);
+
+  let lowTide = createArenaBattle(levelForVariant("退潮窗口"), team);
+  lowTide = performArenaAction(lowTide, { playerId: "spoonbill", enemyId: lowTide.enemies[0].id, action: "attack" });
+  assert.equal(lowTide.lastEvent.damage, 19);
+  lowTide = performArenaAction(lowTide, { playerId: "kingfisher", enemyId: lowTide.enemies[0].id, action: "attack" });
+  assert.equal(lowTide.lastEvent.damage, 18);
+
+  let healedBeforeStrike = chargeSkill(createArenaBattle(levelForVariant("退潮窗口"), team), "egret");
+  healedBeforeStrike = performArenaAction(healedBeforeStrike, { playerId: "egret", enemyId: healedBeforeStrike.enemies[0].id, action: "skill" });
+  healedBeforeStrike = performArenaAction(healedBeforeStrike, { playerId: "spoonbill", enemyId: healedBeforeStrike.enemies[0].id, action: "attack" });
+  assert.equal(healedBeforeStrike.lastEvent.damage, 19);
+
+  const lunar = { ...createArenaBattle(levelForVariant("月相偏移"), team), round: 2 };
+  assert.equal(previewArenaEnemyTurn(lunar).action, "skill");
+
+  const salinityLevel = levelForVariant("盐度波动");
+  const salinity = createArenaBattle(salinityLevel, team);
+  assert.equal(salinity.enemies[0].maxHp, Math.round(salinityLevel.enemies[0].maxHp * 1.05));
+});
+
+test("stage modifiers alter the values promised by their copy", () => {
+  const stage2 = createArenaBattle(ARENA_LEVELS[1], team);
+  const armored = performArenaAction(stage2, { playerId: "spoonbill", enemyId: stage2.enemies[0].id, action: "attack" });
+  assert.equal(armored.lastEvent.damage, 9);
+  assert.equal(performArenaAction(armored, { playerId: "kingfisher", enemyId: stage2.enemies[0].id, action: "attack" }).lastEvent.damage, 18);
+
+  let stage3 = chargeSkill(createArenaBattle(ARENA_LEVELS[2], team), "spoonbill");
+  stage3 = performArenaAction(stage3, { playerId: "spoonbill", enemyId: stage3.enemies[0].id, action: "skill" });
+  assert.equal(stage3.lastEvent.damage, 42);
+
+  assert.equal(createArenaBattle(ARENA_LEVELS[3], team).enemies[0].attack, ARENA_LEVELS[3].enemies[0].attack + 2);
+  assert.equal(createArenaBattle(ARENA_LEVELS[4], team).enemies[0].maxHp, Math.round(ARENA_LEVELS[4].enemies[0].maxHp * 1.1));
+
+  const stage6 = { ...createArenaBattle(ARENA_LEVELS[5], team), round: 3 };
+  assert.equal(previewArenaEnemyTurn(stage6).damage, ARENA_LEVELS[5].enemies[2].skillDamage + 5);
+
+  let stage7 = createArenaBattle(ARENA_LEVELS[6], team);
+  stage7 = performArenaAction(stage7, { playerId: "spoonbill", enemyId: stage7.enemies[0].id, action: "attack" });
+  assert.equal(previewArenaEnemyTurn(stage7).damage, Math.round(ARENA_LEVELS[6].enemies[0].attack * 1.2));
+
+  assert.equal(createArenaBattle(ARENA_LEVELS[7], team).enemies[0].attack, ARENA_LEVELS[7].enemies[0].attack + 4);
+  assert.equal(createArenaBattle(ARENA_LEVELS[8], team).enemies[0].maxHp, Math.round(ARENA_LEVELS[8].enemies[0].maxHp * 1.15));
+  const stage10 = createArenaBattle(ARENA_LEVELS[9], team).enemies[0];
+  assert.equal(stage10.maxHp, Math.round(ARENA_LEVELS[9].enemies[0].maxHp * 1.1));
+  assert.equal(stage10.attack, Math.round(ARENA_LEVELS[9].enemies[0].attack * 1.1));
+  assert.equal(stage10.skillDamage, Math.round(ARENA_LEVELS[9].enemies[0].skillDamage * 1.1));
+});
+
+test("player action preview matches armor, execute, and support resolution", () => {
+  const armored = createArenaBattle(ARENA_LEVELS[1], team);
+  const armoredInput = { playerId: "spoonbill", enemyId: armored.enemies[0].id, action: "attack" };
+  const armorPreview = previewArenaAction(armored, armoredInput);
+  assert.equal(armorPreview.damage, 9);
+  assert.equal(performArenaAction(armored, armoredInput).lastEvent.damage, armorPreview.damage);
+
+  let execute = chargeSkill(createArenaBattle(ARENA_LEVELS[0], team), "kingfisher");
+  execute.enemies = execute.enemies.map((unit, index) => index === 0 ? { ...unit, hp: 30, maxHp: 100 } : unit);
+  const executePreview = previewArenaAction(execute, { playerId: "kingfisher", enemyId: execute.enemies[0].id, action: "skill" });
+  assert.equal(executePreview.execute, true);
+  assert.ok(executePreview.damage > team[1].skillDamage);
+
+  const support = chargeSkill(createArenaBattle(ARENA_LEVELS[0], team), "egret");
+  const supportPreview = previewArenaAction(support, { playerId: "egret", enemyId: support.enemies[0].id, action: "skill" });
+  assert.deepEqual({ damage: supportPreview.damage, healing: supportPreview.healing }, { damage: 0, healing: 0 });
+});
+
+test("player action preview rejects unavailable actions", () => {
+  const battle = createArenaBattle(ARENA_LEVELS[0], team);
+  const input = { playerId: "spoonbill", enemyId: battle.enemies[0].id };
+  assert.equal(previewArenaAction(battle, { ...input, action: "skill" }), null);
+  assert.equal(previewArenaAction(battle, { ...input, action: "invalid" }), null);
+  assert.equal(previewArenaAction({ ...battle, status: "enemy" }, { ...input, action: "attack" }), null);
+  assert.equal(previewArenaAction({ ...battle, acted: ["spoonbill"] }, { ...input, action: "attack" }), null);
+});
+
+test("egret preview and event report applied healing by target", () => {
+  let battle = chargeSkill(createArenaBattle(ARENA_LEVELS[0], team), "egret");
+  battle.players = battle.players.map(unit => ({ ...unit, hp: unit.maxHp - 1, debuff: "exposed" }));
+  const input = { playerId: "egret", enemyId: battle.enemies[0].id, action: "skill" };
+  const preview = previewArenaAction(battle, input);
+  const expected = { spoonbill: 1, kingfisher: 1, egret: 1 };
+  assert.equal(preview.healing, 3);
+  assert.deepEqual(preview.healingByTarget, expected);
+
+  const resolved = performArenaAction(battle, input);
+  assert.equal(resolved.lastEvent.healing, 3);
+  assert.deepEqual(resolved.lastEvent.healingByTarget, expected);
+  assert.deepEqual(Object.fromEntries(resolved.players.map((unit, index) => [unit.id, unit.hp - battle.players[index].hp])), expected);
+});
+
+test("spoonbill preview and event report applied barrier by target", () => {
+  let battle = chargeSkill(createArenaBattle(ARENA_LEVELS[0], team), "spoonbill");
+  battle.players = battle.players.map((unit, index) => ({ ...unit, shield: Math.round(unit.maxHp * .45) - Number(index === 0) }));
+  const input = { playerId: "spoonbill", enemyId: battle.enemies[0].id, action: "skill" };
+  const preview = previewArenaAction(battle, input);
+  const expected = { spoonbill: 1, kingfisher: 0, egret: 0 };
+  assert.equal(preview.barrier, 1);
+  assert.deepEqual(preview.barrierByTarget, expected);
+
+  const resolved = performArenaAction(battle, input);
+  assert.equal(resolved.lastEvent.barrier, 1);
+  assert.deepEqual(resolved.lastEvent.barrierByTarget, expected);
+  assert.deepEqual(Object.fromEntries(resolved.players.map((unit, index) => [unit.id, unit.shield - battle.players[index].shield])), expected);
+});
+
+test("spoonbill skill raises a barrier and intercepts the forecasted hit", () => {
+  let battle = chargeSkill(createArenaBattle(ARENA_LEVELS[0], team), "spoonbill");
+  battle.players = battle.players.map(unit => unit.id === "egret" ? { ...unit, hp: 10 } : unit);
+  battle = performArenaAction(battle, { playerId: "spoonbill", enemyId: battle.enemies[0].id, action: "skill" });
+  assert.ok(battle.players.every(unit => unit.shield > 0));
+  for (const id of ["kingfisher", "egret"]) battle = performArenaAction(battle, { playerId: id, enemyId: battle.enemies[0].id, action: "attack" });
+  const intent = previewArenaEnemyTurn(battle);
+  assert.equal(intent.targetId, "spoonbill");
+  assert.equal(intent.protectedTargetId, "egret");
+  const resolved = performArenaEnemyTurn(battle);
+  assert.ok(resolved.lastEvent.absorbed > 0);
+});
+
+test("kingfisher skill breaks toughness and executes weak targets", () => {
+  let battle = chargeSkill(createArenaBattle(ARENA_LEVELS[0], team), "kingfisher");
+  battle.enemies = battle.enemies.map((unit, index) => index === 0 ? { ...unit, hp: 30, maxHp: 100, toughness: 2, maxToughness: 2 } : unit);
+  battle = performArenaAction(battle, { playerId: "kingfisher", enemyId: battle.enemies[0].id, action: "skill" });
+  assert.equal(battle.enemies[0].toughness, 0);
+  assert.equal(battle.enemies[0].broken, true);
+  assert.ok(battle.lastEvent.damage > team[1].skillDamage);
+});
+
+test("egret skill heals the flock and cleanses exposure", () => {
+  let battle = chargeSkill(createArenaBattle(ARENA_LEVELS[0], team), "egret");
+  battle.players = battle.players.map(unit => ({ ...unit, hp: Math.round(unit.maxHp / 2), debuff: "侵蚀" }));
+  const enemyHp = battle.enemies[0].hp;
+  battle = performArenaAction(battle, { playerId: "egret", enemyId: battle.enemies[0].id, action: "skill" });
+  assert.ok(battle.players.every(unit => unit.hp > unit.maxHp / 2));
+  assert.ok(battle.players.every(unit => !unit.debuff));
+  assert.equal(battle.enemies[0].hp, enemyHp);
+  assert.equal(battle.lastEvent.healing, team.length * team[2].skillDamage);
+});
+
+test("heron skill delays exactly one forecasted enemy intent", () => {
+  const controlTeam = [{ id: "heron", name: "夜鹭", maxHp: 88, attack: 14, skillDamage: 32 }, team[1], team[2]];
+  let battle = chargeSkill(createArenaBattle(ARENA_LEVELS[0], controlTeam), "heron");
+  battle = performArenaAction(battle, { playerId: "heron", enemyId: battle.enemies[0].id, action: "skill" });
+  for (const id of ["kingfisher", "egret"]) battle = performArenaAction(battle, { playerId: id, enemyId: battle.enemies[0].id, action: "attack" });
+  assert.deepEqual(previewArenaEnemyTurn(battle).action, "delayed");
+  const hpBefore = battle.players.map(unit => unit.hp);
+  battle = performArenaEnemyTurn(battle);
+  assert.deepEqual(battle.players.map(unit => unit.hp), hpBefore);
+  assert.equal(battle.enemyDelay, 0);
+  assert.notEqual(previewArenaEnemyTurn(battle).action, "delayed");
+});
+
+test("max-level formations can clear every late-stage daily variant", () => {
+  const maxBirds = {
+    spoonbill: { id: "spoonbill", name: "黑脸琵鹭", maxHp: 232, attack: 24, skillDamage: 54 },
+    kingfisher: { id: "kingfisher", name: "普通翠鸟", maxHp: 170, attack: 33, skillDamage: 74 },
+    egret: { id: "egret", name: "白鹭", maxHp: 193, attack: 26, skillDamage: 59 },
+    heron: { id: "heron", name: "夜鹭", maxHp: 182, attack: 30, skillDamage: 68 }
+  };
+  const formations = [
+    [maxBirds.spoonbill, maxBirds.kingfisher, maxBirds.egret],
+    [maxBirds.spoonbill, maxBirds.heron, maxBirds.egret]
+  ];
+  const variantNames = ["退潮窗口", "微风潮沟", "候鸟活跃", "月相偏移", "盐度波动"];
+  for (const levelId of [8, 9, 10]) {
+    for (const variant of variantNames) {
+      const results = formations.map(team => simulateArena(levelForVariant(variant, levelId), team));
+      const victory = results.find(result => result.status === "victory");
+      assert.ok(victory, `stage ${levelId} should be clearable under ${variant}`);
+      assert.ok(victory.round <= 20);
+    }
+  }
+});
+
+test("level-10 formations are defeated by at least one stage 10 daily variant", () => {
+  const levelTenBirds = {
+    spoonbill: { id: "spoonbill", name: "Spoonbill", maxHp: 167, attack: 18, skillDamage: 41 },
+    kingfisher: { id: "kingfisher", name: "Kingfisher", maxHp: 122, attack: 24, skillDamage: 54 },
+    egret: { id: "egret", name: "Egret", maxHp: 139, attack: 19, skillDamage: 43 },
+    heron: { id: "heron", name: "Heron", maxHp: 131, attack: 22, skillDamage: 50 }
+  };
+  const formations = [
+    [levelTenBirds.spoonbill, levelTenBirds.kingfisher, levelTenBirds.egret],
+    [levelTenBirds.spoonbill, levelTenBirds.heron, levelTenBirds.egret]
+  ];
+  const variantNames = ["退潮窗口", "微风潮沟", "候鸟活跃", "月相偏移", "盐度波动"];
+  const hasUnclearableVariant = variantNames.some(variant => formations.every(lineup => simulateArena(levelForVariant(variant, 10), lineup).status === "defeat"));
+  assert.equal(hasUnclearableVariant, true);
 });
 
 test("each bird acts once before the enemy response", () => {
