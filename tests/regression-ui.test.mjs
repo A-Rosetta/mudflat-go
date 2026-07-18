@@ -68,7 +68,8 @@ test("collection cabinet exposes a display-only AI glasses preview", () => {
   assert.doesNotMatch(script, /ai-glasses-preview/);
 });
 
-test("display headings use the editorial serif and the explore message matches the campaign", () => {
-  assert.match(css, /h1, h2 \{ font-family: "Noto Serif SC", serif; \}/);
+test("display headings use ZCOOL XiaoWei and the explore message matches the campaign", () => {
+  assert.match(html, /family=ZCOOL\+XiaoWei/);
+  assert.match(css, /h1, h2 \{ font-family: "ZCOOL XiaoWei", "Noto Serif SC", serif !important; \}/);
   assert.match(html, /id="exploreTitle">让每一次<br>湿地相遇，<br>成为一张<br><em>生命卡片。<\/em>/);
 });

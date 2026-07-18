@@ -31,6 +31,8 @@ let lastReward = 0;
 let enemyTimer;
 let returnFocus;
 let audioContext;
+let arenaAnimating = false;
+let arenaAnimationToken = 0;
 
 function readRoot() {
   try {
@@ -156,6 +158,64 @@ function hpBar(unit) {
   return `<span class="arena-hp"><span><b>HP</b><em>${Math.max(0, unit.hp)} / ${unit.maxHp}</em></span><i><b style="width:${Math.max(0, unit.hp / unit.maxHp * 100)}%"></b></i></span>`;
 }
 
+const animationDelay = duration => new Promise(resolve => window.setTimeout(resolve, duration));
+
+function clearArenaEffects() {
+  arenaAnimating = false;
+  shell.classList.remove("is-animating");
+  shell.querySelectorAll(".is-launching,.is-taking-hit").forEach(node => node.classList.remove("is-launching", "is-taking-hit"));
+  document.querySelectorAll(".arena-attack-ghost,.arena-impact").forEach(node => node.remove());
+}
+
+function cancelArenaEffects() {
+  arenaAnimationToken += 1;
+  clearArenaEffects();
+}
+
+async function animateArenaAttack(attacker, target, { damage, skill = false, enemy = false }) {
+  if (!attacker || !target || window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches) return;
+  const start = attacker.getBoundingClientRect();
+  const end = target.getBoundingClientRect();
+  const flightX = end.left + end.width / 2 - start.left - start.width / 2;
+  const flightY = end.top + end.height / 2 - start.top - start.height / 2;
+  const ghost = attacker.cloneNode(true);
+  ghost.removeAttribute("data-arena-player");
+  ghost.removeAttribute("data-arena-enemy");
+  ghost.removeAttribute("disabled");
+  ghost.removeAttribute("aria-label");
+  ghost.setAttribute("aria-hidden", "true");
+  ghost.className = `arena-attack-ghost ${enemy ? "is-enemy" : "is-player"} ${skill ? "is-skill" : ""}`;
+  Object.assign(ghost.style, {
+    top: `${start.top}px`,
+    left: `${start.left}px`,
+    width: `${start.width}px`,
+    height: `${start.height}px`
+  });
+  ghost.style.setProperty("--arena-flight-x", `${flightX}px`);
+  ghost.style.setProperty("--arena-flight-y", `${flightY}px`);
+  ghost.style.setProperty("--arena-pull-x", `${flightX * -.055}px`);
+  ghost.style.setProperty("--arena-pull-y", `${flightY * -.055}px`);
+  attacker.classList.add("is-launching");
+  document.body.append(ghost);
+
+  await animationDelay(390);
+  if (!ghost.isConnected) return;
+  target.classList.add("is-taking-hit");
+  const targetRect = target.getBoundingClientRect();
+  const impact = document.createElement("span");
+  impact.className = `arena-impact ${skill ? "is-skill" : ""}`;
+  impact.setAttribute("aria-hidden", "true");
+  impact.style.left = `${targetRect.left + targetRect.width / 2}px`;
+  impact.style.top = `${targetRect.top + targetRect.height / 2}px`;
+  impact.innerHTML = `<i></i><i></i><i></i><b>-${damage}</b>`;
+  document.body.append(impact);
+  await animationDelay(350);
+  ghost.remove();
+  impact.remove();
+  attacker.classList.remove("is-launching");
+  target.classList.remove("is-taking-hit");
+}
+
 function renderBattle() {
   if (!battle) return;
   const level = dailyArenaLevel(battle.levelId);
@@ -194,32 +254,54 @@ function resultMarkup(level) {
   return `<div class="arena-result" role="alertdialog" aria-modal="true"><div><span>${victory ? "BATTLE CLEAR" : "BATTLE OVER"}</span><h2>${victory ? "潮汐防线守住了" : "暂时撤回鸟灵档案"}</h2><p>${victory ? `完成「${level.name}」，${lastReward ? `获得 ${lastReward} 积分` : "今日奖励已经领取"}` : "调整阵容或提升鸟灵等级后再次挑战。"}</p><div><button type="button" data-arena-lobby>${icon("arrow-left")} 关卡大厅</button><button type="button" data-arena-replay>${icon("rotate-cw")} 再战一次</button></div></div></div>`;
 }
 
-function act(action) {
-  if (!battle || !activePlayerId || !activeEnemyId) return;
+async function act(action) {
+  if (!battle || !activePlayerId || !activeEnemyId || arenaAnimating) return;
   const before = battle;
   const attacker = before.players.find(unit => unit.id === activePlayerId);
   const target = before.enemies.find(unit => unit.id === activeEnemyId);
-  battle = performArenaAction(before, { playerId: activePlayerId, enemyId: activeEnemyId, action });
-  if (battle === before || battle.lastEvent === before.lastEvent) return;
-  logs.push(`【${attacker.name}】${action === "skill" ? `释放「${attacker.skill}」` : "普通攻击"}，对【${target.name}】造成 ${battle.lastEvent.damage} 点伤害。`);
+  const nextBattle = performArenaAction(before, { playerId: activePlayerId, enemyId: activeEnemyId, action });
+  if (nextBattle === before || nextBattle.lastEvent === before.lastEvent) return;
+  const token = ++arenaAnimationToken;
+  arenaAnimating = true;
+  shell.classList.add("is-animating");
   sound(action === "skill" ? 330 : 180, action === "skill" ? .26 : .14, action === "skill" ? "triangle" : "square", .06);
+  await animateArenaAttack(
+    shell.querySelector(`[data-arena-player="${activePlayerId}"]`),
+    shell.querySelector(`[data-arena-enemy="${activeEnemyId}"]`),
+    { damage: nextBattle.lastEvent.damage, skill: action === "skill" }
+  );
+  if (token !== arenaAnimationToken || shell.hidden) return;
+  battle = nextBattle;
+  logs.push(`【${attacker.name}】${action === "skill" ? `释放「${attacker.skill}」` : "普通攻击"}，对【${target.name}】造成 ${battle.lastEvent.damage} 点伤害。`);
   const targetAfter = battle.enemies.find(unit => unit.id === activeEnemyId);
   if (!targetAfter || targetAfter.defeated) activeEnemyId = battle.enemies.find(unit => unit.hp > 0)?.id || "";
   activePlayerId = battle.players.find(unit => unit.hp > 0 && !battle.acted.includes(unit.id))?.id || activePlayerId;
   if (battle.status === "victory") settleVictory();
+  clearArenaEffects();
   renderBattle();
 }
 
-function resolveEnemyTurn() {
-  if (!battle || battle.status !== "enemy") return;
-  battle = performArenaEnemyTurn(battle);
-  const event = battle.lastEvent;
-  const attacker = battle.enemies.find(unit => unit.id === event.attackerId);
-  const target = battle.players.find(unit => unit.id === event.targetId);
-  logs.push(`【${attacker.name}】反击【${target.name}】，造成 ${event.damage} 点伤害。`);
+async function resolveEnemyTurn() {
+  if (!battle || battle.status !== "enemy" || arenaAnimating) return;
+  const nextBattle = performArenaEnemyTurn(battle);
+  const event = nextBattle.lastEvent;
+  const attacker = nextBattle.enemies.find(unit => unit.id === event.attackerId);
+  const target = nextBattle.players.find(unit => unit.id === event.targetId);
+  const token = ++arenaAnimationToken;
+  arenaAnimating = true;
+  shell.classList.add("is-animating");
   sound(82, .2, "sawtooth", .07);
+  await animateArenaAttack(
+    shell.querySelector(`[data-arena-enemy="${event.attackerId}"]`),
+    shell.querySelector(`[data-arena-player="${event.targetId}"]`),
+    { damage: event.damage, enemy: true }
+  );
+  if (token !== arenaAnimationToken || shell.hidden) return;
+  battle = nextBattle;
+  logs.push(`【${attacker.name}】反击【${target.name}】，造成 ${event.damage} 点伤害。`);
   activePlayerId = battle.players.find(unit => unit.hp > 0)?.id || "";
   if (battle.status === "player") logs.push("【系统】敌方行动结束，轮到我方三位鸟灵行动。");
+  clearArenaEffects();
   renderBattle();
 }
 
@@ -252,6 +334,7 @@ function openArena() {
 
 function closeArena() {
   clearTimeout(enemyTimer);
+  cancelArenaEffects();
   battle = null;
   shell.hidden = true;
   document.body.classList.remove("arena-open");

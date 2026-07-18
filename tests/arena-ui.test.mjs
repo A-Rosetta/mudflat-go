@@ -32,3 +32,13 @@ test("arena includes lobby, targets, actions, result, and responsive layouts", (
   assert.match(css, /@media \(max-width:680px\)[\s\S]*?\.arena-side > div \{ display:flex/);
   assert.match(css, /@media \(max-width:390px\)/);
 });
+
+test("player attacks and enemy counters fly between cards before battle redraw", () => {
+  assert.match(controller, /async function animateArenaAttack/);
+  assert.match(controller, /cloneNode\(true\)/);
+  assert.equal((controller.match(/await animateArenaAttack\(/g) || []).length, 2);
+  assert.match(controller, /arenaAnimationToken/);
+  assert.match(css, /@keyframes arenaCardStrike/);
+  assert.match(css, /\.arena-impact/);
+  assert.match(css, /@keyframes arenaCardHit/);
+});
