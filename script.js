@@ -1,3 +1,5 @@
+import { normalizeBlindBoxHistory, resolveBlindBoxPull } from "./blind-box-history.mjs";
+
 const STORAGE_KEY = "mudflat-go-compact-state-v1";
 const todayKey = () => new Date().toLocaleDateString("en-CA");
 const emptySiteProgress = () => Array.from({ length: 6 }, () => ({ targetsViewed: false, gps: false, identified: false, complete: false }));
@@ -13,7 +15,8 @@ const initialState = {
   blindBoxCollection: {},
   blindBoxFragments: 0,
   blindBoxPity: {},
-  blindBoxGuarantee: {}
+  blindBoxGuarantee: {},
+  blindBoxHistory: []
 };
 const MOBILE_NET_MODEL_URL = "assets/models/mobilenet/model.json";
 const BLIND_BOX_COSTS = { 1: 500, 10: 4000 };
@@ -63,6 +66,7 @@ const blindBoxPools = [
 ];
 let activeBlindBoxPool = "standard-atlas";
 let blindBoxRevealIndex = 0;
+let blindBoxRevealTimer;
 let blindBoxCabinetPage = 0;
 const BLIND_BOX_CABINET_PAGE_SIZE = 6;
 const getBlindBoxPool = () => blindBoxPools.find(pool => pool.id === activeBlindBoxPool) || blindBoxPools[0];
@@ -136,6 +140,7 @@ function readState() {
     if (!Number.isFinite(migrated.blindBoxFragments)) migrated.blindBoxFragments = 0;
     migrated.blindBoxPity = { ...(migrated.blindBoxPity || {}) };
     migrated.blindBoxGuarantee = { ...(migrated.blindBoxGuarantee || {}) };
+    migrated.blindBoxHistory = normalizeBlindBoxHistory(migrated.blindBoxHistory);
     if (!migrated.cardProgress || typeof migrated.cardProgress !== "object") migrated.cardProgress = {};
     if (!migrated.daily || migrated.daily.date !== todayKey()) migrated.daily = { date: todayKey(), supplyClaimed: false, viewedCard: false, identified: false };
     migrated.supply = { ...initialState.supply, ...(migrated.supply || {}) };
@@ -372,6 +377,52 @@ function updateBlindBoxPoolMeta() {
   document.getElementById("blindBoxHeroQuote").textContent = pool.copy;
   document.getElementById("blindBoxHeroSpecies").textContent = pool.heroSpecies || pool.subtitle;
   document.querySelectorAll("[data-pool-id]").forEach(button => { const active = button.dataset.poolId === pool.id; button.classList.toggle("is-active", active); button.setAttribute("aria-selected", String(active)); });
+  renderBlindBoxAudit();
+}
+function renderBlindBoxAudit() {
+  const pool = getBlindBoxPool();
+  const key = getBlindBoxStateKey(pool);
+  const pity = Number(state.blindBoxPity[key]) || 0;
+  const guaranteed = Boolean(state.blindBoxGuarantee[key]);
+  const history = normalizeBlindBoxHistory(state.blindBoxHistory);
+  document.getElementById("blindBoxAuditPool").textContent = pool.title;
+  document.getElementById("blindBoxAuditPoolHint").textContent = pool.carryOver ? "限定池共享计数" : "本池独立计数";
+  document.getElementById("blindBoxAuditPity").textContent = `${pity} / 10`;
+  document.getElementById("blindBoxAuditPityHint").textContent = pity === 9 ? "下一次必得珍稀藏品" : `至多再开启 ${10 - pity} 次`;
+  document.getElementById("blindBoxAuditGuarantee").textContent = guaranteed ? "已触发" : "未触发";
+  document.getElementById("blindBoxAuditGuaranteeHint").textContent = guaranteed ? "下一件珍稀藏品必为主推" : pool.carryOver ? "未命中主推后自动生效" : "常驻池不设主推保障";
+  document.getElementById("blindBoxHistoryCount").textContent = history[0]?.sequence || 0;
+  const list = document.getElementById("blindBoxHistory");
+  if (!history.length) {
+    const empty = document.createElement("li");
+    empty.className = "is-empty";
+    empty.textContent = "尚无开启记录";
+    list.replaceChildren(empty);
+    return;
+  }
+  list.replaceChildren(...history.map(entry => {
+    const row = document.createElement("li");
+    row.className = `rarity-${String(entry.rarity || "n").toLowerCase()}`;
+    const sequence = document.createElement("span");
+    sequence.className = "history-sequence";
+    sequence.textContent = `#${String(entry.sequence).padStart(4, "0")}`;
+    const result = document.createElement("span");
+    result.className = "history-result";
+    const resultTitle = document.createElement("b");
+    resultTitle.textContent = `${entry.rarity === "CHASE" ? "典藏" : entry.rarity} · ${entry.itemName}`;
+    const resultMeta = document.createElement("small");
+    resultMeta.textContent = `${entry.poolTitle}${entry.duplicate ? ` · 重复 +${entry.duplicateFragments} 碎片` : " · 首次获得"}`;
+    result.append(resultTitle, resultMeta);
+    const proof = document.createElement("span");
+    proof.className = "history-proof";
+    const pityChange = document.createElement("b");
+    pityChange.textContent = `保底 ${entry.pityBefore} → ${entry.pityAfter}`;
+    const provenance = document.createElement("small");
+    provenance.textContent = entry.guaranteeUsed ? "主推保障生效" : entry.forcedByPity ? "十次保底生效" : entry.featured ? "命中主推" : "常规概率";
+    proof.append(pityChange, provenance);
+    row.append(sequence, result, proof);
+    return row;
+  }));
 }
 function updateBlindBoxEconomyUI() {
   document.querySelectorAll("[data-points]").forEach(node => node.textContent = formatNumber(state.points));
@@ -443,7 +494,7 @@ function drawBlindBoxes(count) {
   if (blindBoxDrawing || !cost) return;
   if (state.points < cost) { toast('积分不足，还差 ' + formatNumber(cost - state.points)); return; }
   blindBoxDrawing = true; document.querySelectorAll('[data-draw-count]').forEach(button => button.disabled = true); document.getElementById('blindBoxStage').classList.add('is-drawing'); state.points -= cost;
-  const results = Array.from({ length: count }, () => { const item = pickBlindBox(); const duplicate = Boolean(state.blindBoxCollection[item.id]); const duplicateFragments = item.fragments; const rare = ['SSR', 'CHASE'].includes(item.rarity); const key = getBlindBoxStateKey(pool); state.blindBoxCollection[item.id] = (Number(state.blindBoxCollection[item.id]) || 0) + 1; if (duplicate) state.blindBoxFragments += item.fragments; state.blindBoxPity[key] = rare ? 0 : (Number(state.blindBoxPity[key]) || 0) + 1; if (pool.carryOver && rare) state.blindBoxGuarantee[key] = !pool.upIds.includes(item.id); else if (!pool.carryOver && rare) state.blindBoxGuarantee[key] = false; return { item, duplicate, duplicateFragments }; });
+  const results = Array.from({ length: count }, () => { const item = pickBlindBox(); return resolveBlindBoxPull(state, { pool, item, stateKey: getBlindBoxStateKey(pool) }); });
   saveState(); updateBlindBoxEconomyUI();
   const delay = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 120 : 1850;
   window.setTimeout(() => { renderBlindBoxResults(results); document.getElementById('blindBoxReveal').hidden = false; document.body.style.overflow = 'hidden'; blindBoxRevealTimer = window.setInterval(() => { if (blindBoxRevealIndex >= results.length - 1) { clearInterval(blindBoxRevealTimer); return; } revealBlindBoxCard(); }, window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 180 : 700); document.getElementById('blindBoxStage').classList.remove('is-drawing'); document.querySelectorAll('[data-draw-count]').forEach(button => button.disabled = false); blindBoxDrawing = false; icons(); }, delay);
@@ -1504,7 +1555,7 @@ document.getElementById("posterButton").addEventListener("click", () => {
   generateShareCard(item);
 });
 document.getElementById("creditsButton").addEventListener("click", () => window.open("CREDITS.md", "_blank", "noopener"));
-document.getElementById("resetButton").addEventListener("click", () => { stopBirdSound(); clearTimeout(alarmTimer); state = { ...initialState, siteProgress: emptySiteProgress(), collectedSpecies: [], cardProgress: {}, daily: { ...initialState.daily }, supply: { ...initialState.supply }, alarm: { ...initialState.alarm }, blindBoxCollection: {}, blindBoxFragments: 0, blindBoxPity: {}, blindBoxGuarantee: {} }; localStorage.removeItem(STORAGE_KEY); activeSite = 0; closeBlindBoxReveal(); updateUI(); toast("守护值已初始化，到账 300,000 积分"); });
+document.getElementById("resetButton").addEventListener("click", () => { stopBirdSound(); clearTimeout(alarmTimer); state = { ...initialState, siteProgress: emptySiteProgress(), collectedSpecies: [], cardProgress: {}, daily: { ...initialState.daily }, supply: { ...initialState.supply }, alarm: { ...initialState.alarm }, blindBoxCollection: {}, blindBoxFragments: 0, blindBoxPity: {}, blindBoxGuarantee: {}, blindBoxHistory: [] }; localStorage.removeItem(STORAGE_KEY); activeSite = 0; closeBlindBoxReveal(); updateUI(); toast("守护值已初始化，到账 300,000 积分"); });
 document.querySelectorAll(".modal-backdrop").forEach(backdrop => backdrop.addEventListener("click", event => {
   if (event.target !== backdrop) return;
   if (backdrop.id === "speciesModal") closeSpecies();

@@ -214,9 +214,9 @@
           <img class="cabinet-collection-art" src="assets/images/blind-box/14-complete-collection.webp" loading="lazy" decoding="async" alt="湿地藏品完整系列陈列">
           <div class="blind-box-grid" id="blindBoxGrid"></div>
         </section>
-        <section class="blind-box-panel blind-box-probability" data-blind-box-panel-content="rules" hidden>
-          <div><span class="eyebrow">概率公示</span><h2>获取概率与保底规则</h2><p>各次开启相互独立；演出效果不影响获取结果。</p></div>
-          <div class="probability-bars"><span style="--rate:.01"><b>典藏款</b><i></i><em>0.01%</em></span><span style="--rate:.99"><b>SSR</b><i></i><em>0.99%</em></span><span style="--rate:4"><b>SR</b><i></i><em>4%</em></span><span style="--rate:20"><b>R</b><i></i><em>20%</em></span><span style="--rate:75"><b>N</b><i></i><em>75%</em></span></div>
+        <section class="blind-box-panel blind-box-probability" data-blind-box-panel-content="rules" aria-labelledby="blindBoxRulesTitle" hidden>
+          <div class="blind-box-rules-overview"><span class="eyebrow">规则与回溯</span><h2 id="blindBoxRulesTitle">每次开启，都有据可查</h2><p>概率、保底进度与主推保障同步记录；演出效果不影响获取结果。</p><div class="blind-box-audit-status" aria-live="polite"><article><small>当前典藏</small><b id="blindBoxAuditPool">潮间万象</b><span id="blindBoxAuditPoolHint">本池独立计数</span></article><article><small>珍稀保底</small><b id="blindBoxAuditPity">0 / 10</b><span id="blindBoxAuditPityHint">至多再开启 10 次</span></article><article><small>主推保障</small><b id="blindBoxAuditGuarantee">未触发</b><span id="blindBoxAuditGuaranteeHint">常驻池不设主推保障</span></article></div></div>
+          <div class="blind-box-audit"><div class="probability-bars" aria-label="基础获取概率"><span style="--rate:.01"><b>典藏款</b><i></i><em>0.01%</em></span><span style="--rate:.99"><b>SSR</b><i></i><em>0.99%</em></span><span style="--rate:4"><b>SR</b><i></i><em>4%</em></span><span style="--rate:20"><b>R</b><i></i><em>20%</em></span><span style="--rate:75"><b>N</b><i></i><em>75%</em></span></div><section class="blind-box-history-shell" aria-labelledby="blindBoxHistoryTitle"><header><span><small>设备内记录</small><b id="blindBoxHistoryTitle">最近开启</b></span><em>累计 <b id="blindBoxHistoryCount">0</b> 次</em></header><ol class="blind-box-history" id="blindBoxHistory" aria-live="polite"><li class="is-empty">尚无开启记录</li></ol></section></div>
         </section>
       </section>
 
@@ -456,6 +456,6 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"><i data-lucide="check-circle-2"></i><span></span></div>
   <script src="assets/vendor/lucide.min.js"></script>
-  <script src="script.js"></script>
+  <script type="module" src="script.js"></script>
 </body>
 </html>

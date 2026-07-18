@@ -6,6 +6,8 @@ import { stat } from "node:fs/promises";
 const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
 const script = await readFile(new URL("../script.js", import.meta.url), "utf8");
 const styles = await readFile(new URL("../styles.css", import.meta.url), "utf8");
+const historyScript = await readFile(new URL("../blind-box-history.mjs", import.meta.url), "utf8");
+const historyModule = await import(new URL("../blind-box-history.mjs", import.meta.url)).catch(() => ({}));
 const wrangler = await readFile(new URL("../wrangler.jsonc", import.meta.url), "utf8").catch(() => "");
 const assetsIgnore = await readFile(new URL("../.assetsignore", import.meta.url), "utf8").catch(() => "");
 
@@ -42,7 +44,7 @@ test("blind-box collection persists with the main state", () => {
 });
 
 test("duplicate pulls retain collection counts for spirit resonance", () => {
-  assert.match(script, /state\.blindBoxCollection\[item\.id\] = \(Number\(state\.blindBoxCollection\[item\.id\]\) \|\| 0\) \+ 1/);
+  assert.match(historyScript, /state\.blindBoxCollection\[item\.id\] = \(Number\(state\.blindBoxCollection\[item\.id\]\) \|\| 0\) \+ 1/);
 });
 
 test("Cloudflare deploy points Wrangler at the static asset root", () => {
@@ -96,21 +98,84 @@ test("blind-box supports multiple concurrent UP pools with independent metadata"
   assert.match(script, /activeBlindBoxPool/);
 });
 
+test("blind-box history migration rejects malformed data and caps newest records", () => {
+  const normalize = historyModule.normalizeBlindBoxHistory || (() => null);
+  const entries = Array.from({ length: 55 }, (_, index) => ({ sequence: 55 - index, poolId: "tide-watch", itemId: `item-${index}` }));
+  assert.deepEqual(normalize("invalid"), []);
+  assert.deepEqual(normalize(entries).map(entry => entry.sequence), Array.from({ length: 50 }, (_, index) => 55 - index));
+});
+
+test("blind-box pull resolution records exact pity and guarantee provenance", () => {
+  assert.equal(typeof historyModule.resolveBlindBoxPull, "function");
+  const state = {
+    blindBoxCollection: { spoonbill: 1 },
+    blindBoxFragments: 10,
+    blindBoxPity: { "shared-up": 9 },
+    blindBoxGuarantee: { "shared-up": true },
+    blindBoxHistory: []
+  };
+  const pool = { id: "tide-watch", title: "潮有信", carryOver: true, upIds: ["spoonbill"] };
+  const item = { id: "spoonbill", name: "琵小鹭", rarity: "SSR", fragments: 60 };
+
+  const result = historyModule.resolveBlindBoxPull(state, { pool, item, stateKey: "shared-up", pulledAt: 1721376000000 });
+
+  assert.equal(result.duplicate, true);
+  assert.equal(state.blindBoxCollection.spoonbill, 2);
+  assert.equal(state.blindBoxFragments, 70);
+  assert.equal(state.blindBoxPity["shared-up"], 0);
+  assert.equal(state.blindBoxGuarantee["shared-up"], false);
+  assert.deepEqual(state.blindBoxHistory[0], {
+    sequence: 1,
+    pulledAt: 1721376000000,
+    poolId: "tide-watch",
+    poolTitle: "潮有信",
+    itemId: "spoonbill",
+    itemName: "琵小鹭",
+    rarity: "SSR",
+    duplicate: true,
+    duplicateFragments: 60,
+    featured: true,
+    carryOver: true,
+    pityBefore: 9,
+    pityAfter: 0,
+    forcedByPity: true,
+    guaranteeBefore: true,
+    guaranteeUsed: true,
+    guaranteeAfter: false
+  });
+});
+
+test("rules panel exposes persisted guarantee status and recent pull audit", () => {
+  assert.match(html, /id="blindBoxAuditPity"/);
+  assert.match(html, /id="blindBoxAuditGuarantee"/);
+  assert.match(html, /id="blindBoxHistoryCount"/);
+  assert.match(html, /id="blindBoxHistory"/);
+  assert.match(script, /import \{ normalizeBlindBoxHistory, resolveBlindBoxPull \}/);
+  assert.match(script, /blindBoxHistory: \[\]/);
+  assert.match(script, /migrated\.blindBoxHistory = normalizeBlindBoxHistory\(migrated\.blindBoxHistory\)/);
+  assert.match(script, /resolveBlindBoxPull\(state, \{ pool, item, stateKey: getBlindBoxStateKey\(pool\) \}\)/);
+  assert.match(script, /function renderBlindBoxAudit\(\)/);
+  assert.match(styles, /\.blind-box-audit/);
+  assert.match(styles, /\.blind-box-history/);
+});
+
 test("UP pool draws expose pity, guarantee, carry-over, and duplicate conversion", () => {
-  assert.match(script, /blindBoxPity/);
-  assert.match(script, /guaranteedUp/);
-  assert.match(script, /carryOver/);
-  assert.match(script, /duplicateFragments/);
+  const source = `${script}\n${historyScript}`;
+  assert.match(source, /blindBoxPity/);
+  assert.match(source, /guaranteedUp/);
+  assert.match(source, /carryOver/);
+  assert.match(source, /duplicateFragments/);
   assert.match(html, /id="blindBoxPity"/);
   assert.match(html, /id="blindBoxRules"/);
   assert.match(script, /pity >= 9/);
   assert.match(script, /BLIND_BOX_CARRY_KEY/);
-  assert.match(script, /pool\.carryOver && rare/);
+  assert.match(source, /pool\.carryOver && rare/);
 });
 
 test("blind-box reveals cards sequentially and supports skip", () => {
   assert.match(script, /revealBlindBoxCard/);
   assert.match(script, /blindBoxRevealIndex/);
+  assert.match(script, /let blindBoxRevealTimer;/);
   assert.match(script, /data-reveal-skip/);
   assert.match(html, /data-reveal-skip/);
 });
@@ -153,6 +218,14 @@ test("mobile ten-pulls use a five-by-two result overview", () => {
   assert.match(styles, /@media\(max-width:520px\)\{[\s\S]*?\.reveal-grid\{grid-template-columns:repeat\(5,minmax\(0,1fr\)\)/);
   assert.match(styles, /@media\(max-width:520px\)\{[\s\S]*?\.reveal-card p\{display:none\}/);
   assert.match(script, /重复 · \+.*碎片/);
+});
+
+test("mobile pull audit keeps verification text readable", () => {
+  assert.match(styles, /\.blind-box-audit-status small\{font-size:9px!important\}/);
+  assert.match(styles, /\.blind-box-panel\.blind-box-probability \.blind-box-audit \.probability-bars b\{font-size:9px\}/);
+  assert.match(styles, /\.blind-box-history \.history-sequence\{font-size:9px\}/);
+  assert.match(styles, /\.blind-box-history b\{font-size:10px\}/);
+  assert.match(styles, /\.blind-box-history small,\.blind-box-history \.history-proof b\{font-size:9px\}/);
 });
 
 test("blind-box workspace switches four full-height panels without page scrolling", () => {

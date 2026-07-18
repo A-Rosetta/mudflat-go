@@ -13,7 +13,7 @@ const [html, controller, css, script] = await Promise.all([
 test("bird sanctuary exposes a separate wetland arena", () => {
   assert.match(html, /id="openBirdArena"/);
   assert.match(html, /id="birdArenaShell"[^>]+aria-label="湿地竞技"/);
-  assert.match(html, /<script src="script\.js"><\/script>/);
+  assert.match(html, /<script type="module" src="script\.js"><\/script>/);
   assert.match(script, /import\("\.\/game\.js"\)\.then\(\(\) => import\("\.\/arena\.js"\)\)/);
   assert.match(controller, /arena-engine\.mjs/);
   assert.match(controller, /mudflat-go-compact-state-v1/);
