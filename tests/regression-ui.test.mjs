@@ -55,6 +55,14 @@ test("recognition uses the Cloudflare endpoint without browser model runtimes", 
   assert.match(html, /识别时会上传压缩照片至 Cloudflare AI/);
 });
 
+test("atlas includes three cloud-recognizable Shenzhen shorebirds without overcrowding sites", () => {
+  assert.match(script, /id: "dunlin", name: "黑腹滨鹬"/);
+  assert.match(script, /id: "redshank", name: "红脚鹬"/);
+  assert.match(script, /id: "turnstone", name: "翻石鹬"/);
+  const targetLists = [...script.matchAll(/targets: \[([^\]]+)\]/g)].map(match => match[1].split(",").length);
+  assert.deepEqual(targetLists, [6, 5, 4, 5, 4, 6]);
+});
+
 test("primary navigation stays focused while collection exposes secondary features", () => {
   const navigation = html.match(/<nav class="bottom-nav"[\s\S]*?<\/nav>/)?.[0] || "";
   assert.equal((navigation.match(/<button\b/g) || []).length, 5);

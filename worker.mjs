@@ -10,7 +10,10 @@ const SPECIES = {
   avicenna: { label: "白骨壤", latin: "Avicennia marina" },
   kingfisher: { label: "普通翠鸟", latin: "Alcedo atthis" },
   snail: { label: "红树拟蟹守螺", latin: "Cerithidea rhizophorarum" },
-  heron: { label: "夜鹭", latin: "Nycticorax nycticorax" }
+  heron: { label: "夜鹭", latin: "Nycticorax nycticorax" },
+  dunlin: { label: "黑腹滨鹬", latin: "Calidris alpina" },
+  redshank: { label: "红脚鹬", latin: "Tringa totanus" },
+  turnstone: { label: "翻石鹬", latin: "Arenaria interpres" }
 };
 
 const json = (body, status = 200) => Response.json(body, {
@@ -24,7 +27,10 @@ const CLASS_MAPPINGS = [
   { terms: ["night heron"], speciesId: "heron", reason: "云端分类器检测到夜鹭类轮廓，请结合红眼、黑冠与灰色背部人工复核。" },
   { terms: ["kingfisher"], speciesId: "kingfisher", reason: "云端分类器检测到翠鸟类轮廓，请结合蓝绿色背部与长直嘴人工复核。" },
   { terms: ["fiddler crab"], speciesId: "fiddler", reason: "云端分类器检测到招潮蟹特征，请结合雄蟹不对称大螯人工复核。" },
-  { terms: ["snail"], speciesId: "snail", reason: "云端分类器检测到螺类特征，具体种类仍需结合壳形和栖息环境判断。" }
+  { terms: ["snail"], speciesId: "snail", reason: "云端分类器检测到螺类特征，具体种类仍需结合壳形和栖息环境判断。" },
+  { terms: ["red-backed sandpiper"], speciesId: "dunlin", reason: "云端分类器检测到黑腹滨鹬特征，请结合微向下弯的黑嘴与腹部羽色人工复核。" },
+  { terms: ["redshank"], speciesId: "redshank", reason: "云端分类器检测到红脚鹬特征，请结合橙红色双腿与基部红色的长嘴人工复核。" },
+  { terms: ["ruddy turnstone"], speciesId: "turnstone", reason: "云端分类器检测到翻石鹬特征，请结合短楔形嘴、橙色腿与斑驳背羽人工复核。" }
 ];
 
 function parseModelResult(output) {

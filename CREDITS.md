@@ -8,6 +8,9 @@
 - `kandelia-obovata.jpg`：Minghong，CC BY-SA 4.0，https://commons.wikimedia.org/wiki/File:Kandelia_obovata_1.jpg
 - `fiddler-crab.jpg`：Charles J. Sharp，CC BY-SA 4.0，https://commons.wikimedia.org/wiki/File:Compressed_fiddler_crab_(Uca_coarctata)_male.jpg
 - `little-egret.jpg`：Laitche，CC BY-SA 4.0，https://commons.wikimedia.org/wiki/File:Egretta_garzetta_2015-06-17.jpg
+- `dunlin.jpg`：Hans Hillewaert，CC BY-SA 3.0，https://commons.wikimedia.org/wiki/File:Calidris_alpina_(foraging).jpg
+- `common-redshank.jpg`：Andreas Trepte，CC BY-SA 2.5，https://commons.wikimedia.org/wiki/File:Common_Redshank_Tringa_totanus.jpg
+- `ruddy-turnstone.jpg`：Charles J. Sharp，CC BY-SA 4.0，https://commons.wikimedia.org/wiki/File:Ruddy_turnstone_(Arenaria_interpres_morinella).jpg
 
 物种图片仅用于腾讯青科实训营课题原型展示。若用于公开部署或商业用途，需继续遵守对应许可证的署名、相同方式共享等要求。
 

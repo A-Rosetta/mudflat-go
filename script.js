@@ -27,7 +27,10 @@ const species = [
   { id: "avicenna", name: "白骨壤", latin: "Avicennia marina", rarity: "R", category: "plant", season: "全年", image: "assets/images/avicenna-marina.jpg", found: false, description: "耐盐能力很强的红树植物，根系能帮助稳定海岸并提供栖息空间。", fact: "它的呼吸根会从泥滩中向上伸出，像一支支短小的铅笔。" },
   { id: "kingfisher", name: "普通翠鸟", latin: "Alcedo atthis", rarity: "SR", category: "bird", season: "全年", image: "assets/images/common-kingfisher.jpg", found: false, description: "常在水边停栖，以快速俯冲的方式捕捉小鱼。", fact: "鲜艳蓝色来自羽毛微观结构对光线的散射，而不是蓝色色素。" },
   { id: "snail", name: "红树拟蟹守螺", latin: "Cerithidea rhizophorarum", rarity: "R", category: "benthic", season: "全年", image: "assets/images/mangrove-snail.jpg", found: false, description: "常见于红树根部和泥滩表面，以藻类和有机碎屑为食。", fact: "退潮后观察红树根部，常能发现它们留下的细小移动痕迹。" },
-  { id: "heron", name: "夜鹭", latin: "Nycticorax nycticorax", rarity: "SSR", category: "bird", season: "全年", image: "assets/images/night-heron.jpg", found: false, description: "黄昏和夜间更活跃的鹭科鸟类，白天常停在水边树丛中。", fact: "幼鸟有褐色纵纹，与成年鸟灰黑相间的羽色差别很大。" }
+  { id: "heron", name: "夜鹭", latin: "Nycticorax nycticorax", rarity: "SSR", category: "bird", season: "全年", image: "assets/images/night-heron.jpg", found: false, description: "黄昏和夜间更活跃的鹭科鸟类，白天常停在水边树丛中。", fact: "幼鸟有褐色纵纹，与成年鸟灰黑相间的羽色差别很大。" },
+  { id: "dunlin", name: "黑腹滨鹬", latin: "Calidris alpina", rarity: "R", category: "bird", season: "9-5月", image: "assets/images/dunlin.jpg", found: false, description: "深圳湾常见的小型迁徙鸻鹬，退潮时会成群在泥滩快速取食。", fact: "繁殖羽腹部有醒目的黑斑，非繁殖羽则以灰褐色为主。" },
+  { id: "redshank", name: "红脚鹬", latin: "Tringa totanus", rarity: "R", category: "bird", season: "9-5月", image: "assets/images/common-redshank.jpg", found: false, description: "常在浅水和潮沟边活动的中型鹬类，橙红色双腿是重要辨识特征。", fact: "受惊时会发出响亮而连续的警戒声，也是湿地环境变化的敏感观察对象。" },
+  { id: "turnstone", name: "翻石鹬", latin: "Arenaria interpres", rarity: "SR", category: "bird", season: "9-5月", image: "assets/images/ruddy-turnstone.jpg", found: false, description: "偏爱岩岸和潮池的小型鸻鹬，会翻动石块、贝壳和海藻寻找食物。", fact: "它的中文名直接来自独特的翻石取食动作。" }
 ];
 
 const birdSounds = {
@@ -52,12 +55,12 @@ const blindBoxPool = [
 ];
 
 const sites = [
-  { name: "福田红树林", short: "福田", feature: "黑脸琵鹭越冬栖息地", lat: 22.51187, lng: 114.04258, limited: "黑脸琵鹭限定", habitat: "潮间带 · 红树林", season: "候鸟季 11-3月", description: "从红树与浅水交界开始，辨认匙状长嘴、白色涉禽和泥滩上的微小生命。", targets: ["spoonbill", "egret", "kandelia", "fiddler", "snail"] },
-  { name: "深圳湾公园", short: "深圳湾", feature: "城市滨海候鸟长廊", lat: 22.51897, lng: 113.97260, limited: "候鸟观察路线", habitat: "滨海浅水 · 草坡", season: "全年可观察", description: "沿城市海岸寻找停栖与觅食的水鸟，用距离和耐心换取更自然的观察。", targets: ["egret", "spoonbill", "heron", "kingfisher"] },
+  { name: "福田红树林", short: "福田", feature: "黑脸琵鹭越冬栖息地", lat: 22.51187, lng: 114.04258, limited: "黑脸琵鹭限定", habitat: "潮间带 · 红树林", season: "候鸟季 11-3月", description: "从红树与浅水交界开始，辨认匙状长嘴、白色涉禽和泥滩上的微小生命。", targets: ["spoonbill", "egret", "dunlin", "kandelia", "fiddler", "snail"] },
+  { name: "深圳湾公园", short: "深圳湾", feature: "城市滨海候鸟长廊", lat: 22.51897, lng: 113.97260, limited: "候鸟观察路线", habitat: "滨海浅水 · 草坡", season: "全年可观察", description: "沿城市海岸寻找停栖与觅食的水鸟，用距离和耐心换取更自然的观察。", targets: ["egret", "spoonbill", "heron", "kingfisher", "redshank"] },
   { name: "西湾红树林", short: "西湾", feature: "红树林与海上日落", lat: 22.59626, lng: 113.83211, limited: "弹涂鱼限定", habitat: "泥滩 · 红树边缘", season: "退潮前后", description: "退潮后的开阔泥滩会留下洞穴和爬痕，适合观察弹涂鱼与底栖生物。", targets: ["mudskipper", "fiddler", "snail", "kandelia"] },
   { name: "海上田园", short: "田园", feature: "鱼塘红树林生态", lat: 22.72819, lng: 113.76665, limited: "亲子生态研学", habitat: "鱼塘 · 芦苇 · 红树", season: "全年可观察", description: "鱼塘、芦苇和红树林形成多层栖息地，留意水边静候的小型鸟类。", targets: ["kingfisher", "egret", "heron", "kandelia", "fiddler"] },
   { name: "坝光银叶树", short: "坝光", feature: "深圳古老红树群落", lat: 22.65986, lng: 114.54395, limited: "古树守护卡", habitat: "古红树群落", season: "全年可观察", description: "在成熟红树群落里观察叶片、呼吸根和潮水留下的生态分层。", targets: ["avicenna", "kandelia", "snail", "kingfisher"] },
-  { name: "东涌湿地", short: "东涌", feature: "原始海岸与潮池", lat: 22.49256, lng: 114.59048, limited: "潮池生物限定", habitat: "河口 · 潮池 · 海岸", season: "低潮时段", description: "从河口走向潮池，寻找咸淡水交汇处的鸟类、螺类与两栖泥滩生物。", targets: ["mudskipper", "snail", "egret", "kingfisher", "avicenna"] }
+  { name: "东涌湿地", short: "东涌", feature: "原始海岸与潮池", lat: 22.49256, lng: 114.59048, limited: "潮池生物限定", habitat: "河口 · 潮池 · 海岸", season: "低潮时段", description: "从河口走向潮池，寻找咸淡水交汇处的鸟类、螺类与两栖泥滩生物。", targets: ["mudskipper", "snail", "egret", "kingfisher", "turnstone", "avicenna"] }
 ];
 
 const badges = [

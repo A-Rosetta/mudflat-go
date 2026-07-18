@@ -20,6 +20,12 @@ test("cloud recognition rejects unknown ids and clamps confidence", () => {
   assert.equal(result.confidence, 0);
 });
 
+test("cloud recognition maps common Shenzhen shorebird labels", () => {
+  assert.equal(parseModelResult([{ label: "red-backed sandpiper", score: .82 }]).speciesId, "dunlin");
+  assert.equal(parseModelResult([{ label: "redshank", score: .78 }]).speciesId, "redshank");
+  assert.equal(parseModelResult([{ label: "ruddy turnstone", score: .74 }]).speciesId, "turnstone");
+});
+
 test("cloud recognition safely handles malformed model output", () => {
   const result = parseModelResult({ description: "This image is unclear." });
   assert.equal(result.speciesId, null);
