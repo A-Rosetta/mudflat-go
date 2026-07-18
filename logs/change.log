@@ -14,3 +14,4 @@
 [2026-07-18 14:02:29 +0800 CST] Unified primary display headings with the existing high-contrast Chinese serif and replaced the explore hero statement with the four-line wetland encounter message.
 [2026-07-18 14:18:20 +0800 CST] Added bidirectional arena card-flight attacks with impact flashes, slash bursts, damage numbers, input locking, and reduced-motion handling; switched every primary heading to ZCOOL XiaoWei.
 [2026-07-18 14:43:52 +0800 CST] Matched the field-site detail background and sticky header to the explore page's pale forest-green gradient while preserving its content cards and actions.
+[2026-07-18 21:05:44 +0800 CST] Raised new, reset, and one-time-migrated demo balances to 88,888,888 points; added capture-screen background prewarming for both local recognition models; verified one-time balance migration, post-spend persistence, mobile layouts, model loading, and the full 83-test suite.

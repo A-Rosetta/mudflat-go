@@ -30,17 +30,24 @@ test("mobile panorama has an in-page reset above the cross-origin iframe", () =>
   assert.match(css, /\.panorama-reset \{[^}]*z-index:3/);
 });
 
-test("new and reset sessions consistently start with 3000 points", () => {
-  assert.match(script, /points: 3000/);
-  assert.match(game, /saved\.points = 3000/);
-  assert.match(game, /root\.points \?\? 3000/);
-  assert.match(arena, /input\.points == null \? 3000 : input\.points/);
-  assert.equal((html.match(/data-points>3,000/g) || []).length, 4);
-  assert.match(html, /id="spiritPoints">3,000/);
-  assert.doesNotMatch(html, /data-points>1,280|id="spiritPoints">1,280/);
-  assert.doesNotMatch(script, /points: 1280/);
-  assert.doesNotMatch(game, /saved\.points = 1280|root\.points \?\? 1280/);
-  assert.doesNotMatch(arena, /input\.points == null \? 1280/);
+test("new sessions start with 88888888 points and legacy balances migrate once", () => {
+  assert.match(script, /const INITIAL_POINTS = 88888888/);
+  assert.match(script, /saved\.demoPointsVersion !== DEMO_POINTS_VERSION/);
+  assert.match(script, /migrated\.points = Math\.max\(Number\(migrated\.points\) \|\| 0, INITIAL_POINTS\)/);
+  assert.match(script, /migrated\.demoPointsVersion = DEMO_POINTS_VERSION/);
+  assert.doesNotMatch(script, /Math\.max\(Number\(migrated\.points\) \|\| 0, INITIAL_POINTS\)[\s\S]*?return migrated;[\s\S]*?Math\.max\(Number\(migrated\.points\) \|\| 0, INITIAL_POINTS\)/);
+  assert.match(game, /saved\.points = INITIAL_POINTS/);
+  assert.match(game, /root\.points \?\? INITIAL_POINTS/);
+  assert.match(arena, /input\.points == null \? INITIAL_POINTS : input\.points/);
+  assert.equal((html.match(/data-points>88,888,888/g) || []).length, 4);
+  assert.match(html, /id="spiritPoints">88,888,888/);
+  assert.doesNotMatch(script, /points: 3000/);
+  assert.doesNotMatch(game, /saved\.points = 3000|root\.points \?\? 3000/);
+  assert.doesNotMatch(arena, /input\.points == null \? 3000/);
+});
+
+test("recognition models warm in the background only after capture opens", () => {
+  assert.match(script, /function openCapture\(\)[\s\S]*?startCamera\(\);[\s\S]*?Promise\.allSettled\(\[loadRecognitionModel\(\), loadBirdRecognitionModel\(\)\]\)/);
 });
 
 test("primary navigation stays focused while collection exposes secondary features", () => {

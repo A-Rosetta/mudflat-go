@@ -1,8 +1,11 @@
 const STORAGE_KEY = "mudflat-go-compact-state-v1";
+const INITIAL_POINTS = 88888888;
+const DEMO_POINTS_VERSION = 2;
 const todayKey = () => new Date().toLocaleDateString("en-CA");
 const emptySiteProgress = () => Array.from({ length: 6 }, () => ({ targetsViewed: false, gps: false, identified: false, complete: false }));
 const initialState = {
-  points: 3000,
+  points: INITIAL_POINTS,
+  demoPointsVersion: DEMO_POINTS_VERSION,
   unlockedThrough: 1,
   siteProgress: emptySiteProgress(),
   collectedSpecies: [],
@@ -104,6 +107,12 @@ function readState() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
     const migrated = { ...initialState, ...saved };
+    let shouldPersist = false;
+    if (saved.demoPointsVersion !== DEMO_POINTS_VERSION) {
+      migrated.points = Math.max(Number(migrated.points) || 0, INITIAL_POINTS);
+      migrated.demoPointsVersion = DEMO_POINTS_VERSION;
+      shouldPersist = true;
+    }
     const hasLegacyCapture = Object.prototype.hasOwnProperty.call(saved, "captured");
     if (saved.captured || saved.aiIdentified) {
       migrated.siteProgress = emptySiteProgress();
@@ -123,7 +132,7 @@ function readState() {
     delete migrated.aiIdentified;
     delete migrated.quizDone;
     delete migrated.captured;
-    if (hasLegacyCapture || Object.prototype.hasOwnProperty.call(saved, "aiIdentified")) localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
+    if (shouldPersist || hasLegacyCapture || Object.prototype.hasOwnProperty.call(saved, "aiIdentified")) localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
     return migrated;
   }
   catch { return { ...initialState }; }
@@ -589,6 +598,7 @@ function openCapture() {
   document.getElementById("captureView").hidden = false;
   document.body.style.overflow = "hidden";
   startCamera();
+  window.setTimeout(() => { void Promise.allSettled([loadRecognitionModel(), loadBirdRecognitionModel()]); }, 300);
 }
 
 function closeCapture() {

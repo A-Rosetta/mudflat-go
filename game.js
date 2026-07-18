@@ -19,6 +19,7 @@ import {
 } from "./progression-engine.mjs";
 
 const STORAGE_KEY = "mudflat-go-compact-state-v1";
+const INITIAL_POINTS = 88888888;
 const STARTERS = ["spoonbill", "kingfisher", "egret"];
 const DEFAULT_LEVELS = { spoonbill: 5, kingfisher: 5, egret: 5, heron: 4 };
 const affinityNames = { tide: "潮", wing: "羽", grove: "林" };
@@ -77,7 +78,7 @@ function readRootState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     const saved = JSON.parse(raw || "{}");
-    if (!raw && saved.points == null) saved.points = 3000;
+    if (!raw && saved.points == null) saved.points = INITIAL_POINTS;
     return saved && typeof saved === "object" && !Array.isArray(saved) ? saved : {};
   } catch {
     return {};
@@ -170,7 +171,7 @@ function renderSanctuary() {
   const { root, spirits } = currentState();
   if (!birds[selectedSpirit] || !isUnlocked(root, selectedSpirit)) selectedSpirit = spirits.team[0];
   audioEnabled = spirits.audioEnabled;
-  document.getElementById("spiritPoints").textContent = formatNumber(root.points ?? 3000);
+  document.getElementById("spiritPoints").textContent = formatNumber(root.points ?? INITIAL_POINTS);
   document.getElementById("spiritFragments").textContent = formatNumber(root.blindBoxFragments);
   document.querySelectorAll("[data-battle-encounter]").forEach(button => {
     const active = button.dataset.battleEncounter === selectedEncounter;
@@ -658,7 +659,7 @@ function finishBattle(victory, session = battleSession) {
       spirits.wins++;
       const multiplier = battle.boss ? 2 : 1;
       root.spiritMaterials.trainingDew += 8 * multiplier;
-      root.points = Number(root.points ?? 3000) + 160 * multiplier;
+      root.points = Number(root.points ?? INITIAL_POINTS) + 160 * multiplier;
       root.spiritMaterials.insightPlume += multiplier;
       root.spiritMaterials.skillFeather += 3 * multiplier;
       root.spiritMaterials.traceSeed += 2 * multiplier;

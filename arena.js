@@ -12,6 +12,7 @@ import {
 } from "./arena-engine.mjs";
 
 const STORAGE_KEY = "mudflat-go-compact-state-v1";
+const INITIAL_POINTS = 88888888;
 const STARTERS = ["spoonbill", "kingfisher", "egret"];
 const DEFAULT_LEVELS = { spoonbill: 5, kingfisher: 5, egret: 5, heron: 4 };
 const birdCopy = {
@@ -46,7 +47,7 @@ function readRoot() {
 function normalizeRoot(input) {
   const source = input.birdSpirits && typeof input.birdSpirits === "object" ? input.birdSpirits : {};
   const levels = source.profiles ? source.levels : { ...DEFAULT_LEVELS, ...(source.levels || {}) };
-  const root = normalizeProgression({ ...input, points: input.points == null ? 3000 : input.points, birdSpirits: { ...source, levels } }, Object.keys(birdCopy));
+  const root = normalizeProgression({ ...input, points: input.points == null ? INITIAL_POINTS : input.points, birdSpirits: { ...source, levels } }, Object.keys(birdCopy));
   const saved = Array.isArray(source.team) ? [...new Set(source.team)] : [];
   const team = saved.filter(id => birdCopy[id]).slice(0, 3);
   for (const id of STARTERS) if (team.length < 3 && !team.includes(id)) team.push(id);
