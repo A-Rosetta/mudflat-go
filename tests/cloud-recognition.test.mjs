@@ -40,17 +40,17 @@ test("worker sends valid images to Workers AI and returns constrained JSON", asy
     body: form
   }), {
     AI: { run: async (model, input) => {
-      assert.equal(model, "@cf/moondream/moondream3.1-9B-A2B");
+      assert.equal(model, "@cf/mistralai/mistral-small-3.1-24b-instruct");
       receivedInput = input;
       return { answer: '{"speciesId":"egret","confidence":0.91,"reason":"白色鹭鸟与黑腿清晰"}' };
     }}
   });
   assert.equal(response.status, 200);
   assert.equal((await response.json()).result.speciesId, "egret");
-  assert.equal(receivedInput.task, "query");
-  assert.equal(receivedInput.image, "data:image/jpeg;base64,/9j/2Q==");
-  assert.match(receivedInput.question, /unknown=无法可靠确认/);
-  assert.match(receivedInput.question, /尖嘴白鸟绝不能选 spoonbill/);
+  assert.equal(receivedInput.messages[0].content[1].image_url.url, "data:image/jpeg;base64,/9j/2Q==");
+  assert.match(receivedInput.messages[0].content[0].text, /unknown=无法可靠确认/);
+  assert.match(receivedInput.messages[0].content[0].text, /尖嘴白鸟绝不能选 spoonbill/);
+  assert.deepEqual(receivedInput.guided_json.required, ["speciesId", "confidence", "reason"]);
 });
 
 test("worker rejects cross-origin and oversized recognition requests", async () => {

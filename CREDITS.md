@@ -28,7 +28,7 @@
 
 - TensorFlow.js 4.22.0，Apache License 2.0，https://github.com/tensorflow/tfjs 。
 - TensorFlow.js MobileNet 2.1.1，Apache License 2.0，https://github.com/tensorflow/tfjs-models/tree/master/mobilenet 。
-- 当前在线识别使用 Cloudflare Workers AI 的 `@cf/moondream/moondream3.1-9B-A2B` 视觉模型，由同源 Worker 接收压缩照片并返回受限的图鉴候选；浏览器不再加载本地推理运行时或模型权重。
+- 当前在线识别使用 Cloudflare Workers AI 的 `@cf/mistralai/mistral-small-3.1-24b-instruct` 视觉模型，由同源 Worker 接收压缩照片并返回受限的图鉴候选；浏览器不再加载本地推理运行时或模型权重。
 - 仓库中保留的 MobileNet、`chriamue/bird-species-classifier` 和 ONNX Runtime Web 文件是早期本地识别方案的归档素材，当前页面不会请求，Cloudflare 部署也会排除这些文件。
 
 ## 鸟鸣录音
