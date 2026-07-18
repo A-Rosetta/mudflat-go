@@ -6,6 +6,7 @@ import { stat } from "node:fs/promises";
 const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
 const script = await readFile(new URL("../script.js", import.meta.url), "utf8");
 const wrangler = await readFile(new URL("../wrangler.jsonc", import.meta.url), "utf8").catch(() => "");
+const assetsIgnore = await readFile(new URL("../.assetsignore", import.meta.url), "utf8").catch(() => "");
 
 test("atlas exposes the glowing blind-box entry and view", () => {
   assert.match(html, /data-view-target="blind-box"/);
@@ -46,6 +47,12 @@ test("duplicate pulls retain collection counts for spirit resonance", () => {
 test("Cloudflare deploy points Wrangler at the static asset root", () => {
   assert.match(wrangler, /"compatibility_date": "2026-07-17"/);
   assert.match(wrangler, /"directory": "\."/);
+});
+
+test("Cloudflare asset upload excludes repository and local build metadata", () => {
+  assert.match(assetsIgnore, /^\.git\/?$/m);
+  assert.match(assetsIgnore, /^\.wrangler\/?$/m);
+  assert.match(assetsIgnore, /^output\/?$/m);
 });
 
 test("four unlocked GLB models are lazy-loaded while the chase model stays locked", async () => {
