@@ -1,4 +1,5 @@
 import { normalizeBlindBoxHistory, resolveBlindBoxPull } from "./blind-box-history.mjs";
+import { pickBlindBoxItem } from "./blind-box-engine.mjs";
 
 const STORAGE_KEY = "mudflat-go-compact-state-v1";
 const todayKey = () => new Date().toLocaleDateString("en-CA");
@@ -340,25 +341,12 @@ function updateUI() {
   icons();
 }
 
-function pickBlindBoxByWeight(items, getWeight = item => item.weight) {
-  let roll = Math.random() * items.reduce((sum, item) => sum + getWeight(item), 0);
-  for (const item of items) { roll -= getWeight(item); if (roll < 0) return item; }
-  return items[items.length - 1];
-}
 function pickBlindBox() {
   const pool = getBlindBoxPool();
   const key = getBlindBoxStateKey(pool);
   const pity = Number(state.blindBoxPity[key]) || 0;
   const guaranteedUp = Boolean(state.blindBoxGuarantee[key]);
-  const rareItems = pool.items.filter(item => ["SSR", "CHASE"].includes(item.rarity));
-  const featuredRareItems = rareItems.filter(item => pool.upIds.includes(item.id));
-  if (guaranteedUp && featuredRareItems.length && pity >= 9) return pickBlindBoxByWeight(featuredRareItems);
-  if (pity >= 9) return pickBlindBoxByWeight(rareItems);
-  const rarityBuckets = ["CHASE", "SSR", "SR", "R", "N"].map(rarity => ({ rarity, weight: blindBoxPool.filter(item => item.rarity === rarity).reduce((sum, item) => sum + item.weight, 0) }));
-  const rarity = pickBlindBoxByWeight(rarityBuckets).rarity;
-  if (guaranteedUp && ["SSR", "CHASE"].includes(rarity) && featuredRareItems.length) return pickBlindBoxByWeight(featuredRareItems);
-  const candidates = pool.items.filter(item => item.rarity === rarity);
-  return pickBlindBoxByWeight(candidates, item => item.weight * (pool.upIds.includes(item.id) ? 3 : 1));
+  return pickBlindBoxItem({ pool, pity, guaranteedUp });
 }
 function updateBlindBoxPoolMeta() {
   const pool = getBlindBoxPool();
@@ -373,6 +361,7 @@ function updateBlindBoxPoolMeta() {
   const view = document.querySelector(".blind-box-view");
   view.dataset.pool = pool.id;
   view.style.setProperty("--pool-accent", pool.accent || "#dff47b");
+  document.getElementById("blindBoxReveal").style.setProperty("--pool-accent", pool.accent || "#dff47b");
   document.getElementById("blindBoxHeroBadge").textContent = pool.heroBadge || "本期主推";
   document.getElementById("blindBoxHeroQuote").textContent = pool.copy;
   document.getElementById("blindBoxHeroSpecies").textContent = pool.heroSpecies || pool.subtitle;
@@ -473,11 +462,21 @@ function buildBlindBoxConfetti(rarity) {
   confetti.innerHTML = Array.from({ length: rarity === "CHASE" ? 72 : 42 }, (_, index) => `<i style="--x:${(index * 47) % 100}%;--r:${(index * 83) % 360}deg;--d:${(index % 9) * 60}ms;--h:${index % 5}"></i>`).join("");
 }
 
+function blindBoxPullProof(audit) {
+  if (audit?.guaranteeUsed) return "主推保障";
+  if (audit?.forcedByPity) return "十次保底";
+  if (audit?.featured) return "命中主推";
+  return "";
+}
+
 function renderBlindBoxResults(results) {
   const highest = results.find(result => result.item.rarity === "CHASE") || results.find(result => result.item.rarity === "SSR") || results[0];
   blindBoxRevealIndex = 0;
   document.getElementById("blindBoxRevealTitle").textContent = ["SSR", "CHASE"].includes(highest.item.rarity) ? "珍稀藏品现身" : "本次开启结果";
-  document.getElementById("blindBoxResults").innerHTML = results.map(({ item, duplicate }, index) => '<article class="reveal-card rarity-' + item.rarity.toLowerCase() + ' ' + (index ? 'is-hidden' : 'is-revealed') + '" style="--delay:' + (index * 70) + 'ms" data-reveal-index="' + index + '"><div><span>' + (item.rarity === 'CHASE' ? '典藏' : item.rarity) + '</span><img src="' + item.image + '" alt="' + item.name + '"></div><small>' + (duplicate ? '重复 · +' + item.fragments + ' 碎片' : '首次获得') + '</small><h3>' + item.name + '</h3><p>' + item.species + '</p></article>').join("");
+  document.getElementById("blindBoxResults").innerHTML = results.map(({ item, duplicate, audit }, index) => {
+    const proof = blindBoxPullProof(audit);
+    return '<article class="reveal-card rarity-' + item.rarity.toLowerCase() + ' ' + (index ? 'is-hidden' : 'is-revealed') + '" style="--delay:' + (index * 70) + 'ms" data-reveal-index="' + index + '"><div><span>' + (item.rarity === 'CHASE' ? '典藏' : item.rarity) + '</span><img src="' + item.image + '" alt="' + item.name + '">' + (proof ? '<em class="reveal-proof">' + proof + '</em>' : '') + '</div><small>' + (duplicate ? '重复 · +' + item.fragments + ' 碎片' : '首次获得') + '</small><h3>' + item.name + '</h3><p>' + item.species + '</p></article>';
+  }).join("");
   buildBlindBoxConfetti(highest.item.rarity);
   document.getElementById("blindBoxReveal").dataset.rarity = highest.item.rarity.toLowerCase();
 }
@@ -493,11 +492,11 @@ function drawBlindBoxes(count) {
   const cost = BLIND_BOX_COSTS[count]; const pool = getBlindBoxPool();
   if (blindBoxDrawing || !cost) return;
   if (state.points < cost) { toast('积分不足，还差 ' + formatNumber(cost - state.points)); return; }
-  blindBoxDrawing = true; document.querySelectorAll('[data-draw-count]').forEach(button => button.disabled = true); document.getElementById('blindBoxStage').classList.add('is-drawing'); state.points -= cost;
+  blindBoxDrawing = true; document.querySelectorAll('[data-draw-count],[data-pool-id]').forEach(button => button.disabled = true); document.getElementById('blindBoxStage').classList.add('is-drawing'); state.points -= cost;
   const results = Array.from({ length: count }, () => { const item = pickBlindBox(); return resolveBlindBoxPull(state, { pool, item, stateKey: getBlindBoxStateKey(pool) }); });
   saveState(); updateBlindBoxEconomyUI();
   const delay = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 120 : 1850;
-  window.setTimeout(() => { renderBlindBoxResults(results); document.getElementById('blindBoxReveal').hidden = false; document.body.style.overflow = 'hidden'; blindBoxRevealTimer = window.setInterval(() => { if (blindBoxRevealIndex >= results.length - 1) { clearInterval(blindBoxRevealTimer); return; } revealBlindBoxCard(); }, window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 180 : 700); document.getElementById('blindBoxStage').classList.remove('is-drawing'); document.querySelectorAll('[data-draw-count]').forEach(button => button.disabled = false); blindBoxDrawing = false; icons(); }, delay);
+  window.setTimeout(() => { renderBlindBoxResults(results); document.getElementById('blindBoxReveal').hidden = false; document.body.style.overflow = 'hidden'; blindBoxRevealTimer = window.setInterval(() => { if (blindBoxRevealIndex >= results.length - 1) { clearInterval(blindBoxRevealTimer); return; } revealBlindBoxCard(); }, window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 180 : 700); document.getElementById('blindBoxStage').classList.remove('is-drawing'); document.querySelectorAll('[data-draw-count],[data-pool-id]').forEach(button => button.disabled = false); blindBoxDrawing = false; icons(); }, delay);
 }
 function selectShowroomModel(button) {
   const viewer = document.getElementById("blindBoxModelViewer");

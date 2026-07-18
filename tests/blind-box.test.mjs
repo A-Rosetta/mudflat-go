@@ -7,7 +7,9 @@ const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
 const script = await readFile(new URL("../script.js", import.meta.url), "utf8");
 const styles = await readFile(new URL("../styles.css", import.meta.url), "utf8");
 const historyScript = await readFile(new URL("../blind-box-history.mjs", import.meta.url), "utf8");
+const engineScript = await readFile(new URL("../blind-box-engine.mjs", import.meta.url), "utf8").catch(() => "");
 const historyModule = await import(new URL("../blind-box-history.mjs", import.meta.url)).catch(() => ({}));
+const engineModule = await import(new URL("../blind-box-engine.mjs", import.meta.url)).catch(() => ({}));
 const wrangler = await readFile(new URL("../wrangler.jsonc", import.meta.url), "utf8").catch(() => "");
 const assetsIgnore = await readFile(new URL("../.assetsignore", import.meta.url), "utf8").catch(() => "");
 
@@ -98,6 +100,42 @@ test("blind-box supports multiple concurrent UP pools with independent metadata"
   assert.match(script, /activeBlindBoxPool/);
 });
 
+test("blind-box picker preserves rarity odds and resolves pity guarantees deterministically", () => {
+  const pick = engineModule.pickBlindBoxItem;
+  assert.equal(typeof pick, "function");
+  const pool = {
+    upIds: ["featured-ssr"],
+    items: [
+      { id: "common", rarity: "N", weight: 99 },
+      { id: "off-ssr", rarity: "SSR", weight: .5 },
+      { id: "featured-ssr", rarity: "SSR", weight: .5 }
+    ]
+  };
+  const randomFrom = values => {
+    let index = 0;
+    return () => values[index++];
+  };
+
+  assert.equal(pick({ pool, pity: 0, guaranteedUp: false, random: randomFrom([.02, .99]) }).id, "common");
+  assert.equal(pick({ pool, pity: 0, guaranteedUp: false, random: randomFrom([.005, .3]) }).id, "featured-ssr");
+  assert.equal(pick({ pool, pity: 9, guaranteedUp: false, random: () => 0 }).rarity, "SSR");
+  assert.equal(pick({ pool, pity: 9, guaranteedUp: true, random: () => .99 }).id, "featured-ssr");
+});
+
+test("draw results expose immediate pity and featured provenance", () => {
+  assert.match(script, /import \{ pickBlindBoxItem \} from "\.\/blind-box-engine\.mjs"/);
+  assert.match(script, /pickBlindBoxItem\(\{ pool, pity, guaranteedUp \}\)/);
+  assert.match(script, /function blindBoxPullProof\(audit\)/);
+  for (const phrase of ["主推保障", "十次保底", "命中主推"]) assert.match(script, new RegExp(phrase));
+  assert.match(script, /blindBoxPullProof\(audit\)/);
+  assert.match(script, /document\.getElementById\("blindBoxReveal"\)\.style\.setProperty\("--pool-accent", pool\.accent \|\| "#dff47b"\)/);
+  assert.match(script, /document\.querySelectorAll\('\[data-draw-count\],\[data-pool-id\]'\)\.forEach\(button => button\.disabled = true\)/);
+  assert.match(script, /document\.querySelectorAll\('\[data-draw-count\],\[data-pool-id\]'\)\.forEach\(button => button\.disabled = false\)/);
+  assert.match(styles, /\.reveal-proof\{[^}]*right:8px;top:8px;/);
+  assert.match(styles, /@media\(max-width:520px\)\{\.reveal-proof\{right:auto;bottom:3px;left:3px;top:auto;[^}]*font-size:8px/);
+  assert.match(styles, /\.blind-box-reveal \{[^}]*overflow-x: hidden;[^}]*overflow-y: auto;/);
+});
+
 test("blind-box history migration rejects malformed data and caps newest records", () => {
   const normalize = historyModule.normalizeBlindBoxHistory || (() => null);
   const entries = Array.from({ length: 55 }, (_, index) => ({ sequence: 55 - index, poolId: "tide-watch", itemId: `item-${index}` }));
@@ -167,7 +205,7 @@ test("UP pool draws expose pity, guarantee, carry-over, and duplicate conversion
   assert.match(source, /duplicateFragments/);
   assert.match(html, /id="blindBoxPity"/);
   assert.match(html, /id="blindBoxRules"/);
-  assert.match(script, /pity >= 9/);
+  assert.match(engineScript, /pity >= 9/);
   assert.match(script, /BLIND_BOX_CARRY_KEY/);
   assert.match(source, /pool\.carryOver && rare/);
 });
