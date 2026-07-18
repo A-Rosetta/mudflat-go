@@ -3,16 +3,18 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 const root = new URL("../", import.meta.url);
-const [html, controller, css] = await Promise.all([
+const [html, controller, css, script] = await Promise.all([
   readFile(new URL("index.html", root), "utf8"),
   readFile(new URL("arena.js", root), "utf8"),
-  readFile(new URL("styles.css", root), "utf8")
+  readFile(new URL("styles.css", root), "utf8"),
+  readFile(new URL("script.js", root), "utf8")
 ]);
 
 test("bird sanctuary exposes a separate wetland arena", () => {
   assert.match(html, /id="openBirdArena"/);
   assert.match(html, /id="birdArenaShell"[^>]+aria-label="湿地竞技"/);
-  assert.match(html, /type="module" src="arena\.js"/);
+  assert.match(html, /<script src="script\.js"><\/script>/);
+  assert.match(script, /import\("\.\/game\.js"\)\.then\(\(\) => import\("\.\/arena\.js"\)\)/);
   assert.match(controller, /arena-engine\.mjs/);
   assert.match(controller, /mudflat-go-compact-state-v1/);
 });
@@ -41,4 +43,11 @@ test("player attacks and enemy counters fly between cards before battle redraw",
   assert.match(css, /@keyframes arenaCardStrike/);
   assert.match(css, /\.arena-impact/);
   assert.match(css, /@keyframes arenaCardHit/);
+});
+
+test("arena telegraphs the next enemy attacker, target, and damage", () => {
+  assert.match(controller, /previewArenaEnemyTurn/);
+  assert.match(controller, /arena-intent/);
+  assert.match(css, /\.arena-side button\.is-intent/);
+  assert.match(css, /\.arena-side button\.is-threatened/);
 });

@@ -7,7 +7,8 @@ import {
   dailyArenaLevel,
   normalizeArenaProgress,
   performArenaAction,
-  performArenaEnemyTurn
+  performArenaEnemyTurn,
+  previewArenaEnemyTurn
 } from "../arena-engine.mjs";
 
 const team = [
@@ -44,6 +45,19 @@ test("each bird acts once before the enemy response", () => {
   assert.equal(battle.round, 2);
   assert.deepEqual(battle.acted, []);
   assert.ok(battle.players.some(unit => unit.hp < unit.maxHp));
+});
+
+test("enemy intent previews the exact counter and shifts when its attacker falls", () => {
+  const burstTeam = team.map((unit, index) => ({ ...unit, attack: index === 0 ? 999 : unit.attack }));
+  let battle = createArenaBattle(dailyArenaLevel(1, "2026-07-18"), burstTeam);
+  const firstIntent = previewArenaEnemyTurn(battle);
+  battle = performArenaAction(battle, { playerId: burstTeam[0].id, enemyId: firstIntent.attackerId, action: "attack" });
+  const shiftedIntent = previewArenaEnemyTurn(battle);
+  assert.notEqual(shiftedIntent.attackerId, firstIntent.attackerId);
+  for (const unit of burstTeam.slice(1)) battle = performArenaAction(battle, { playerId: unit.id, enemyId: shiftedIntent.attackerId, action: "attack" });
+  const committedIntent = previewArenaEnemyTurn(battle);
+  const resolved = performArenaEnemyTurn(battle);
+  assert.deepEqual(resolved.lastEvent, { side: "enemy", ...committedIntent });
 });
 
 test("normal attacks charge energy and skills require full charge", () => {

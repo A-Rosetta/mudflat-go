@@ -2,7 +2,7 @@ const STORAGE_KEY = "mudflat-go-compact-state-v1";
 const todayKey = () => new Date().toLocaleDateString("en-CA");
 const emptySiteProgress = () => Array.from({ length: 6 }, () => ({ targetsViewed: false, gps: false, identified: false, complete: false }));
 const initialState = {
-  points: 3000,
+  points: 300000,
   unlockedThrough: 1,
   siteProgress: emptySiteProgress(),
   collectedSpecies: [],
@@ -16,7 +16,7 @@ const initialState = {
   blindBoxGuarantee: {}
 };
 const MOBILE_NET_MODEL_URL = "assets/models/mobilenet/model.json";
-const BLIND_BOX_COSTS = { 1: 500, 5: 2000 };
+const BLIND_BOX_COSTS = { 1: 500, 10: 4000 };
 const BIRD_MODEL_URL = "assets/models/bird-species/model.onnx";
 const BIRD_CONFIG_URL = "assets/models/bird-species/config.json";
 const BIRD_IMAGE_SIZE = 260;
@@ -57,13 +57,17 @@ const blindBoxPool = [
 ];
 
 const blindBoxPools = [
-  { id: "tide-watch", title: "潮汐守望", subtitle: "黑脸琵鹭与冬候鸟的迁徙信号", upIds: ["spoonbill", "kingfisher"], carryOver: true, copy: "当潮线退去，远方的翅膀替你记住季节。", items: blindBoxPool },
-  { id: "mangrove-echo", title: "红树林回声", subtitle: "根系、泥滩与夜行者的秘密", upIds: ["fiddler", "mudskipper", "golden-spoonbill"], carryOver: true, copy: "每一根露出潮面的根，都藏着一段没有被听见的故事。", items: blindBoxPool.filter(item => ["fiddler", "mudskipper", "greenshank", "stilt", "golden-spoonbill"].includes(item.id)) }
+  { id: "standard-atlas", title: "潮间万象", subtitle: "深圳湿地物种典藏 · 不限时开放", upIds: [], carryOver: false, copy: "潮来潮往，滩涂上的每一次相遇，都值得被记住。", items: blindBoxPool, accent: "#dff47b", heroBadge: "常驻典藏", heroSpecies: "全系列收录 · 不限时开放" },
+  { id: "tide-watch", title: "潮有信", subtitle: "黑脸琵鹭、普通翠鸟获取概率提升", upIds: ["spoonbill", "kingfisher"], carryOver: true, copy: "白羽循潮而至，翠影掠水而行。", accent: "#8de5d1", heroBadge: "本期主推 · 黑脸琵鹭", heroSpecies: "黑脸琵鹭 · 普通翠鸟", items: blindBoxPool },
+  { id: "mangrove-echo", title: "暮栖红林", subtitle: "池鹭、白鹭、金色琵鹭获取概率提升", upIds: ["pond-heron", "egret", "golden-spoonbill"], carryOver: true, copy: "潮声入林，白羽与暮色一同栖下。", accent: "#f2b56b", heroBadge: "本期主推 · 金色琵鹭", heroSpecies: "池鹭 · 白鹭 · 金色琵鹭", items: blindBoxPool }
 ];
-let activeBlindBoxPool = "tide-watch";
+let activeBlindBoxPool = "standard-atlas";
 let blindBoxRevealIndex = 0;
+let blindBoxCabinetPage = 0;
+const BLIND_BOX_CABINET_PAGE_SIZE = 6;
 const getBlindBoxPool = () => blindBoxPools.find(pool => pool.id === activeBlindBoxPool) || blindBoxPools[0];
 const BLIND_BOX_CARRY_KEY = "shared-up";
+const getBlindBoxStateKey = pool => pool.carryOver ? BLIND_BOX_CARRY_KEY : pool.id;
 
 const sites = [
   { name: "福田红树林", short: "福田", feature: "黑脸琵鹭越冬栖息地", lat: 22.51187, lng: 114.04258, limited: "黑脸琵鹭限定", habitat: "潮间带 · 红树林", season: "候鸟季 11-3月", description: "从红树与浅水交界开始，辨认匙状长嘴、白色涉禽和泥滩上的微小生命。", targets: ["spoonbill", "egret", "kandelia", "fiddler", "snail"] },
@@ -106,6 +110,10 @@ let interactiveMap = null;
 let interactiveMapLayers = null;
 let blindBoxDrawing = false;
 let showroomInitialized = false;
+let recognitionRuntimePromise = null;
+let interactiveMapPromise = null;
+let gameRuntimePromise = null;
+let panoramaObserver = null;
 let locationResult = null;
 let lastUnlockedItem = null;
 let shareObjectUrl = "";
@@ -156,6 +164,40 @@ function badgeCount() { return Math.min(badges.length, 2 + completedSiteCount())
 function formatNumber(value) { return new Intl.NumberFormat("zh-CN").format(value); }
 function icon(name) { return `<i data-lucide="${name}"></i>`; }
 function icons() { if (window.lucide) window.lucide.createIcons({ attrs: { "stroke-width": 1.9 } }); }
+function loadScriptOnce(src) {
+  const existing = document.querySelector(`script[src="${src}"]`);
+  if (existing) return existing.dataset.loaded === "true" ? Promise.resolve() : new Promise((resolve, reject) => { existing.addEventListener("load", resolve, { once: true }); existing.addEventListener("error", reject, { once: true }); });
+  return new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = src;
+    script.async = true;
+    script.addEventListener("load", () => { script.dataset.loaded = "true"; resolve(); }, { once: true });
+    script.addEventListener("error", reject, { once: true });
+    document.head.append(script);
+  });
+}
+function loadStylesheetOnce(href) {
+  if (document.querySelector(`link[href="${href}"]`)) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = href;
+    link.addEventListener("load", resolve, { once: true });
+    link.addEventListener("error", reject, { once: true });
+    document.head.append(link);
+  });
+}
+function ensureRecognitionRuntime() {
+  if (!recognitionRuntimePromise) recognitionRuntimePromise = Promise.all([
+    loadScriptOnce("assets/vendor/tf.min.js").then(() => loadScriptOnce("assets/vendor/mobilenet.min.js")),
+    loadScriptOnce("assets/vendor/onnxruntime-web.min.js")
+  ]).catch(error => { recognitionRuntimePromise = null; throw error; });
+  return recognitionRuntimePromise;
+}
+function ensureGameRuntime() {
+  if (!gameRuntimePromise) gameRuntimePromise = import("./game.js").then(() => import("./arena.js")).catch(error => { gameRuntimePromise = null; throw error; });
+  return gameRuntimePromise;
+}
 function cardProgress(item) { return { xp: 0, observations: 0, ...(state.cardProgress[item.id] || {}) }; }
 function cardLevel(item) {
   const progress = cardProgress(item);
@@ -259,10 +301,13 @@ function scheduleBirdAlarm() {
 
 function navigate(name) {
   document.querySelectorAll(".view").forEach(view => view.classList.toggle("is-active", view.dataset.view === name));
+  document.body.classList.toggle("is-blind-box-active", name === "blind-box");
   document.querySelectorAll("[data-view-target]").forEach(button => {
     const activeView = button.closest(".bottom-nav") && ["blind-box", "bird-sanctuary"].includes(name) ? "collection" : name;
     button.classList.toggle("is-active", button.dataset.viewTarget === activeView);
   });
+  if (name === "explore") ensureExploreRuntime();
+  if (name === "bird-sanctuary") ensureGameRuntime();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -290,38 +335,84 @@ function updateUI() {
   icons();
 }
 
+function pickBlindBoxByWeight(items, getWeight = item => item.weight) {
+  let roll = Math.random() * items.reduce((sum, item) => sum + getWeight(item), 0);
+  for (const item of items) { roll -= getWeight(item); if (roll < 0) return item; }
+  return items[items.length - 1];
+}
 function pickBlindBox() {
   const pool = getBlindBoxPool();
-  const pity = Number(state.blindBoxPity[BLIND_BOX_CARRY_KEY]) || 0;
-  const guaranteedUp = Boolean(state.blindBoxGuarantee[BLIND_BOX_CARRY_KEY]);
-  if (guaranteedUp) return pool.items.find(item => pool.upIds.includes(item.id) && ["SSR", "CHASE"].includes(item.rarity)) || pool.items[0];
-  if (pity >= 9) return pool.items.find(item => ["SSR", "CHASE"].includes(item.rarity)) || pool.items[0];
-  let roll = Math.random() * pool.items.reduce((sum, item) => sum + item.weight, 0);
-  for (const item of pool.items) { roll -= item.weight; if (roll < 0) return item; }
-  return pool.items[pool.items.length - 1];
+  const key = getBlindBoxStateKey(pool);
+  const pity = Number(state.blindBoxPity[key]) || 0;
+  const guaranteedUp = Boolean(state.blindBoxGuarantee[key]);
+  const rareItems = pool.items.filter(item => ["SSR", "CHASE"].includes(item.rarity));
+  const featuredRareItems = rareItems.filter(item => pool.upIds.includes(item.id));
+  if (guaranteedUp && featuredRareItems.length && pity >= 9) return pickBlindBoxByWeight(featuredRareItems);
+  if (pity >= 9) return pickBlindBoxByWeight(rareItems);
+  const rarityBuckets = ["CHASE", "SSR", "SR", "R", "N"].map(rarity => ({ rarity, weight: blindBoxPool.filter(item => item.rarity === rarity).reduce((sum, item) => sum + item.weight, 0) }));
+  const rarity = pickBlindBoxByWeight(rarityBuckets).rarity;
+  if (guaranteedUp && ["SSR", "CHASE"].includes(rarity) && featuredRareItems.length) return pickBlindBoxByWeight(featuredRareItems);
+  const candidates = pool.items.filter(item => item.rarity === rarity);
+  return pickBlindBoxByWeight(candidates, item => item.weight * (pool.upIds.includes(item.id) ? 3 : 1));
 }
 function updateBlindBoxPoolMeta() {
   const pool = getBlindBoxPool();
-  const pity = Number(state.blindBoxPity[BLIND_BOX_CARRY_KEY]) || 0;
-  document.getElementById("blindBoxPoolName").textContent = pool.title;
+  const key = getBlindBoxStateKey(pool);
+  const pity = Number(state.blindBoxPity[key]) || 0;
+  document.getElementById("blindBoxTitle").innerHTML = pool.title + `<br><em>${pool.id === "standard-atlas" ? "常驻典藏" : "限定典藏"}</em>`;
+  document.getElementById("blindBoxKicker").textContent = pool.id === "standard-atlas" ? "深圳湿地典藏 · 第一辑" : "限定典藏 · 概率提升";
   document.getElementById("blindBoxSubtitle").textContent = pool.subtitle;
   document.getElementById("blindBoxCopy").textContent = pool.copy;
   document.getElementById("blindBoxPity").textContent = pity + " / 10";
-  document.getElementById("blindBoxRules").textContent = state.blindBoxGuarantee[BLIND_BOX_CARRY_KEY] ? "本池下一次高稀有度必出 UP" : "10 抽内必得 SSR/CHASE；UP 保底跨池继承";
+  document.getElementById("blindBoxRules").textContent = state.blindBoxGuarantee[key] ? "下一次获得 SSR 或典藏款时，必为本期主推藏品。" : pool.carryOver ? "10 次开启内必得 SSR 或典藏款；两期限定典藏共享保底计数。" : "10 次开启内必得 SSR 或典藏款；本池独立计数。";
+  const view = document.querySelector(".blind-box-view");
+  view.dataset.pool = pool.id;
+  view.style.setProperty("--pool-accent", pool.accent || "#dff47b");
+  document.getElementById("blindBoxHeroBadge").textContent = pool.heroBadge || "本期主推";
+  document.getElementById("blindBoxHeroQuote").textContent = pool.copy;
+  document.getElementById("blindBoxHeroSpecies").textContent = pool.heroSpecies || pool.subtitle;
   document.querySelectorAll("[data-pool-id]").forEach(button => { const active = button.dataset.poolId === pool.id; button.classList.toggle("is-active", active); button.setAttribute("aria-selected", String(active)); });
 }
+function updateBlindBoxEconomyUI() {
+  document.querySelectorAll("[data-points]").forEach(node => node.textContent = formatNumber(state.points));
+  updateBlindBoxPoolMeta();
+  renderBlindBoxCollection();
+}
 function selectBlindBoxPool(poolId) { if (!blindBoxPools.some(pool => pool.id === poolId)) return; activeBlindBoxPool = poolId; updateBlindBoxPoolMeta(); renderBlindBoxCollection(); }
+function selectBlindBoxPanel(panelId) {
+  const panel = document.querySelector(`[data-blind-box-panel-content="${panelId}"]`);
+  if (!panel) return;
+  document.querySelectorAll("[data-blind-box-panel-content]").forEach(item => {
+    const active = item === panel;
+    item.hidden = !active;
+    item.classList.toggle("is-active", active);
+  });
+  document.querySelectorAll("[data-blind-box-panel-target]").forEach(button => {
+    const active = button.dataset.blindBoxPanelTarget === panelId;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-selected", String(active));
+    button.setAttribute("tabindex", active ? "0" : "-1");
+  });
+  if (panelId === "showroom") initializeShowroom();
+}
 function renderBlindBoxCollection() {
   const grid = document.getElementById("blindBoxGrid");
   if (!grid) return;
   const owned = blindBoxPool.filter(item => state.blindBoxCollection[item.id]).length;
+  const pageCount = Math.ceil(blindBoxPool.length / BLIND_BOX_CABINET_PAGE_SIZE);
+  blindBoxCabinetPage = Math.min(blindBoxCabinetPage, pageCount - 1);
+  const start = blindBoxCabinetPage * BLIND_BOX_CABINET_PAGE_SIZE;
   document.getElementById("blindBoxOwned").textContent = owned;
   document.getElementById("blindBoxFragments").textContent = formatNumber(state.blindBoxFragments);
-  grid.innerHTML = blindBoxPool.map((item, index) => {
+  document.getElementById("blindBoxCabinetPage").textContent = `${blindBoxCabinetPage + 1} / ${pageCount}`;
+  document.getElementById("blindBoxCabinetPrev").disabled = blindBoxCabinetPage === 0;
+  document.getElementById("blindBoxCabinetNext").disabled = blindBoxCabinetPage === pageCount - 1;
+  grid.innerHTML = blindBoxPool.slice(start, start + BLIND_BOX_CABINET_PAGE_SIZE).map((item, pageIndex) => {
+    const index = start + pageIndex;
     const unlocked = Boolean(state.blindBoxCollection[item.id]);
     return `<article class="blind-box-card rarity-${item.rarity.toLowerCase()} ${unlocked ? "is-unlocked" : "is-locked"}" style="--delay:${index * 35}ms">
-      <div><span>${item.rarity}</span><img src="${item.image}" alt="${unlocked ? `${item.name} · ${item.species}` : "未解锁湿地精灵"}"></div>
-      <small>NO.${String(index + 1).padStart(2, "0")}</small><h3>${unlocked ? item.name : "等待潮汐揭晓"}</h3><p>${unlocked ? item.species : `${item.weight}% 获取概率`}</p>
+      <div><span>${item.rarity === "CHASE" ? "典藏" : item.rarity}</span><img src="${item.image}" alt="${unlocked ? `${item.name} · ${item.species}` : "尚未收录的湿地藏品"}"></div>
+      <small>编号 ${String(index + 1).padStart(2, "0")}</small><h3>${unlocked ? item.name : "尚未收录"}</h3><p>${unlocked ? item.species : `${item.weight}% 获取概率`}</p>
     </article>`;
   }).join("");
 }
@@ -334,7 +425,8 @@ function buildBlindBoxConfetti(rarity) {
 function renderBlindBoxResults(results) {
   const highest = results.find(result => result.item.rarity === "CHASE") || results.find(result => result.item.rarity === "SSR") || results[0];
   blindBoxRevealIndex = 0;
-  document.getElementById("blindBoxResults").innerHTML = results.map(({ item, duplicate }, index) => '<article class="reveal-card rarity-' + item.rarity.toLowerCase() + ' ' + (index ? 'is-hidden' : 'is-revealed') + '" data-reveal-index="' + index + '"><div><span>' + item.rarity + '</span><img src="' + item.image + '" alt="' + item.name + '"></div><small>' + (duplicate ? '重复转化 · +' + item.fragments + ' 生态碎片' : 'NEW · 新发现') + '</small><h3>' + item.name + '</h3><p>' + item.species + '</p></article>').join("");
+  document.getElementById("blindBoxRevealTitle").textContent = ["SSR", "CHASE"].includes(highest.item.rarity) ? "珍稀藏品现身" : "本次开启结果";
+  document.getElementById("blindBoxResults").innerHTML = results.map(({ item, duplicate }, index) => '<article class="reveal-card rarity-' + item.rarity.toLowerCase() + ' ' + (index ? 'is-hidden' : 'is-revealed') + '" style="--delay:' + (index * 70) + 'ms" data-reveal-index="' + index + '"><div><span>' + (item.rarity === 'CHASE' ? '典藏' : item.rarity) + '</span><img src="' + item.image + '" alt="' + item.name + '"></div><small>' + (duplicate ? '重复 · +' + item.fragments + ' 碎片' : '首次获得') + '</small><h3>' + item.name + '</h3><p>' + item.species + '</p></article>').join("");
   buildBlindBoxConfetti(highest.item.rarity);
   document.getElementById("blindBoxReveal").dataset.rarity = highest.item.rarity.toLowerCase();
 }
@@ -349,10 +441,10 @@ function closeBlindBoxReveal() {
 function drawBlindBoxes(count) {
   const cost = BLIND_BOX_COSTS[count]; const pool = getBlindBoxPool();
   if (blindBoxDrawing || !cost) return;
-  if (state.points < cost) { toast('还需要 ' + formatNumber(cost - state.points) + ' 积分'); return; }
+  if (state.points < cost) { toast('积分不足，还差 ' + formatNumber(cost - state.points)); return; }
   blindBoxDrawing = true; document.querySelectorAll('[data-draw-count]').forEach(button => button.disabled = true); document.getElementById('blindBoxStage').classList.add('is-drawing'); state.points -= cost;
-  const results = Array.from({ length: count }, () => { const item = pickBlindBox(); const duplicate = Boolean(state.blindBoxCollection[item.id]); const duplicateFragments = item.fragments; const rare = ['SSR', 'CHASE'].includes(item.rarity); state.blindBoxCollection[item.id] = (Number(state.blindBoxCollection[item.id]) || 0) + 1; if (duplicate) state.blindBoxFragments += item.fragments; state.blindBoxPity[pool.id] = rare ? 0 : (Number(state.blindBoxPity[pool.id]) || 0) + 1; if (rare) state.blindBoxGuarantee[pool.id] = !pool.upIds.includes(item.id); return { item, duplicate, duplicateFragments }; });
-  saveState(); updateUI();
+  const results = Array.from({ length: count }, () => { const item = pickBlindBox(); const duplicate = Boolean(state.blindBoxCollection[item.id]); const duplicateFragments = item.fragments; const rare = ['SSR', 'CHASE'].includes(item.rarity); const key = getBlindBoxStateKey(pool); state.blindBoxCollection[item.id] = (Number(state.blindBoxCollection[item.id]) || 0) + 1; if (duplicate) state.blindBoxFragments += item.fragments; state.blindBoxPity[key] = rare ? 0 : (Number(state.blindBoxPity[key]) || 0) + 1; if (pool.carryOver && rare) state.blindBoxGuarantee[key] = !pool.upIds.includes(item.id); else if (!pool.carryOver && rare) state.blindBoxGuarantee[key] = false; return { item, duplicate, duplicateFragments }; });
+  saveState(); updateBlindBoxEconomyUI();
   const delay = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 120 : 1850;
   window.setTimeout(() => { renderBlindBoxResults(results); document.getElementById('blindBoxReveal').hidden = false; document.body.style.overflow = 'hidden'; blindBoxRevealTimer = window.setInterval(() => { if (blindBoxRevealIndex >= results.length - 1) { clearInterval(blindBoxRevealTimer); return; } revealBlindBoxCard(); }, window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 180 : 700); document.getElementById('blindBoxStage').classList.remove('is-drawing'); document.querySelectorAll('[data-draw-count]').forEach(button => button.disabled = false); blindBoxDrawing = false; icons(); }, delay);
 }
@@ -366,18 +458,25 @@ function selectShowroomModel(button) {
   });
   document.getElementById("blindBoxModelPanel").setAttribute("aria-labelledby", button.id);
   viewer.setAttribute("poster", button.dataset.modelPoster);
-  viewer.setAttribute("alt", `${button.dataset.modelName} 3D 模型`);
+  viewer.setAttribute("alt", `${button.dataset.modelName}立体模型`);
   document.getElementById("showroomName").textContent = button.dataset.modelName;
   document.getElementById("showroomSpecies").textContent = button.dataset.modelSpecies;
-  document.getElementById("showroomStatus").textContent = "正在载入高精度模型…";
+  document.getElementById("showroomStatus").textContent = "正在载入立体模型…";
   document.getElementById("showroomLoader").style.setProperty("--progress", "0%");
   viewer.setAttribute("src", button.dataset.modelSrc);
 }
 
-function initializeShowroom() {
+async function initializeShowroom() {
   if (showroomInitialized) return;
   showroomInitialized = true;
-  customElements.whenDefined("model-viewer").then(() => selectShowroomModel(document.querySelector("[data-model-src].is-active")));
+  try {
+    await import("./assets/vendor/model-viewer.min.js");
+    await customElements.whenDefined("model-viewer");
+    selectShowroomModel(document.querySelector("[data-model-src].is-active"));
+  } catch (error) {
+    showroomInitialized = false;
+    document.getElementById("showroomStatus").textContent = "立体模型加载失败，请重试";
+  }
 }
 
 function renderMap() {
@@ -391,7 +490,7 @@ function renderMap() {
   });
   document.querySelectorAll("[data-route-segment]").forEach((segment, index) => segment.classList.toggle("is-open", index + 1 <= state.unlockedThrough));
   document.getElementById("siteStrip").innerHTML = sites.map((site, index) => `<button type="button" data-strip-site="${index}" ${index > state.unlockedThrough ? "disabled" : ""}><b>${String(index + 1).padStart(2,"0")} · ${site.name}</b><small>${index > state.unlockedThrough ? "尚未解锁" : site.feature}</small></button>`).join("");
-  renderInteractiveMap();
+  if (interactiveMap) renderInteractiveMap();
   updateMapFocus();
   icons();
 }
@@ -399,19 +498,14 @@ function renderMap() {
 function initializeInteractiveMap() {
   if (interactiveMap || !window.L) return;
   const container = document.getElementById("liveMap");
-  interactiveMap = L.map(container, { zoomControl: false, attributionControl: true, minZoom: 9, maxZoom: 17, tap: true });
+  interactiveMap = L.map(container, { zoomControl: false, attributionControl: false, minZoom: 9, maxZoom: 17, tap: true });
   L.control.zoom({ position: "bottomleft" }).addTo(interactiveMap);
-  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 19,
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-  }).addTo(interactiveMap);
   interactiveMapLayers = L.layerGroup().addTo(interactiveMap);
   interactiveMap.fitBounds(L.latLngBounds(sites.map(site => [site.lat, site.lng])), { padding: [34, 34] });
   container.closest(".route-map").classList.add("is-interactive");
 }
 
 function renderInteractiveMap() {
-  initializeInteractiveMap();
   if (!interactiveMap) return;
   interactiveMapLayers.clearLayers();
   sites.slice(1).forEach((site, index) => {
@@ -441,6 +535,31 @@ function renderInteractiveMap() {
     marker.on("click", () => selectSite(index));
   });
   requestAnimationFrame(() => interactiveMap.invalidateSize());
+}
+
+async function ensureInteractiveMap() {
+  if (!interactiveMapPromise) interactiveMapPromise = Promise.all([
+    loadStylesheetOnce("assets/vendor/leaflet.min.css"),
+    loadScriptOnce("assets/vendor/leaflet.min.js")
+  ]).then(() => { initializeInteractiveMap(); renderInteractiveMap(); }).catch(error => { interactiveMapPromise = null; throw error; });
+  return interactiveMapPromise;
+}
+
+function preparePanorama() {
+  const frame = document.getElementById("mangrovePanoramaFrame");
+  if (!frame || frame.src !== "about:blank" || panoramaObserver) return;
+  panoramaObserver = new IntersectionObserver(entries => {
+    if (!entries.some(entry => entry.isIntersecting)) return;
+    frame.src = frame.dataset.src;
+    panoramaObserver.disconnect();
+    panoramaObserver = null;
+  }, { rootMargin: "120px 0px" });
+  panoramaObserver.observe(frame);
+}
+
+function ensureExploreRuntime() {
+  ensureInteractiveMap().catch(() => {});
+  preparePanorama();
 }
 
 function renderAtlas() {
@@ -745,7 +864,11 @@ async function snapshotCamera() {
   canvas.width = video.videoWidth || 1280;
   canvas.height = video.videoHeight || 720;
   canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
-  image.src = canvas.toDataURL("image/jpeg", .92);
+  const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/jpeg", .88));
+  if (!blob) throw new Error("无法读取相机画面");
+  if (image.dataset.captureUrl) URL.revokeObjectURL(image.dataset.captureUrl);
+  image.dataset.captureUrl = URL.createObjectURL(blob);
+  image.src = image.dataset.captureUrl;
   await image.decode();
   image.hidden = false;
   video.hidden = true;
@@ -897,6 +1020,7 @@ async function identify() {
   readout.querySelector("small").textContent = "正在加载模型并分析画面";
   document.getElementById("cameraStatus").textContent = "正在设备端分析";
   try {
+    await ensureRecognitionRuntime();
     updateScanProgress(8, "正在检查照片清晰度");
     let input = document.getElementById("captureImage");
     if (captureSource === "camera") input = await snapshotCamera();
@@ -1197,6 +1321,20 @@ function toast(message) {
 document.querySelectorAll("[data-view-target]").forEach(button => button.addEventListener("click", () => navigate(button.dataset.viewTarget)));
 document.querySelectorAll("[data-draw-count]").forEach(button => button.addEventListener("click", () => drawBlindBoxes(Number(button.dataset.drawCount))));
 document.querySelectorAll("[data-pool-id]").forEach(button => button.addEventListener("click", () => selectBlindBoxPool(button.dataset.poolId)));
+document.getElementById("blindBoxCabinetPrev").addEventListener("click", () => { blindBoxCabinetPage -= 1; renderBlindBoxCollection(); });
+document.getElementById("blindBoxCabinetNext").addEventListener("click", () => { blindBoxCabinetPage += 1; renderBlindBoxCollection(); });
+const blindBoxPanelTabs = [...document.querySelectorAll("[data-blind-box-panel-target]")];
+blindBoxPanelTabs.forEach((button, index) => {
+  button.addEventListener("click", () => selectBlindBoxPanel(button.dataset.blindBoxPanelTarget));
+  button.addEventListener("keydown", event => {
+    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+    event.preventDefault();
+    const targetIndex = event.key === "Home" ? 0 : event.key === "End" ? blindBoxPanelTabs.length - 1 : (index + (event.key === "ArrowRight" ? 1 : -1) + blindBoxPanelTabs.length) % blindBoxPanelTabs.length;
+    const target = blindBoxPanelTabs[targetIndex];
+    target.focus();
+    selectBlindBoxPanel(target.dataset.blindBoxPanelTarget);
+  });
+});
 document.querySelector("[data-reveal-skip]")?.addEventListener("click", revealAllBlindBoxCards);
 document.querySelectorAll("[data-model-src]").forEach(button => button.addEventListener("click", () => { initializeShowroom(); selectShowroomModel(button); }));
 const showroomTabs = [...document.querySelectorAll("[data-model-src]")];
@@ -1366,7 +1504,7 @@ document.getElementById("posterButton").addEventListener("click", () => {
   generateShareCard(item);
 });
 document.getElementById("creditsButton").addEventListener("click", () => window.open("CREDITS.md", "_blank", "noopener"));
-document.getElementById("resetButton").addEventListener("click", () => { stopBirdSound(); clearTimeout(alarmTimer); state = { ...initialState, siteProgress: emptySiteProgress(), collectedSpecies: [], cardProgress: {}, daily: { ...initialState.daily }, supply: { ...initialState.supply }, alarm: { ...initialState.alarm }, blindBoxCollection: {}, blindBoxFragments: 0, blindBoxPity: {}, blindBoxGuarantee: {} }; localStorage.removeItem(STORAGE_KEY); activeSite = 0; closeBlindBoxReveal(); updateUI(); toast("演示进度已重置"); });
+document.getElementById("resetButton").addEventListener("click", () => { stopBirdSound(); clearTimeout(alarmTimer); state = { ...initialState, siteProgress: emptySiteProgress(), collectedSpecies: [], cardProgress: {}, daily: { ...initialState.daily }, supply: { ...initialState.supply }, alarm: { ...initialState.alarm }, blindBoxCollection: {}, blindBoxFragments: 0, blindBoxPity: {}, blindBoxGuarantee: {} }; localStorage.removeItem(STORAGE_KEY); activeSite = 0; closeBlindBoxReveal(); updateUI(); toast("守护值已初始化，到账 300,000 积分"); });
 document.querySelectorAll(".modal-backdrop").forEach(backdrop => backdrop.addEventListener("click", event => {
   if (event.target !== backdrop) return;
   if (backdrop.id === "speciesModal") closeSpecies();
@@ -1380,5 +1518,14 @@ window.addEventListener("mudflat-state-changed", () => {
 });
 
 updateUI();
+const launchParams = new URLSearchParams(window.location.search);
+const launchPool = launchParams.get("pool");
+if (launchPool) selectBlindBoxPool(launchPool); else updateBlindBoxPoolMeta();
+const launchView = launchParams.get("view");
+if (launchView && document.querySelector(`[data-view="${launchView}"]`)) navigate(launchView);
+else {
+  const idle = window.requestIdleCallback || (callback => window.setTimeout(callback, 1200));
+  idle(() => ensureExploreRuntime(), { timeout: 1800 });
+}
 scheduleBirdAlarm();
 icons();

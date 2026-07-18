@@ -116,15 +116,25 @@ export function performArenaAction(state, { playerId, enemyId, action }) {
   };
 }
 
+export function previewArenaEnemyTurn(state) {
+  const enemies = state.enemies.filter(alive);
+  const players = state.players.filter(alive);
+  if (!enemies.length || !players.length) return null;
+  const round = Math.max(1, Math.round(Number(state.round) || 1));
+  const attacker = enemies[(round - 1) % enemies.length];
+  const target = players.slice().sort((left, right) => left.hp / left.maxHp - right.hp / right.maxHp || state.players.indexOf(left) - state.players.indexOf(right))[0];
+  return { attackerId: attacker.id, targetId: target.id, action: "attack", damage: attacker.attack };
+}
+
 export function performArenaEnemyTurn(state) {
   if (state.status !== "enemy") return state;
   const enemies = state.enemies.filter(alive);
   const players = state.players.filter(alive);
   if (!enemies.length) return { ...state, status: "victory" };
   if (!players.length) return { ...state, status: "defeat" };
-  const attacker = enemies[(state.round - 1) % enemies.length];
-  const target = players.slice().sort((left, right) => left.hp / left.maxHp - right.hp / right.maxHp)[0];
-  const damage = attacker.attack;
+  const intent = previewArenaEnemyTurn(state);
+  const target = players.find(unit => unit.id === intent.targetId);
+  const damage = intent.damage;
   const nextPlayers = state.players.map(unit => unit.id === target.id ? { ...unit, hp: clamp(unit.hp - damage, 0, unit.maxHp), defeated: unit.hp - damage <= 0 } : { ...unit });
   return {
     ...state,
@@ -132,7 +142,7 @@ export function performArenaEnemyTurn(state) {
     round: state.round + 1,
     acted: [],
     status: nextPlayers.some(alive) ? "player" : "defeat",
-    lastEvent: { side: "enemy", attackerId: attacker.id, targetId: target.id, action: "attack", damage }
+    lastEvent: { side: "enemy", ...intent }
   };
 }
 

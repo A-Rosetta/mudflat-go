@@ -8,7 +8,8 @@ import {
   dailyArenaLevel,
   normalizeArenaProgress,
   performArenaAction,
-  performArenaEnemyTurn
+  performArenaEnemyTurn,
+  previewArenaEnemyTurn
 } from "./arena-engine.mjs";
 
 const STORAGE_KEY = "mudflat-go-compact-state-v1";
@@ -46,7 +47,7 @@ function readRoot() {
 function normalizeRoot(input) {
   const source = input.birdSpirits && typeof input.birdSpirits === "object" ? input.birdSpirits : {};
   const levels = source.profiles ? source.levels : { ...DEFAULT_LEVELS, ...(source.levels || {}) };
-  const root = normalizeProgression({ ...input, points: input.points == null ? 3000 : input.points, birdSpirits: { ...source, levels } }, Object.keys(birdCopy));
+  const root = normalizeProgression({ ...input, points: input.points == null ? 300000 : input.points, birdSpirits: { ...source, levels } }, Object.keys(birdCopy));
   const saved = Array.isArray(source.team) ? [...new Set(source.team)] : [];
   const team = saved.filter(id => birdCopy[id]).slice(0, 3);
   for (const id of STARTERS) if (team.length < 3 && !team.includes(id)) team.push(id);
@@ -149,7 +150,10 @@ function startArena(levelId = selectedLevelId) {
   lastReward = 0;
   activePlayerId = battle.players[0].id;
   activeEnemyId = battle.enemies[0].id;
-  logs = [`【系统】第 ${level.id} 关「${level.name}」已载入。`, `【系统】今日变异：${level.dailyVariant}；首胜奖励 +${level.dailyReward} 积分。`, "【系统】每位鸟灵每回合可以行动一次。"];
+  const intent = previewArenaEnemyTurn(battle);
+  const intentAttacker = battle.enemies.find(unit => unit.id === intent.attackerId);
+  const intentTarget = battle.players.find(unit => unit.id === intent.targetId);
+  logs = [`【系统】第 ${level.id} 关「${level.name}」已载入。`, `【系统】今日变异：${level.dailyVariant}；首胜奖励 +${level.dailyReward} 积分。`, `【潮讯】${intentAttacker.name}将反击${intentTarget.name}，预计造成 ${intent.damage} 点伤害。`];
   sound(196, .2, "triangle", .05);
   renderBattle();
 }
@@ -224,6 +228,9 @@ function renderBattle() {
   activePlayerId = activePlayer?.id || "";
   activeEnemyId = activeEnemy?.id || "";
   const finished = battle.status === "victory" || battle.status === "defeat";
+  const intent = finished ? null : previewArenaEnemyTurn(battle);
+  const intentAttacker = intent && battle.enemies.find(unit => unit.id === intent.attackerId);
+  const intentTarget = intent && battle.players.find(unit => unit.id === intent.targetId);
   shell.dataset.screen = "battle";
   shell.innerHTML = `<div class="arena-backdrop-art" aria-hidden="true"></div>
     <header class="arena-header arena-battle-header">
@@ -231,11 +238,11 @@ function renderBattle() {
       <div><small>${icon("swords")} BATTLE MODE · STAGE ${String(level.id).padStart(2, "0")}</small><h1>${level.name}</h1><p>${level.zone} · ${level.modifier}</p></div>
       <span class="arena-round"><b>ROUND ${String(battle.round).padStart(2, "0")}</b><em>${battle.status === "enemy" ? "敌方回合" : finished ? "战斗结束" : "我方回合"}</em></span>
     </header>
-    <section class="arena-status"><span>${icon("clock-3")} ${battle.status === "enemy" ? "敌方正在反击" : finished ? "结算完成" : `已行动 ${battle.acted.length}/${battle.players.filter(unit => unit.hp > 0).length}`}</span><strong>${activePlayer && activeEnemy ? `${activePlayer.name} → ${activeEnemy.name}` : "潮线战斗结束"}</strong><em>${level.description}</em></section>
+    <section class="arena-status"><span>${icon("clock-3")} ${battle.status === "enemy" ? "敌方正在反击" : finished ? "结算完成" : `已行动 ${battle.acted.length}/${battle.players.filter(unit => unit.hp > 0).length}`}</span><strong class="arena-intent">${intent ? `${icon("radio")} ${intentAttacker.name} → ${intentTarget.name} · ${intent.damage}` : "潮线战斗结束"}</strong><em>${level.description}</em></section>
     <section class="arena-field">
-      <div class="arena-side"><header><span>我方鸟灵</span><b>依次行动</b></header><div>${battle.players.map(unit => `<button type="button" data-arena-player="${unit.id}" class="${unit.id === activePlayerId ? "is-active" : ""} ${battle.acted.includes(unit.id) ? "has-acted" : ""} ${unit.defeated ? "is-defeated" : ""}" ${unit.defeated || battle.acted.includes(unit.id) || battle.status !== "player" ? "disabled" : ""}><img src="${unit.image}" alt=""><span><strong>${unit.name}</strong><small>${unit.role} · Lv.${unit.level}</small>${hpBar(unit)}<em>能量 ${unit.mp}/100</em></span></button>`).join("")}</div></div>
+      <div class="arena-side"><header><span>我方鸟灵</span><b>依次行动</b></header><div>${battle.players.map(unit => `<button type="button" data-arena-player="${unit.id}" class="${unit.id === activePlayerId ? "is-active" : ""} ${battle.acted.includes(unit.id) ? "has-acted" : ""} ${unit.defeated ? "is-defeated" : ""} ${intent?.targetId === unit.id ? "is-threatened" : ""}" ${unit.defeated || battle.acted.includes(unit.id) || battle.status !== "player" ? "disabled" : ""}>${intent?.targetId === unit.id ? `<mark class="arena-threat-label">${icon("crosshair")} 预计 -${intent.damage}</mark>` : ""}<img src="${unit.image}" alt=""><span><strong>${unit.name}</strong><small>${unit.role} · Lv.${unit.level}</small>${hpBar(unit)}<em>能量 ${unit.mp}/100</em></span></button>`).join("")}</div></div>
       <div class="arena-vs"><b>VS</b><span>${battle.lastEvent ? `-${battle.lastEvent.damage}` : "READY"}</span></div>
-      <div class="arena-side arena-enemies"><header><span>入侵扩散队</span><b>点击选择目标</b></header><div>${battle.enemies.map(unit => `<button type="button" data-arena-enemy="${unit.id}" class="${unit.id === activeEnemyId ? "is-active" : ""} ${unit.defeated ? "is-defeated" : ""}" ${unit.defeated || battle.status !== "player" ? "disabled" : ""}><img src="${unit.image}" alt=""><span><strong>${unit.name}</strong><small>${unit.skillName} · ATK ${unit.attack}</small>${hpBar(unit)}</span></button>`).join("")}</div></div>
+      <div class="arena-side arena-enemies"><header><span>入侵扩散队</span><b>点击选择目标</b></header><div>${battle.enemies.map(unit => `<button type="button" data-arena-enemy="${unit.id}" class="${unit.id === activeEnemyId ? "is-active" : ""} ${unit.defeated ? "is-defeated" : ""} ${intent?.attackerId === unit.id ? "is-intent" : ""}" ${unit.defeated || battle.status !== "player" ? "disabled" : ""}>${intent?.attackerId === unit.id ? `<mark class="arena-intent-label">${icon("radio")} 下一行动</mark>` : ""}<img src="${unit.image}" alt=""><span><strong>${unit.name}</strong><small>${unit.skillName} · ATK ${unit.attack}</small>${hpBar(unit)}</span></button>`).join("")}</div></div>
     </section>
     <section class="arena-console">
       <div class="arena-log"><header><span>${icon("shield")} BATTLE LOG</span><small>实时战况</small></header><div>${logs.slice(-8).map(line => `<p>${line}</p>`).join("")}</div></div>

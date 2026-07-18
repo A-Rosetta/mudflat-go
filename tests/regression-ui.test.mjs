@@ -30,13 +30,13 @@ test("mobile panorama has an in-page reset above the cross-origin iframe", () =>
   assert.match(css, /\.panorama-reset \{[^}]*z-index:3/);
 });
 
-test("new and reset sessions consistently start with 3000 points", () => {
-  assert.match(script, /points: 3000/);
-  assert.match(game, /saved\.points = 3000/);
-  assert.match(game, /root\.points \?\? 3000/);
-  assert.match(arena, /input\.points == null \? 3000 : input\.points/);
-  assert.equal((html.match(/data-points>3,000/g) || []).length, 4);
-  assert.match(html, /id="spiritPoints">3,000/);
+test("new and reset sessions consistently start with 300000 points", () => {
+  assert.match(script, /points: 300000/);
+  assert.match(game, /saved\.points = 300000/);
+  assert.match(game, /root\.points \?\? 300000/);
+  assert.match(arena, /input\.points == null \? 300000 : input\.points/);
+  assert.equal((html.match(/data-points>300,000/g) || []).length, 4);
+  assert.match(html, /id="spiritPoints">300,000/);
   assert.doesNotMatch(html, /data-points>1,280|id="spiritPoints">1,280/);
   assert.doesNotMatch(script, /points: 1280/);
   assert.doesNotMatch(game, /saved\.points = 1280|root\.points \?\? 1280/);
@@ -63,10 +63,10 @@ test("forest background and refractive top bar remain part of the glass system",
   assert.match(css, /\.topbar::after \{[^}]*linear-gradient/);
 });
 
-test("collection cabinet exposes a display-only AI glasses preview", () => {
-  assert.match(html, /class="ai-glasses-preview"[^>]+aria-disabled="true"[^>]+title="展览预览，暂未开放"/);
+test("collection cabinet exposes a display-only spatial preview", () => {
+  assert.match(html, /class="ai-glasses-preview"[^>]+aria-disabled="true"[^>]+title="空间预览功能尚未开放"/);
   assert.match(html, /data-lucide="glasses"/);
-  assert.match(html, />AI眼镜预览</);
+  assert.match(html, />空间预览</);
   assert.doesNotMatch(script, /ai-glasses-preview/);
 });
 
