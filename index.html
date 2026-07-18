@@ -142,6 +142,7 @@
               <button class="is-featured" type="button" data-draw-count="5"><span>潮汐 5 连</span><b><i data-lucide="sparkles"></i> 2,000</b><small>节省 500</small></button>
             </div>
             <div class="blind-box-odds"><span><b>3%</b> SSR</span><span><b>1%</b> CHASE</span><span><b>11</b> 全系列</span></div>
+            <button class="spirit-gate" type="button" data-view-target="bird-sanctuary"><i data-lucide="swords"></i><span><small>NEW · BIRD SPIRIT PROTOCOL</small><b>让收藏成为并肩作战的鸟灵</b></span><i data-lucide="arrow-up-right"></i></button>
           </div>
           <div class="blind-box-stage" id="blindBoxStage" aria-live="polite">
             <img class="blind-box-stage-art" src="assets/images/blind-box/01-unboxing-hero.webp" alt="湿地盲盒开盒展示">
@@ -153,16 +154,18 @@
         </section>
         <section class="blind-box-showroom" id="blindBoxShowroom" aria-labelledby="showroomTitle">
           <header class="showroom-head">
-            <div><span class="eyebrow">INTERACTIVE SPECIMEN ROOM</span><h2 id="showroomTitle">把湿地精灵，转到你眼前。</h2><p>三款高精度模型已完成 50% 减面、Draco 网格压缩与 WebP 纹理优化。拖动观察细节，滚轮或双指缩放。</p></div>
+            <div><span class="eyebrow">INTERACTIVE SPECIMEN ROOM</span><h2 id="showroomTitle">把湿地精灵，转到你眼前。</h2><p>五款高精度模型已完成减面、Draco 网格压缩与 WebP 纹理优化。拖动观察细节，滚轮或双指缩放。</p></div>
             <span class="showroom-performance"><i data-lucide="gauge"></i><b>97%</b><small>体积缩减</small></span>
           </header>
           <div class="showroom-layout">
             <div class="showroom-selector" role="tablist" aria-label="选择三维湿地精灵">
-              <button class="is-active" type="button" role="tab" aria-selected="true" data-model-src="assets/models/blind-box/mystery-wetland-bird.glb" data-model-poster="assets/images/blind-box/poster-mystery-wetland-bird.png" data-model-name="神秘湿地精灵" data-model-species="SERIES 01 · 未定名原型"><img src="assets/images/blind-box/poster-mystery-wetland-bird.png" alt=""><span><small>MODEL 01</small><b>神秘湿地精灵</b><em>2.45 MiB</em></span></button>
-              <button type="button" role="tab" aria-selected="false" data-model-src="assets/models/blind-box/fork-tailed-sunbird.glb" data-model-poster="assets/images/blind-box/poster-fork-tailed-sunbird.png" data-model-name="叉尾太阳鸟" data-model-species="Aethopyga christinae"><img src="assets/images/blind-box/poster-fork-tailed-sunbird.png" alt=""><span><small>MODEL 02</small><b>叉尾太阳鸟</b><em>2.49 MiB</em></span></button>
-              <button type="button" role="tab" aria-selected="false" data-model-src="assets/models/blind-box/red-whiskered-bulbul.glb" data-model-poster="assets/images/blind-box/poster-red-whiskered-bulbul.png" data-model-name="红耳鹎" data-model-species="Pycnonotus jocosus"><img src="assets/images/blind-box/poster-red-whiskered-bulbul.png" alt=""><span><small>MODEL 03</small><b>红耳鹎</b><em>2.35 MiB</em></span></button>
+              <button class="is-active" id="modelTab1" type="button" role="tab" aria-controls="blindBoxModelPanel" aria-selected="true" tabindex="0" data-model-src="assets/models/blind-box/mystery-wetland-bird.glb" data-model-poster="assets/images/blind-box/poster-mystery-wetland-bird.png" data-model-name="神秘湿地精灵" data-model-species="SERIES 01 · 未定名原型"><img src="assets/images/blind-box/poster-mystery-wetland-bird.png" alt=""><span><small>MODEL 01</small><b>神秘湿地精灵</b><em>2.45 MiB</em></span></button>
+              <button id="modelTab2" type="button" role="tab" aria-controls="blindBoxModelPanel" aria-selected="false" tabindex="-1" data-model-src="assets/models/blind-box/fork-tailed-sunbird.glb" data-model-poster="assets/images/blind-box/poster-fork-tailed-sunbird.png" data-model-name="叉尾太阳鸟" data-model-species="Aethopyga christinae"><img src="assets/images/blind-box/poster-fork-tailed-sunbird.png" alt=""><span><small>MODEL 02</small><b>叉尾太阳鸟</b><em>2.49 MiB</em></span></button>
+              <button id="modelTab3" type="button" role="tab" aria-controls="blindBoxModelPanel" aria-selected="false" tabindex="-1" data-model-src="assets/models/blind-box/red-whiskered-bulbul.glb" data-model-poster="assets/images/blind-box/poster-red-whiskered-bulbul.png" data-model-name="红耳鹎" data-model-species="Pycnonotus jocosus"><img src="assets/images/blind-box/poster-red-whiskered-bulbul.png" alt=""><span><small>MODEL 03</small><b>红耳鹎</b><em>2.35 MiB</em></span></button>
+              <button id="modelTab4" type="button" role="tab" aria-controls="blindBoxModelPanel" aria-selected="false" tabindex="-1" data-model-src="assets/models/blind-box/white-rumped-munia.glb" data-model-poster="assets/images/blind-box/poster-white-rumped-munia.webp" data-model-name="白腰文鸟" data-model-species="Lonchura striata"><img src="assets/images/blind-box/poster-white-rumped-munia.webp" alt=""><span><small>MODEL 04</small><b>白腰文鸟</b><em>2.22 MiB</em></span></button>
+              <button id="modelTab5" type="button" role="tab" aria-controls="blindBoxModelPanel" aria-selected="false" tabindex="-1" data-model-src="assets/models/blind-box/common-tailorbird.glb" data-model-poster="assets/images/blind-box/poster-common-tailorbird.webp" data-model-name="长尾缝叶莺" data-model-species="Orthotomus sutorius"><img src="assets/images/blind-box/poster-common-tailorbird.webp" alt=""><span><small>MODEL 05</small><b>长尾缝叶莺</b><em>2.23 MiB</em></span></button>
             </div>
-            <div class="showroom-stage">
+            <div class="showroom-stage" role="tabpanel" id="blindBoxModelPanel" aria-labelledby="modelTab1" tabindex="0">
               <model-viewer id="blindBoxModelViewer" poster="assets/images/blind-box/poster-mystery-wetland-bird.png" alt="神秘湿地精灵 3D 模型" camera-controls auto-rotate rotation-per-second="16deg" shadow-intensity="1.25" shadow-softness=".85" exposure="1.05" environment-image="neutral" interaction-prompt="none" loading="lazy" reveal="auto"></model-viewer>
               <div class="showroom-halo" aria-hidden="true"></div>
               <div class="showroom-loader" id="showroomLoader"><i></i><span id="showroomStatus">滑到这里后加载 3D 模型</span></div>
@@ -183,6 +186,59 @@
         <section class="blind-box-probability">
           <div><span class="eyebrow">FAIR DRAW</span><h2>概率透明，惊喜不藏规则。</h2><p>每次抽取相互独立；动画仅用于呈现，不影响抽取结果。</p></div>
           <div class="probability-bars"><span style="--rate:1"><b>CHASE</b><i></i><em>1%</em></span><span style="--rate:3"><b>SSR</b><i></i><em>3%</em></span><span style="--rate:7"><b>SR</b><i></i><em>7%</em></span><span style="--rate:18"><b>R</b><i></i><em>18%</em></span><span style="--rate:71"><b>N</b><i></i><em>71%</em></span></div>
+        </section>
+      </section>
+
+      <section class="view spirit-view" data-view="bird-sanctuary" aria-labelledby="spiritTitle">
+        <div class="spirit-noise" aria-hidden="true"></div>
+        <header class="spirit-nav">
+          <button type="button" data-view-target="blind-box"><i data-lucide="arrow-left"></i> 返回盲盒</button>
+          <span><i data-lucide="sparkles"></i><b id="spiritPoints">1,280</b> 积分 <i data-lucide="gem"></i><b id="spiritFragments">0</b> 生态碎片</span>
+        </header>
+        <section class="spirit-hero">
+          <div class="spirit-hero-copy">
+            <span class="spirit-kicker">WETLAND SPIRIT · TACTICAL ARCHIVE</span>
+            <h1 id="spiritTitle">潮汐退去，<br><em>鸟灵开始回响。</em></h1>
+            <p>从盲盒与图鉴中唤醒鸟灵，组成三位一体的湿地小队。观察敌方意图、合成高阶咒羽，在三行动点内改写潮线。</p>
+            <div class="spirit-hero-actions"><div class="encounter-picker" role="group" aria-label="演练难度"><button class="is-active" type="button" data-battle-encounter="normal" aria-pressed="true">净滩演练<small>4-7 回合</small></button><button type="button" data-battle-encounter="boss" aria-pressed="false">赤潮首领<small>7-10 回合</small></button></div><button type="button" id="startSpiritBattle"><i data-lucide="play"></i> 进入潮线演练</button><span><b>3 AP</b><small>每回合行动点</small></span><span><b>5</b><small>激情终结技</small></span></div>
+            <p class="spirit-notice" id="spiritNotice" aria-live="polite">收藏可产生共鸣，高阶升级会消耗重复盲盒转化的生态碎片。</p>
+          </div>
+          <div class="spirit-team-preview" id="spiritTeamPreview" aria-label="当前鸟灵编队"></div>
+        </section>
+        <section class="spirit-command" aria-labelledby="rosterTitle">
+          <header><div><span class="eyebrow">FORMATION & GROWTH</span><h2 id="rosterTitle">鸟灵档案</h2><p>探索积分用于升级；Lv.10 起同时消耗盲盒重复品转化的生态碎片。队伍固定三席，定位与属性克制决定战斗节奏。</p></div><div class="affinity-loop"><span class="tide">潮</span><i>克</i><span class="wing">羽</span><i>克</i><span class="grove">林</span><i>克</i><span class="tide">潮</span></div></header>
+          <div class="spirit-workbench">
+            <div class="spirit-roster" id="spiritRoster" aria-label="鸟灵列表"></div>
+            <section class="spirit-detail" id="spiritDetail" aria-live="polite">
+              <div id="spiritProfile"></div>
+              <div class="spirit-tabs" role="tablist" aria-label="鸟灵养成分区">
+                <button class="is-active" id="spirit-tab-growth" type="button" role="tab" aria-selected="true" aria-controls="spiritDetailBody" tabindex="0" data-spirit-tab="growth"><i data-lucide="chart-no-axes-column-increasing"></i>成长</button>
+                <button id="spirit-tab-traces" type="button" role="tab" aria-selected="false" aria-controls="spiritDetailBody" tabindex="-1" data-spirit-tab="traces"><i data-lucide="git-branch"></i>轨迹</button>
+                <button id="spirit-tab-sigils" type="button" role="tab" aria-selected="false" aria-controls="spiritDetailBody" tabindex="-1" data-spirit-tab="sigils"><i data-lucide="shield-check"></i>羽印</button>
+                <button id="spirit-tab-resonance" type="button" role="tab" aria-selected="false" aria-controls="spiritDetailBody" tabindex="-1" data-spirit-tab="resonance"><i data-lucide="orbit"></i>共鸣</button>
+              </div>
+            </section>
+            <section class="growth-panel" id="spiritDetailBody" role="tabpanel" aria-labelledby="spirit-tab-growth" aria-live="polite"></section>
+          </div>
+        </section>
+
+        <section class="battle-shell" id="battleShell" hidden role="dialog" aria-modal="true" aria-label="鸟灵战斗" tabindex="-1">
+          <div class="battle-flash" aria-hidden="true"></div><div class="battle-vignette" aria-hidden="true"></div><div class="battle-particles" id="battleParticles" aria-hidden="true"></div>
+          <header class="battle-hud"><button type="button" id="leaveBattle" aria-label="退出战斗"><i data-lucide="x"></i></button><div><span>潮线演练 · 深圳湾</span><b id="battleTurn">TURN 01</b></div><button type="button" id="battleSound" aria-label="关闭战斗音效" aria-pressed="true"><i data-lucide="volume-2"></i></button></header>
+          <div class="battle-timeline" id="battleTimeline" aria-label="行动序列"></div>
+          <div class="enemy-intent" id="enemyIntent" aria-live="polite"><i data-lucide="crosshair"></i><span><small>敌方意图</small><b>浊流冲撞</b></span></div>
+          <div class="weakness-list" id="enemyWeaknesses" aria-label="敌方弱点"></div>
+          <div class="battlefield" id="battlefield">
+            <div class="battle-team" id="battleTeam"></div>
+            <div class="battle-enemy" id="battleEnemy"><div class="enemy-aura"></div><img src="assets/images/fiddler-crab.jpg" alt="污潮巨螯"><span class="enemy-level" id="enemyLevel">NORMAL · LV.7</span><h2 id="enemyName">污潮巨螯</h2><div class="combat-bar enemy"><i id="enemyHpBar"></i><b id="enemyHpText">2100 / 2100</b></div><div class="enemy-toughness" id="enemyToughness"><span></span><b>韧性 100 / 100</b></div><div class="enemy-shield" id="enemyShield" hidden><i data-lucide="shield"></i><span>0</span></div></div>
+          </div>
+          <div class="battle-message" id="battleMessage" aria-live="polite">选择咒羽，规划本回合行动。</div>
+          <footer class="battle-console">
+            <div class="action-points"><span>行动点</span><div id="actionPoints"><i></i><i></i><i></i></div><div class="combo-meter" id="comboMeter"><b>0</b><small>连携</small></div></div>
+            <div class="battle-hand" id="battleHand"></div>
+            <button class="end-turn" type="button" id="endTurn"><span>结束回合</span><small>ENEMY PHASE</small><i data-lucide="chevrons-right"></i></button>
+          </footer>
+          <div class="battle-result" id="battleResult" hidden><div><span id="battleResultKicker">TIDAL LINE SECURED</span><h2 id="battleResultTitle">潮线已净化</h2><p id="battleResultCopy">鸟灵之间的回响变得更清晰。</p><button type="button" id="battleAgain">再次演练 <i data-lucide="rotate-cw"></i></button><button type="button" id="battleReturn">返回鸟灵档案</button></div></div>
         </section>
       </section>
 
@@ -243,6 +299,7 @@
     <nav class="bottom-nav" aria-label="主导航">
       <button class="is-active" type="button" data-view-target="explore"><i data-lucide="map"></i><span>探索</span></button>
       <button type="button" data-view-target="collection"><i data-lucide="panels-top-left"></i><span>图鉴</span></button>
+      <button type="button" data-view-target="bird-sanctuary"><i data-lucide="swords"></i><span>鸟灵</span></button>
       <button class="capture-shortcut" type="button" data-open-site aria-label="查看当前点位目标"><i data-lucide="scan-line"></i></button>
       <button type="button" data-view-target="tasks"><i data-lucide="list-checks"></i><span>任务</span></button>
       <button type="button" data-view-target="profile"><i data-lucide="user-round"></i><span>我的</span></button>
@@ -355,5 +412,6 @@
   <script src="assets/vendor/mobilenet.min.js"></script>
   <script src="assets/vendor/onnxruntime-web.min.js"></script>
   <script src="script.js"></script>
+  <script type="module" src="game.js"></script>
 </body>
 </html>
