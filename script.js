@@ -226,8 +226,8 @@ function drawBlindBoxes(count) {
   const results = Array.from({ length: count }, () => {
     const item = pickBlindBox();
     const duplicate = Boolean(state.blindBoxCollection[item.id]);
+    state.blindBoxCollection[item.id] = (Number(state.blindBoxCollection[item.id]) || 0) + 1;
     if (duplicate) state.blindBoxFragments += item.fragments;
-    else state.blindBoxCollection[item.id] = 1;
     return { item, duplicate };
   });
   saveState();
@@ -250,7 +250,9 @@ function selectShowroomModel(button) {
     const active = item === button;
     item.classList.toggle("is-active", active);
     item.setAttribute("aria-selected", String(active));
+    item.setAttribute("tabindex", active ? "0" : "-1");
   });
+  document.getElementById("blindBoxModelPanel").setAttribute("aria-labelledby", button.id);
   viewer.setAttribute("poster", button.dataset.modelPoster);
   viewer.setAttribute("alt", `${button.dataset.modelName} 3D 模型`);
   document.getElementById("showroomName").textContent = button.dataset.modelName;
@@ -1029,6 +1031,20 @@ function toast(message) {
 document.querySelectorAll("[data-view-target]").forEach(button => button.addEventListener("click", () => navigate(button.dataset.viewTarget)));
 document.querySelectorAll("[data-draw-count]").forEach(button => button.addEventListener("click", () => drawBlindBoxes(Number(button.dataset.drawCount))));
 document.querySelectorAll("[data-model-src]").forEach(button => button.addEventListener("click", () => { initializeShowroom(); selectShowroomModel(button); }));
+const showroomTabs = [...document.querySelectorAll("[data-model-src]")];
+showroomTabs.forEach((button, index) => button.addEventListener("keydown", event => {
+  let targetIndex = index;
+  if (event.key === "ArrowRight") targetIndex = (index + 1) % showroomTabs.length;
+  else if (event.key === "ArrowLeft") targetIndex = (index - 1 + showroomTabs.length) % showroomTabs.length;
+  else if (event.key === "Home") targetIndex = 0;
+  else if (event.key === "End") targetIndex = showroomTabs.length - 1;
+  else return;
+  event.preventDefault();
+  const target = showroomTabs[targetIndex];
+  target.focus();
+  initializeShowroom();
+  selectShowroomModel(target);
+}));
 const showroomObserver = new IntersectionObserver(entries => {
   if (!entries.some(entry => entry.isIntersecting)) return;
   const schedule = window.requestIdleCallback || (callback => window.setTimeout(callback, 80));
@@ -1152,6 +1168,10 @@ document.querySelectorAll(".modal-backdrop").forEach(backdrop => backdrop.addEve
 }));
 document.addEventListener("keydown", event => { if (event.key === "Escape") { closeCapture(); closeSite(); closeSpecies(); closeShare(); closeBlindBoxReveal(); } });
 window.addEventListener("pagehide", stopCamera);
+window.addEventListener("mudflat-state-changed", () => {
+  state = readState();
+  updateUI();
+});
 
 updateUI();
 icons();
