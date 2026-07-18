@@ -10,3 +10,5 @@
 [2026-07-18 11:56:31 +0800 CST] Added stoppable alarm previews, restored repeat recognition, provided a mobile panorama reset, and set new or reset sessions to 3000 points; verified the fixes and arena persistence in a mobile browser.
 [2026-07-18 13:11:02 +0800 CST] Unified navigation and controls with a responsive liquid-glass system, reduced page-title footprint, reorganized collection and arena entry points, and redesigned the blind-box journey as a concrete wetland collection experience.
 [2026-07-18 13:30:33 +0800 CST] Restored the pale forest-green global gradient and increased the top navigation's refractive blur, saturation, edge highlights, and layered glass depth across desktop and mobile.
+[2026-07-18 13:43:33 +0800 CST] Added a responsive display-only AI glasses preview control beside the wetland collection cabinet progress, without attaching navigation or interactive behavior.
+[2026-07-18 14:02:29 +0800 CST] Unified primary display headings with the existing high-contrast Chinese serif and replaced the explore hero statement with the four-line wetland encounter message.

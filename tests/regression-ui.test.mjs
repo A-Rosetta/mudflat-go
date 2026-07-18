@@ -60,3 +60,15 @@ test("forest background and refractive top bar remain part of the glass system",
   assert.match(css, /\.topbar::before \{[^}]*linear-gradient/);
   assert.match(css, /\.topbar::after \{[^}]*linear-gradient/);
 });
+
+test("collection cabinet exposes a display-only AI glasses preview", () => {
+  assert.match(html, /class="ai-glasses-preview"[^>]+aria-disabled="true"[^>]+title="展览预览，暂未开放"/);
+  assert.match(html, /data-lucide="glasses"/);
+  assert.match(html, />AI眼镜预览</);
+  assert.doesNotMatch(script, /ai-glasses-preview/);
+});
+
+test("display headings use the editorial serif and the explore message matches the campaign", () => {
+  assert.match(css, /h1, h2 \{ font-family: "Noto Serif SC", serif; \}/);
+  assert.match(html, /id="exploreTitle">让每一次<br>湿地相遇，<br>成为一张<br><em>生命卡片。<\/em>/);
+});
