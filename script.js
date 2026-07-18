@@ -65,7 +65,7 @@ const sites = [
 
 const badges = [
   ["footprints", "初次启程", "完成首次湿地探索"],
-  ["camera", "生态摄影师", "完成首次 AI 识物"],
+  ["camera", "生态摄影师", "完成首次物种识别"],
   ["trees", "红树林守护者", "完成福田全部任务"],
   ["bird", "湾区观鸟人", "发现 5 种湿地鸟类"],
   ["sunset", "西湾追光者", "完成西湾打卡"],
@@ -246,7 +246,10 @@ function scheduleBirdAlarm() {
 
 function navigate(name) {
   document.querySelectorAll(".view").forEach(view => view.classList.toggle("is-active", view.dataset.view === name));
-  document.querySelectorAll("[data-view-target]").forEach(button => button.classList.toggle("is-active", button.dataset.viewTarget === name));
+  document.querySelectorAll("[data-view-target]").forEach(button => {
+    const activeView = button.closest(".bottom-nav") && ["blind-box", "bird-sanctuary"].includes(name) ? "collection" : name;
+    button.classList.toggle("is-active", button.dataset.viewTarget === activeView);
+  });
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -447,13 +450,13 @@ function renderAtlas() {
       <img src="${item.image}" alt="${isFound ? item.name : "待发现物种剪影"}">
       <span class="rarity ${item.rarity.toLowerCase()}">${item.rarity}</span>
       ${isFound ? "" : `<span class="card-lock">${icon("lock")}</span>`}
-      <span class="species-card-copy"><h2>${item.name}</h2><em>${isFound ? item.latin : `${item.season} · 等待发现`}</em><p>${isFound ? item.description : "前往对应湿地完成 AI 识别，点亮这张生态卡片。"}</p>${isFound ? `<span class="mini-level"><b>Lv.${level.level} · ${level.name}</b><i><em style="width:${level.percent}%"></em></i></span>` : ""}</span>
+      <span class="species-card-copy"><h2>${item.name}</h2><em>${isFound ? item.latin : `${item.season} · 等待发现`}</em><p>${isFound ? item.description : "前往对应湿地完成物种识别，点亮这张生态卡片。"}</p>${isFound ? `<span class="mini-level"><b>Lv.${level.level} · ${level.name}</b><i><em style="width:${level.percent}%"></em></i></span>` : ""}</span>
     </button>`;
   }).join("");
   document.querySelectorAll("[data-species]").forEach(card => card.addEventListener("click", () => {
     const item = species.find(entry => entry.id === card.dataset.species);
     if (found(item)) openSpecies(item);
-    else toast("在点位目标中找到它，再用 AI 完成观察记录");
+    else toast("在点位目标中找到它，再完成一次物种识别记录");
   }));
   icons();
 }
@@ -468,7 +471,7 @@ function renderTasks() {
   ] : [
     { icon: "panels-top-left", title: `查看${sites[activeSite].short}目标`, note: "先认识这里可能遇见的物种", done: progress.targetsViewed, action: "site", reward: "+10" },
     { icon: "map-pin-check", title: `抵达${sites[activeSite].name}`, note: progress.gps ? "浏览器定位已通过点位校验" : "需在点位附近授权 GPS 校验", done: progress.gps, action: "site", reward: "+20" },
-    { icon: "camera", title: "完成一次有效 AI 识物", note: "识别结果需属于当前点位目标库", done: progress.identified, action: "capture", reward: "+40" }
+    { icon: "camera", title: "完成一次有效物种识别", note: "识别结果需属于当前点位目标库", done: progress.identified, action: "capture", reward: "+40" }
   ];
   document.getElementById("taskList").innerHTML = tasks.map(task => `<article class="task-item ${task.done ? "is-done" : ""}"><span>${icon(task.done ? "check" : task.icon)}</span><div><b>${task.title}</b><small>${task.note}</small></div>${task.done ? `<em>${task.reward}</em>` : `<button type="button" data-task-action="${task.action}" aria-label="开始${task.title}">${icon("arrow-right")}</button>`}</article>`).join("");
   document.getElementById("taskRingValue").textContent = taskMode === "daily" ? dailyTaskCount() : siteTaskCount();
@@ -570,7 +573,7 @@ function renderSiteTargets() {
   document.getElementById("siteTaskSummary").innerHTML = [
     ["targetsViewed", "目标", "先认识可能遇见的物种"],
     ["gps", "点位", "到达附近后完成 GPS 校验"],
-    ["identified", "记录", "完成一次有效 AI 识物"]
+    ["identified", "记录", "完成一次有效物种识别"]
   ].map(([key, title, note], index) => `<span class="${progress[key] ? "is-done" : ""}"><i>${progress[key] ? icon("check") : index + 1}</i><b>${title}</b><small>${note}</small></span>`).join("");
   document.querySelectorAll("[data-target]").forEach(card => card.addEventListener("click", () => {
     const item = species.find(entry => entry.id === card.dataset.target);
@@ -602,14 +605,14 @@ function resetCapture() {
   recognitionResult = null;
   document.getElementById("scanner").classList.remove("is-running");
   document.getElementById("captureResult").hidden = true;
-  document.getElementById("cameraStatus").textContent = "浏览器端 AI 生态识别";
+  document.getElementById("cameraStatus").textContent = "设备端物种辅助识别";
   document.getElementById("scanProgress").hidden = true;
   document.getElementById("locationReadout").classList.remove("is-complete", "is-warning");
   document.getElementById("locationReadout").innerHTML = `<span>${icon("map-pin")}</span><p><b>GPS 点位校验</b><small>拍照后请求定位</small></p><em>GPS</em>`;
   document.getElementById("sceneReadout").classList.remove("is-complete", "is-warning");
   document.getElementById("sceneReadout").innerHTML = `<span>${icon("trees")}</span><p><b>生态场景匹配</b><small>${sites[activeSite].short}目标库已就绪</small></p><em>ECO</em>`;
   document.getElementById("featureReadout").classList.remove("is-complete");
-  document.getElementById("featureReadout").innerHTML = `<span>${icon("scan-search")}</span><p><b>物种特征</b><small>等待实时照片</small></p><em>AI</em>`;
+  document.getElementById("featureReadout").innerHTML = `<span>${icon("scan-search")}</span><p><b>物种特征</b><small>等待实时照片</small></p><em>识别</em>`;
   document.getElementById("collectButton").hidden = true;
   document.getElementById("identifyButton").hidden = false;
   setCaptureReady(false, "等待画面");
@@ -713,7 +716,7 @@ async function startCamera() {
     reopen.hidden = true;
     const devices = await navigator.mediaDevices.enumerateDevices();
     document.getElementById("switchCamera").hidden = devices.filter(device => device.kind === "videoinput").length < 2;
-    document.getElementById("cameraStatus").textContent = cameraFacingMode === "environment" ? "后置相机 · 本地 AI" : "前置相机 · 本地 AI";
+    document.getElementById("cameraStatus").textContent = cameraFacingMode === "environment" ? "后置相机 · 设备端识别" : "前置相机 · 设备端识别";
     document.getElementById("featureReadout").querySelector("small").textContent = "相机就绪，拍照后识别";
     setCaptureReady(true, "拍照并识别");
   } catch (error) {
@@ -886,7 +889,7 @@ async function identify() {
   const readout = document.getElementById("featureReadout");
   readout.classList.remove("is-complete");
   readout.querySelector("small").textContent = "正在加载模型并分析画面";
-  document.getElementById("cameraStatus").textContent = "本地 AI 分析中";
+  document.getElementById("cameraStatus").textContent = "正在设备端分析";
   try {
     updateScanProgress(8, "正在检查照片清晰度");
     let input = document.getElementById("captureImage");
@@ -914,12 +917,12 @@ async function identify() {
     showRecognitionResult(displayPredictions, recognitionResult, detectedResult);
     readout.classList.toggle("is-complete", Boolean(detectedResult));
     readout.innerHTML = detectedResult
-      ? `<span>${icon(recognitionResult ? "check" : "circle-alert")}</span><p><b>物种特征</b><small>${detectedResult.title} · ${(detectedResult.probability * 100).toFixed(1)}%</small></p><em>AI</em>`
-      : `<span>${icon("circle-alert")}</span><p><b>物种特征</b><small>当前模型无法可靠确认</small></p><em>AI</em>`;
+      ? `<span>${icon(recognitionResult ? "check" : "circle-alert")}</span><p><b>物种特征</b><small>${detectedResult.title} · ${(detectedResult.probability * 100).toFixed(1)}%</small></p><em>识别</em>`
+      : `<span>${icon("circle-alert")}</span><p><b>物种特征</b><small>当前模型无法可靠确认</small></p><em>识别</em>`;
   } catch (error) {
     recognitionResult = null;
     showRecognitionError(error.message || "模型加载失败，请稍后重试");
-    readout.innerHTML = `<span>${icon("triangle-alert")}</span><p><b>物种特征</b><small>识别失败，请重试</small></p><em>AI</em>`;
+    readout.innerHTML = `<span>${icon("triangle-alert")}</span><p><b>物种特征</b><small>识别失败，请重试</small></p><em>识别</em>`;
     updateScanProgress(100, "扫描未完成");
   } finally {
     document.getElementById("scanner").classList.remove("is-running");
@@ -1326,7 +1329,7 @@ document.getElementById("photoInput").addEventListener("change", event => {
     document.getElementById("switchCamera").hidden = true;
     document.getElementById("reopenCamera").hidden = false;
     document.getElementById("captureResult").hidden = true;
-    document.getElementById("cameraStatus").textContent = "相册照片 · 本地 AI";
+    document.getElementById("cameraStatus").textContent = "相册照片 · 设备端识别";
     document.getElementById("featureReadout").querySelector("small").textContent = "照片就绪，可以开始识别";
     setCaptureReady(true, "识别这张照片");
     toast("照片只在当前浏览器本地处理，不会上传");

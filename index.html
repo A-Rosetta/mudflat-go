@@ -31,9 +31,9 @@
       <section class="view is-active" data-view="explore" aria-labelledby="exploreTitle">
         <div class="explore-layout">
           <div class="explore-copy">
-            <span class="hero-kicker"><i data-lucide="compass"></i> 深圳湿地生态 × AI 图鉴收集游戏</span>
-            <h1 id="exploreTitle">让每一次<br>湿地相遇，<br>成为一张<br><em>生命卡片。</em></h1>
-            <p>先看到这里可能出现的鸟，再带着图鉴去寻找。拍下真实生命，通过 AI 与 GPS 校验，把一次散步变成一场可以收集的生态冒险。</p>
+            <span class="hero-kicker"><i data-lucide="compass"></i> 深圳湿地观察与物种档案</span>
+            <h1 id="exploreTitle">走进深圳湿地，<br><em>记录每一次相遇。</em></h1>
+            <p>查看点位与当季目标，带着图鉴实地寻找。照片在当前设备完成物种辅助识别，并结合地点留下可信的观察记录。</p>
             <div class="hero-actions">
               <button class="button primary" type="button" data-open-site>查看当前点位 <i data-lucide="arrow-right"></i></button>
               <button class="button secondary" type="button" data-view-target="collection">打开深圳图鉴</button>
@@ -85,7 +85,7 @@
                 <span class="eyebrow">当前任务</span>
                 <h2 id="missionTitle">解锁红树林守护者</h2>
                 <div class="mission-progress"><span id="missionBar"></span></div>
-                <p><b id="missionCount">1 / 3</b><span id="missionHint">还需完成 AI 识物和湿地问答</span></p>
+                <p><b id="missionCount">1 / 3</b><span id="missionHint">查看目标、抵达点位、完成一次有效识别</span></p>
               </div>
               <button class="icon-action" type="button" data-view-target="tasks" aria-label="查看任务" title="查看任务"><i data-lucide="arrow-right"></i></button>
             </div>
@@ -109,16 +109,22 @@
       </section>
 
       <section class="view" data-view="collection" aria-labelledby="collectionTitle">
-        <header class="page-head">
-          <div><span class="eyebrow">SHENZHEN FIELD ATLAS</span><h1 id="collectionTitle">深圳生态图鉴</h1><p>观察不是占有。每一张点亮的卡片，都来自一次保持距离的真实相遇。</p></div>
-          <div class="atlas-head-actions">
-            <button class="blind-box-entry" type="button" data-view-target="blind-box" aria-label="打开湿地盲盒">
-              <span class="blind-box-entry-glow" aria-hidden="true"></span><i data-lucide="gift"></i>
-              <span><small>积分主要用途</small><strong>湿地盲盒</strong></span><i data-lucide="sparkles"></i>
-            </button>
-            <div class="atlas-count"><strong data-found>2</strong><span>/ 9 已发现</span></div>
-          </div>
+        <header class="page-head atlas-page-head">
+          <div><span class="eyebrow">SHENZHEN FIELD ATLAS</span><h1 id="collectionTitle">深圳湿地物种档案</h1><p>观察不是占有。每一张点亮的卡片，都来自一次保持距离的真实相遇。</p></div>
+          <div class="atlas-count"><strong data-found>2</strong><span>/ 9 已发现</span></div>
         </header>
+        <section class="collection-hub" aria-label="收藏与鸟灵功能">
+          <button class="collection-entry collection-entry-box" type="button" data-view-target="blind-box" aria-label="进入湿地藏品">
+            <img src="assets/images/blind-box/14-complete-collection.webp" alt="湿地藏品系列陈列">
+            <span><small>WETLAND COLLECTION · SERIES 01</small><strong>湿地藏品</strong><p>用探索积分开启系列收藏，概率公开，重复款会转化为生态碎片。</p><em><i data-lucide="sparkles"></i><b data-points>3,000</b> 可用积分</em></span>
+            <i data-lucide="chevron-right"></i>
+          </button>
+          <button class="collection-entry collection-entry-spirit" type="button" data-view-target="bird-sanctuary" aria-label="进入鸟灵档案与湿地竞技">
+            <img src="assets/images/black-faced-spoonbill.jpg" alt="黑脸琵鹭鸟灵档案">
+            <span><small>BIRD SPIRIT ARCHIVE</small><strong>鸟灵档案与竞技</strong><p>管理三鸟编队、培养已收藏鸟灵，进入十关湿地防线。</p><em><i data-lucide="trophy"></i> 每日首胜积分</em></span>
+            <i data-lucide="chevron-right"></i>
+          </button>
+        </section>
         <div class="filter-row">
           <div class="segmented" role="group" aria-label="图鉴筛选">
             <button class="is-active" type="button" data-filter="all">全部</button>
@@ -151,28 +157,28 @@
         </header>
         <section class="blind-box-hero">
           <div class="blind-box-copy">
-            <span class="blind-box-kicker">WETLAND SPIRITS · SERIES 01</span>
-            <h1 id="blindBoxTitle">把探索积分，<br>变成一场<em>潮汐惊喜。</em></h1>
-            <p>每次开启都会获得一款湿地精灵手办。普通款、稀有款与隐藏 CHASE 均已公示概率，重复款自动转化为生态碎片。</p>
+            <span class="blind-box-kicker">WETLAND COLLECTION · SERIES 01</span>
+            <h1 id="blindBoxTitle">深圳湿地藏品<br><em>第一辑</em></h1>
+            <p>以深圳常见湿地物种为原型的系列收藏。各等级概率完整公示，重复藏品自动转化为生态碎片。</p>
             <div class="blind-box-actions">
-              <button type="button" data-draw-count="1"><span>开启 1 盒</span><b><i data-lucide="sparkles"></i> 500</b></button>
-              <button class="is-featured" type="button" data-draw-count="5"><span>潮汐 5 连</span><b><i data-lucide="sparkles"></i> 2,000</b><small>节省 500</small></button>
+              <button type="button" data-draw-count="1"><span>开启一份</span><b><i data-lucide="sparkles"></i> 500</b></button>
+              <button class="is-featured" type="button" data-draw-count="5"><span>开启五份</span><b><i data-lucide="sparkles"></i> 2,000</b><small>节省 500</small></button>
             </div>
-            <div class="blind-box-odds"><span><b>3%</b> SSR</span><span><b>1%</b> CHASE</span><span><b>11</b> 全系列</span></div>
-            <button class="spirit-gate" type="button" data-view-target="bird-sanctuary"><i data-lucide="swords"></i><span><small>NEW · BIRD SPIRIT PROTOCOL</small><b>让收藏成为并肩作战的鸟灵</b></span><i data-lucide="arrow-up-right"></i></button>
+            <div class="blind-box-odds"><span><b>0.99%</b> SSR</span><span><b>0.01%</b> CHASE</span><span><b>11</b> 全系列</span></div>
+            <button class="spirit-gate" type="button" data-view-target="bird-sanctuary"><i data-lucide="swords"></i><span><small>COLLECTION CONTINUES</small><b>前往鸟灵档案与湿地竞技</b></span><i data-lucide="arrow-up-right"></i></button>
           </div>
           <div class="blind-box-stage" id="blindBoxStage" aria-live="polite">
             <img class="blind-box-stage-art" src="assets/images/blind-box/01-unboxing-hero.webp" alt="湿地盲盒开盒展示">
             <div class="blind-box-stage-vignette"></div>
             <div class="mystery-box" aria-hidden="true"><img src="assets/images/blind-box/02-package-flatlay.webp" alt=""><span></span></div>
             <div class="stage-orbit" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></div>
-            <p><span></span> 点击开启，让潮汐替你选择</p>
+            <p><span></span> SERIES 01 · SHENZHEN WETLANDS</p>
           </div>
         </section>
         <section class="blind-box-showroom" id="blindBoxShowroom" aria-labelledby="showroomTitle">
           <header class="showroom-head">
-            <div><span class="eyebrow">INTERACTIVE SPECIMEN ROOM</span><h2 id="showroomTitle">把湿地精灵，转到你眼前。</h2><p>五款高精度模型已完成减面、Draco 网格压缩与 WebP 纹理优化。拖动观察细节，滚轮或双指缩放。</p></div>
-            <span class="showroom-performance"><i data-lucide="gauge"></i><b>97%</b><small>体积缩减</small></span>
+            <div><span class="eyebrow">DIGITAL SPECIMEN ROOM</span><h2 id="showroomTitle">湿地藏品数字展室</h2><p>以本地常见鸟类为原型建立的立体藏品档案，完整保留物种名称与形态特征。</p></div>
+            <span class="showroom-performance"><i data-lucide="box"></i><b>4</b><small>款可查看</small></span>
           </header>
           <div class="showroom-layout">
             <div class="showroom-selector" role="tablist" aria-label="选择三维湿地精灵">
@@ -209,14 +215,14 @@
       <section class="view spirit-view" data-view="bird-sanctuary" aria-labelledby="spiritTitle">
         <div class="spirit-noise" aria-hidden="true"></div>
         <header class="spirit-nav">
-          <button type="button" data-view-target="blind-box"><i data-lucide="arrow-left"></i> 返回盲盒</button>
+          <button type="button" data-view-target="collection"><i data-lucide="arrow-left"></i> 返回图鉴</button>
           <span><i data-lucide="sparkles"></i><b id="spiritPoints">3,000</b> 积分 <i data-lucide="gem"></i><b id="spiritFragments">0</b> 生态碎片</span>
         </header>
         <section class="spirit-hero">
           <div class="spirit-hero-copy">
             <span class="spirit-kicker">WETLAND SPIRIT · TACTICAL ARCHIVE</span>
-            <h1 id="spiritTitle">潮汐退去，<br><em>鸟灵开始回响。</em></h1>
-            <p>从盲盒与图鉴中唤醒鸟灵，组成三位一体的湿地小队。观察敌方意图、合成高阶咒羽，在三行动点内改写潮线。</p>
+            <h1 id="spiritTitle">鸟灵档案<br><em>与湿地竞技</em></h1>
+            <p>从图鉴与藏品中组成三鸟编队，管理等级、技能与共鸣，进入潮线演练或十关湿地防线。</p>
             <div class="spirit-hero-actions"><div class="encounter-picker" role="group" aria-label="演练难度"><button class="is-active" type="button" data-battle-encounter="normal" aria-pressed="true">净滩演练<small>4-7 回合</small></button><button type="button" data-battle-encounter="boss" aria-pressed="false">赤潮首领<small>7-10 回合</small></button></div><button type="button" id="startSpiritBattle"><i data-lucide="play"></i> 进入潮线演练</button><button class="arena-entry" type="button" id="openBirdArena"><i data-lucide="trophy"></i><span>湿地竞技<small>十关防线 · 每日首胜积分</small></span><i data-lucide="arrow-up-right"></i></button><span><b>3 AP</b><small>每回合行动点</small></span><span><b>5</b><small>激情终结技</small></span></div>
             <p class="spirit-notice" id="spiritNotice" aria-live="polite">收藏可产生共鸣，高阶升级会消耗重复盲盒转化的生态碎片。</p>
           </div>
@@ -329,7 +335,6 @@
     <nav class="bottom-nav" aria-label="主导航">
       <button class="is-active" type="button" data-view-target="explore"><i data-lucide="map"></i><span>探索</span></button>
       <button type="button" data-view-target="collection"><i data-lucide="panels-top-left"></i><span>图鉴</span></button>
-      <button type="button" data-view-target="bird-sanctuary"><i data-lucide="swords"></i><span>鸟灵</span></button>
       <button class="capture-shortcut" type="button" data-open-site aria-label="查看当前点位目标"><i data-lucide="scan-line"></i></button>
       <button type="button" data-view-target="tasks"><i data-lucide="list-checks"></i><span>任务</span></button>
       <button type="button" data-view-target="profile"><i data-lucide="user-round"></i><span>我的</span></button>
@@ -372,7 +377,7 @@
   <section class="capture-view" id="captureView" hidden aria-labelledby="captureTitle">
     <header class="capture-head">
       <button type="button" id="closeCapture"><i data-lucide="arrow-left"></i> 返回</button>
-      <span id="cameraStatus">浏览器端 AI 生态识别</span>
+      <span id="cameraStatus">设备端物种辅助识别</span>
       <label for="photoInput"><i data-lucide="image-up"></i> 相册</label>
       <input id="photoInput" type="file" accept="image/*" hidden>
     </header>
@@ -391,7 +396,7 @@
       <div class="capture-readout" id="captureReadout">
         <div id="locationReadout"><span><i data-lucide="map-pin"></i></span><p><b>GPS 点位校验</b><small>拍照后请求定位</small></p><em>GPS</em></div>
         <div id="sceneReadout"><span><i data-lucide="trees"></i></span><p><b>生态场景匹配</b><small>等待当前点位目标库</small></p><em>ECO</em></div>
-        <div id="featureReadout"><span><i data-lucide="scan-search"></i></span><p><b>物种特征</b><small>等待实时照片</small></p><em>AI</em></div>
+        <div id="featureReadout"><span><i data-lucide="scan-search"></i></span><p><b>物种特征</b><small>等待实时照片</small></p><em>识别</em></div>
       </div>
       <div class="scan-progress" id="scanProgress" hidden><div><span id="scanProgressBar"></span></div><p><b id="scanStage">准备分析</b><em id="scanPercent">0%</em></p></div>
       <div class="camera-tools">

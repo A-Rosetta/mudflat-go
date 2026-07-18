@@ -35,10 +35,21 @@ test("new and reset sessions consistently start with 3000 points", () => {
   assert.match(game, /saved\.points = 3000/);
   assert.match(game, /root\.points \?\? 3000/);
   assert.match(arena, /input\.points == null \? 3000 : input\.points/);
-  assert.equal((html.match(/data-points>3,000/g) || []).length, 3);
+  assert.equal((html.match(/data-points>3,000/g) || []).length, 4);
   assert.match(html, /id="spiritPoints">3,000/);
   assert.doesNotMatch(html, /data-points>1,280|id="spiritPoints">1,280/);
   assert.doesNotMatch(script, /points: 1280/);
   assert.doesNotMatch(game, /saved\.points = 1280|root\.points \?\? 1280/);
   assert.doesNotMatch(arena, /input\.points == null \? 1280/);
+});
+
+test("primary navigation stays focused while collection exposes secondary features", () => {
+  const navigation = html.match(/<nav class="bottom-nav"[\s\S]*?<\/nav>/)?.[0] || "";
+  assert.equal((navigation.match(/<button\b/g) || []).length, 5);
+  assert.doesNotMatch(navigation, /data-view-target="bird-sanctuary"/);
+  assert.match(html, /class="collection-entry collection-entry-box"[^>]+data-view-target="blind-box"/);
+  assert.match(html, /class="collection-entry collection-entry-spirit"[^>]+data-view-target="bird-sanctuary"/);
+  assert.match(html, /湿地藏品系列陈列/);
+  assert.match(html, /鸟灵档案与竞技/);
+  assert.match(script, /\["blind-box", "bird-sanctuary"\]\.includes\(name\) \? "collection" : name/);
 });
