@@ -77,7 +77,7 @@ function readRootState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     const saved = JSON.parse(raw || "{}");
-    if (!raw && saved.points == null) saved.points = 1280;
+    if (!raw && saved.points == null) saved.points = 3000;
     return saved && typeof saved === "object" && !Array.isArray(saved) ? saved : {};
   } catch {
     return {};
@@ -170,7 +170,7 @@ function renderSanctuary() {
   const { root, spirits } = currentState();
   if (!birds[selectedSpirit] || !isUnlocked(root, selectedSpirit)) selectedSpirit = spirits.team[0];
   audioEnabled = spirits.audioEnabled;
-  document.getElementById("spiritPoints").textContent = formatNumber(root.points ?? 1280);
+  document.getElementById("spiritPoints").textContent = formatNumber(root.points ?? 3000);
   document.getElementById("spiritFragments").textContent = formatNumber(root.blindBoxFragments);
   document.querySelectorAll("[data-battle-encounter]").forEach(button => {
     const active = button.dataset.battleEncounter === selectedEncounter;
@@ -658,7 +658,7 @@ function finishBattle(victory, session = battleSession) {
       spirits.wins++;
       const multiplier = battle.boss ? 2 : 1;
       root.spiritMaterials.trainingDew += 8 * multiplier;
-      root.points = Number(root.points ?? 1280) + 160 * multiplier;
+      root.points = Number(root.points ?? 3000) + 160 * multiplier;
       root.spiritMaterials.insightPlume += multiplier;
       root.spiritMaterials.skillFeather += 3 * multiplier;
       root.spiritMaterials.traceSeed += 2 * multiplier;

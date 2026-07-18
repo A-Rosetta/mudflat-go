@@ -2,7 +2,7 @@ const STORAGE_KEY = "mudflat-go-compact-state-v1";
 const todayKey = () => new Date().toLocaleDateString("en-CA");
 const emptySiteProgress = () => Array.from({ length: 6 }, () => ({ targetsViewed: false, gps: false, identified: false, complete: false }));
 const initialState = {
-  points: 1280,
+  points: 3000,
   unlockedThrough: 1,
   siteProgress: emptySiteProgress(),
   collectedSpecies: [],
@@ -196,6 +196,8 @@ function stopBirdSound() {
   audio.pause();
   audio.currentTime = 0;
   audio.loop = false;
+  document.getElementById("previewAlarm").hidden = false;
+  document.getElementById("stopPreviewAlarm").hidden = true;
   document.getElementById("alarmRinging").hidden = true;
 }
 
@@ -216,6 +218,8 @@ async function playBirdSound(speciesId, ringing = false) {
   }
   try {
     await audio.play();
+    document.getElementById("previewAlarm").hidden = !ringing;
+    document.getElementById("stopPreviewAlarm").hidden = ringing;
     alarmStopTimer = setTimeout(stopBirdSound, ringing ? 60000 : 8000);
   } catch {
     if (ringing) document.getElementById("alarmRingingSpecies").textContent = `${item.name} · 点击“重播鸟鸣”允许声音`;
@@ -1254,6 +1258,7 @@ document.getElementById("collectButton").addEventListener("click", collect);
 document.getElementById("retryCapture").addEventListener("click", () => {
   recognitionResult = null;
   document.getElementById("captureResult").hidden = true;
+  document.getElementById("identifyButton").hidden = false;
   if (captureSource === "camera") startCamera();
   else setCaptureReady(true, "重新识别");
 });
@@ -1279,6 +1284,8 @@ document.getElementById("alarmBird").addEventListener("change", event => {
   scheduleBirdAlarm();
 });
 document.getElementById("previewAlarm").addEventListener("click", () => playBirdSound(state.alarm.speciesId));
+document.getElementById("stopPreviewAlarm").addEventListener("click", stopBirdSound);
+document.getElementById("alarmAudio").addEventListener("ended", stopBirdSound);
 document.getElementById("toggleAlarm").addEventListener("click", async () => {
   if (state.alarm.enabled) {
     state.alarm.enabled = false;
@@ -1297,6 +1304,12 @@ document.getElementById("toggleAlarm").addEventListener("click", async () => {
 });
 document.getElementById("replayAlarm").addEventListener("click", () => playBirdSound(state.alarm.speciesId, true));
 document.getElementById("stopAlarm").addEventListener("click", stopBirdSound);
+document.getElementById("resetPanorama").addEventListener("click", () => {
+  const frame = document.getElementById("mangrovePanoramaFrame");
+  frame.src = "about:blank";
+  requestAnimationFrame(() => { frame.src = frame.dataset.src; });
+  toast("全景介绍已关闭");
+});
 document.getElementById("photoInput").addEventListener("change", event => {
   const file = event.target.files[0];
   if (!file) return;

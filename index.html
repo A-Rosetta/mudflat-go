@@ -21,7 +21,7 @@
         <span><strong>Mudflat Go!</strong><small>滩涂大冒险</small></span>
       </button>
       <div class="top-actions">
-        <span class="points-pill"><i data-lucide="sparkles"></i><b data-points>1,280</b></span>
+        <span class="points-pill"><i data-lucide="sparkles"></i><b data-points>3,000</b></span>
         <span class="ranking-pill"><i data-lucide="trophy"></i><b>深圳榜 #12</b></span>
         <button class="avatar" type="button" data-view-target="profile" aria-label="打开个人中心">湾</button>
       </div>
@@ -101,7 +101,8 @@
             <a href="https://www.p4panorama.com/panos/mangroves-valanthakad-360-virtual-tour/" target="_blank" rel="noopener noreferrer">全屏观看 <i data-lucide="external-link"></i></a>
           </header>
           <div class="mangrove-panorama-frame">
-            <iframe src="https://www.p4panorama.com/panos/mangroves-valanthakad-360-virtual-tour/" title="Mangrove View 1 红树林全景观鸟" loading="lazy" allow="fullscreen; gyroscope; accelerometer" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
+            <iframe id="mangrovePanoramaFrame" src="https://www.p4panorama.com/panos/mangroves-valanthakad-360-virtual-tour/" data-src="https://www.p4panorama.com/panos/mangroves-valanthakad-360-virtual-tour/" title="Mangrove View 1 红树林全景观鸟" loading="lazy" allow="fullscreen; gyroscope; accelerometer" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
+            <button class="panorama-reset" type="button" id="resetPanorama" aria-label="关闭全景介绍并返回全景" title="关闭介绍并返回全景"><i data-lucide="x"></i></button>
             <span class="mangrove-panorama-note"><i data-lucide="move-3d"></i> 按住并拖动环视 · 支持全屏</span>
           </div>
         </section>
@@ -146,7 +147,7 @@
         <div class="blind-box-ambient" aria-hidden="true"><span></span><span></span><span></span></div>
         <header class="blind-box-nav">
           <button type="button" data-view-target="collection"><i data-lucide="arrow-left"></i> 返回图鉴</button>
-          <span><i data-lucide="sparkles"></i><b data-points>1,280</b> 积分</span>
+          <span><i data-lucide="sparkles"></i><b data-points>3,000</b> 积分</span>
         </header>
         <section class="blind-box-hero">
           <div class="blind-box-copy">
@@ -209,14 +210,14 @@
         <div class="spirit-noise" aria-hidden="true"></div>
         <header class="spirit-nav">
           <button type="button" data-view-target="blind-box"><i data-lucide="arrow-left"></i> 返回盲盒</button>
-          <span><i data-lucide="sparkles"></i><b id="spiritPoints">1,280</b> 积分 <i data-lucide="gem"></i><b id="spiritFragments">0</b> 生态碎片</span>
+          <span><i data-lucide="sparkles"></i><b id="spiritPoints">3,000</b> 积分 <i data-lucide="gem"></i><b id="spiritFragments">0</b> 生态碎片</span>
         </header>
         <section class="spirit-hero">
           <div class="spirit-hero-copy">
             <span class="spirit-kicker">WETLAND SPIRIT · TACTICAL ARCHIVE</span>
             <h1 id="spiritTitle">潮汐退去，<br><em>鸟灵开始回响。</em></h1>
             <p>从盲盒与图鉴中唤醒鸟灵，组成三位一体的湿地小队。观察敌方意图、合成高阶咒羽，在三行动点内改写潮线。</p>
-            <div class="spirit-hero-actions"><div class="encounter-picker" role="group" aria-label="演练难度"><button class="is-active" type="button" data-battle-encounter="normal" aria-pressed="true">净滩演练<small>4-7 回合</small></button><button type="button" data-battle-encounter="boss" aria-pressed="false">赤潮首领<small>7-10 回合</small></button></div><button type="button" id="startSpiritBattle"><i data-lucide="play"></i> 进入潮线演练</button><span><b>3 AP</b><small>每回合行动点</small></span><span><b>5</b><small>激情终结技</small></span></div>
+            <div class="spirit-hero-actions"><div class="encounter-picker" role="group" aria-label="演练难度"><button class="is-active" type="button" data-battle-encounter="normal" aria-pressed="true">净滩演练<small>4-7 回合</small></button><button type="button" data-battle-encounter="boss" aria-pressed="false">赤潮首领<small>7-10 回合</small></button></div><button type="button" id="startSpiritBattle"><i data-lucide="play"></i> 进入潮线演练</button><button class="arena-entry" type="button" id="openBirdArena"><i data-lucide="trophy"></i><span>湿地竞技<small>十关防线 · 每日首胜积分</small></span><i data-lucide="arrow-up-right"></i></button><span><b>3 AP</b><small>每回合行动点</small></span><span><b>5</b><small>激情终结技</small></span></div>
             <p class="spirit-notice" id="spiritNotice" aria-live="polite">收藏可产生共鸣，高阶升级会消耗重复盲盒转化的生态碎片。</p>
           </div>
           <div class="spirit-team-preview" id="spiritTeamPreview" aria-label="当前鸟灵编队"></div>
@@ -298,7 +299,7 @@
             <div class="level-line"><span id="levelBar"></span></div>
             <p class="level-caption">再获得 <b id="pointsNeeded">720</b> 守护值，晋级「湿地探索家」</p>
             <div class="profile-stats">
-              <span><b data-points>1,280</b><small>生态守护值</small></span>
+              <span><b data-points>3,000</b><small>生态守护值</small></span>
               <span><b data-found>2</b><small>图鉴收集</small></span>
               <span><b id="streakCount">0</b><small>连续补给天数</small></span>
             </div>
@@ -311,7 +312,7 @@
                 <label><span>鸟鸣选择</span><select id="alarmBird" aria-describedby="alarmStatus"></select></label>
               </div>
               <p id="alarmStatus">先在图鉴中解锁一种鸟类。</p>
-              <div class="alarm-actions"><button class="button secondary" type="button" id="previewAlarm" disabled><i data-lucide="volume-2"></i> 试听</button><button class="button primary" type="button" id="toggleAlarm" disabled><i data-lucide="alarm-clock"></i> 启用闹钟</button></div>
+              <div class="alarm-actions"><button class="button secondary" type="button" id="previewAlarm" disabled><i data-lucide="volume-2"></i> 试听</button><button class="button secondary" type="button" id="stopPreviewAlarm" hidden><i data-lucide="square"></i> 停止</button><button class="button primary" type="button" id="toggleAlarm" disabled><i data-lucide="alarm-clock"></i> 启用闹钟</button></div>
               <small class="alarm-limit"><i data-lucide="info"></i> 页面保持打开或仍在运行时响铃；锁屏或关闭浏览器后无法保证触发。</small>
               <audio id="alarmAudio" preload="none"></audio>
             </section>
@@ -334,6 +335,8 @@
       <button type="button" data-view-target="profile"><i data-lucide="user-round"></i><span>我的</span></button>
     </nav>
   </div>
+
+  <section class="arena-shell" id="birdArenaShell" hidden role="dialog" aria-modal="true" aria-label="湿地竞技" tabindex="-1"></section>
 
   <section class="blind-box-reveal" id="blindBoxReveal" hidden aria-modal="true" role="dialog" aria-labelledby="blindBoxRevealTitle">
     <div class="reveal-flash" aria-hidden="true"></div><div class="reveal-rays" aria-hidden="true"></div><div class="reveal-confetti" id="blindBoxConfetti" aria-hidden="true"></div>
@@ -447,5 +450,6 @@
   <script src="assets/vendor/leaflet.min.js"></script>
   <script src="script.js"></script>
   <script type="module" src="game.js"></script>
+  <script type="module" src="arena.js"></script>
 </body>
 </html>

@@ -14,6 +14,7 @@
 ## 品牌与地图
 
 - `brand-logo-source.png`：Mudflat Go! 团队品牌图，来自同团队前端仓库 https://github.com/A-Rosetta/MudflatGo 。
+- 湿地竞技的十关防线、每日首胜与三人回合战斗原型来自队友仓库 https://github.com/ssy10224416/mulflat-go- 。本项目仅移植竞技规则与交互，并适配现有鸟灵、积分和原生前端架构。
 - `brand-mark.png`：由上述品牌图进行非破坏性方形裁切，用于导航栏小尺寸展示。
 - `assets/map/`：OpenStreetMap 标准地图瓦片，© OpenStreetMap contributors，页面内保留可见署名。数据许可见 https://www.openstreetmap.org/copyright 。
 - Leaflet 1.9.4，BSD-2-Clause License，https://leafletjs.com/ 。页面使用本地 Leaflet 运行文件加载 OpenStreetMap 在线瓦片；仓库内静态瓦片作为加载前和断网回退。
