@@ -1,9 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import worker, { parseModelResult } from "../worker.mjs";
+import worker, { imageDataUri, parseModelResult } from "../worker.mjs";
 
 test("cloud recognition accepts a known species JSON result", () => {
-  assert.deepEqual(parseModelResult({ description: '{"speciesId":"spoonbill","confidence":0.86,"reason":"黑脸和匙状长嘴清晰"}' }), {
+  assert.deepEqual(parseModelResult({ answer: '{"speciesId":"spoonbill","confidence":0.86,"reason":"黑脸和匙状长嘴清晰"}' }), {
     speciesId: "spoonbill",
     label: "黑脸琵鹭",
     latin: "Platalea minor",
@@ -26,6 +26,10 @@ test("cloud recognition safely handles malformed model output", () => {
   assert.match(result.reason, /无法可靠确认/);
 });
 
+test("worker encodes uploaded bytes as a model data URI", () => {
+  assert.equal(imageDataUri({ type: "image/jpeg" }, new Uint8Array([255, 216, 255, 217])), "data:image/jpeg;base64,/9j/2Q==");
+});
+
 test("worker sends valid images to Workers AI and returns constrained JSON", async () => {
   const form = new FormData();
   form.append("image", new File([new Uint8Array([255, 216, 255, 217])], "bird.jpg", { type: "image/jpeg" }));
@@ -36,15 +40,17 @@ test("worker sends valid images to Workers AI and returns constrained JSON", asy
     body: form
   }), {
     AI: { run: async (model, input) => {
-      assert.equal(model, "@cf/llava-hf/llava-1.5-7b-hf");
+      assert.equal(model, "@cf/moondream/moondream3.1-9B-A2B");
       receivedInput = input;
-      return { description: '{"speciesId":"egret","confidence":0.91,"reason":"白色鹭鸟与黑腿清晰"}' };
+      return { answer: '{"speciesId":"egret","confidence":0.91,"reason":"白色鹭鸟与黑腿清晰"}' };
     }}
   });
   assert.equal(response.status, 200);
   assert.equal((await response.json()).result.speciesId, "egret");
-  assert.deepEqual(receivedInput.image, [255, 216, 255, 217]);
-  assert.match(receivedInput.prompt, /unknown=无法可靠确认/);
+  assert.equal(receivedInput.task, "query");
+  assert.equal(receivedInput.image, "data:image/jpeg;base64,/9j/2Q==");
+  assert.match(receivedInput.question, /unknown=无法可靠确认/);
+  assert.match(receivedInput.question, /尖嘴白鸟绝不能选 spoonbill/);
 });
 
 test("worker rejects cross-origin and oversized recognition requests", async () => {

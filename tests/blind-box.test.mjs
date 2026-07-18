@@ -56,7 +56,7 @@ test("Cloudflare deploy points Wrangler at the static asset root", () => {
 
 test("Cloudflare Worker proxies constrained image recognition", () => {
   assert.match(worker, /url\.pathname === "\/api\/identify"/);
-  assert.match(worker, /@cf\/llava-hf\/llava-1\.5-7b-hf/);
+  assert.match(worker, /@cf\/moondream\/moondream3\.1-9B-A2B/);
   assert.match(worker, /MAX_IMAGE_BYTES = 2 \* 1024 \* 1024/);
   assert.match(worker, /env\.AI\.run/);
   assert.match(worker, /return env\.ASSETS\.fetch\(request\)/);

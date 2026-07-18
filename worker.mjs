@@ -1,4 +1,4 @@
-const MODEL = "@cf/llava-hf/llava-1.5-7b-hf";
+const MODEL = "@cf/moondream/moondream3.1-9B-A2B";
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
 const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const SPECIES = {
@@ -20,7 +20,16 @@ const json = (body, status = 200) => Response.json(body, {
 
 function modelText(output) {
   if (typeof output === "string") return output;
-  return output?.description || output?.response || output?.result || "";
+  return output?.answer || output?.description || output?.response || output?.result || "";
+}
+
+function imageDataUri(image, bytes) {
+  let binary = "";
+  const chunkSize = 32768;
+  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + chunkSize));
+  }
+  return `data:${image.type};base64,${btoa(binary)}`;
 }
 
 function parseModelResult(output) {
@@ -62,17 +71,23 @@ async function identify(request, env) {
   if (!image.size || image.size > MAX_IMAGE_BYTES) return json({ error: "image_too_large" }, 413);
   if (!env.AI) return json({ error: "recognition_unavailable" }, 503);
 
-  const prompt = `你是谨慎的深圳湿地物种识别助手。只分析照片，不根据文件名猜测。
+  const prompt = `Inspect only visible morphology in this wildlife photo. Do not guess from filename or habitat.
 只能从以下 speciesId 中选择一个：
 kandelia=秋茄；fiddler=弧边招潮蟹；spoonbill=黑脸琵鹭；egret=白鹭；mudskipper=弹涂鱼；avicenna=白骨壤；kingfisher=普通翠鸟；snail=红树拟蟹守螺；heron=夜鹭；unknown=无法可靠确认。
-只有关键形态清楚且与具体物种相符时才能选择物种；普通物品、其他动物、其他鸟类、模糊或遮挡照片必须选择 unknown。不要把所有白色水鸟都判断为黑脸琵鹭。
+白鹭 egret 必须是细长、笔直、尖锐的黑嘴，脸不全黑；黑脸琵鹭 spoonbill 必须能看见扁平、宽阔、末端像汤匙的长嘴以及黑色面部。尖嘴白鸟绝不能选 spoonbill，匙状嘴白鸟绝不能选 egret。
+只有关键形态清楚且与具体物种相符时才能选择物种；普通物品、其他动物、其他鸟类、模糊或遮挡照片必须选择 unknown。
 只返回一行合法 JSON，不要 Markdown：{"speciesId":"unknown","confidence":0.0,"reason":"不超过60字的中文视觉依据"}`;
 
   try {
+    const bytes = new Uint8Array(await image.arrayBuffer());
     const output = await env.AI.run(MODEL, {
-      image: Array.from(new Uint8Array(await image.arrayBuffer())),
-      prompt,
-      max_tokens: 180
+      task: "query",
+      image: imageDataUri(image, bytes),
+      question: prompt,
+      reasoning: true,
+      temperature: 0,
+      max_tokens: 220,
+      stream: false
     });
     return json({ result: parseModelResult(output), provider: "cloudflare-workers-ai" });
   } catch (error) {
@@ -89,4 +104,4 @@ export default {
   }
 };
 
-export { parseModelResult };
+export { imageDataUri, parseModelResult };
