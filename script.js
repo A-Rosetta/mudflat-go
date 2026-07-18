@@ -751,7 +751,7 @@ async function snapshotCamera() {
 }
 
 function prepareRecognitionImage(input) {
-  const maxDimension = 1024;
+  const maxDimension = 768;
   const scale = Math.min(1, maxDimension / Math.max(input.naturalWidth, input.naturalHeight));
   const canvas = document.createElement("canvas");
   canvas.width = Math.max(1, Math.round(input.naturalWidth * scale));

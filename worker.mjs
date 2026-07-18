@@ -1,4 +1,4 @@
-const MODEL = "@cf/mistralai/mistral-small-3.1-24b-instruct";
+const MODEL = "@cf/microsoft/resnet-50";
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
 const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const SPECIES = {
@@ -18,41 +18,34 @@ const json = (body, status = 200) => Response.json(body, {
   headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" }
 });
 
-function modelText(output) {
-  if (typeof output === "string") return output;
-  return output?.answer || output?.description || output?.response || output?.result || "";
-}
-
-function imageDataUri(image, bytes) {
-  let binary = "";
-  const chunkSize = 32768;
-  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
-    binary += String.fromCharCode(...bytes.subarray(offset, offset + chunkSize));
-  }
-  return `data:${image.type};base64,${btoa(binary)}`;
-}
+const CLASS_MAPPINGS = [
+  { terms: ["spoonbill"], speciesId: "spoonbill", reason: "云端分类器检测到琵鹭类轮廓，请结合黑脸与匙状长嘴人工复核。" },
+  { terms: ["american egret", "little blue heron", "egret"], speciesId: "egret", reason: "云端分类器检测到白鹭类轮廓，请结合尖直黑嘴、黑腿与黄趾人工复核。" },
+  { terms: ["night heron"], speciesId: "heron", reason: "云端分类器检测到夜鹭类轮廓，请结合红眼、黑冠与灰色背部人工复核。" },
+  { terms: ["kingfisher"], speciesId: "kingfisher", reason: "云端分类器检测到翠鸟类轮廓，请结合蓝绿色背部与长直嘴人工复核。" },
+  { terms: ["fiddler crab"], speciesId: "fiddler", reason: "云端分类器检测到招潮蟹特征，请结合雄蟹不对称大螯人工复核。" },
+  { terms: ["snail"], speciesId: "snail", reason: "云端分类器检测到螺类特征，具体种类仍需结合壳形和栖息环境判断。" }
+];
 
 function parseModelResult(output) {
-  const text = modelText(output).trim();
-  const match = text.match(/\{[\s\S]*?\}/);
-  let parsed = {};
-  if (match) {
-    try { parsed = JSON.parse(match[0]); }
-    catch { parsed = {}; }
-  }
-
-  const speciesId = Object.hasOwn(SPECIES, parsed.speciesId) ? parsed.speciesId : null;
-  const confidence = speciesId ? Math.max(0, Math.min(1, Number(parsed.confidence) || 0)) : 0;
-  const reason = typeof parsed.reason === "string" && parsed.reason.trim()
-    ? parsed.reason.trim().slice(0, 180)
-    : speciesId ? "云端视觉模型发现了与该物种相符的形态特征，请结合地点人工复核。" : "画面中的物种特征不足，暂时无法可靠确认。";
+  const predictions = Array.isArray(output) ? output
+    .map(item => ({ label: String(item?.label || ""), score: Math.max(0, Math.min(1, Number(item?.score) || 0)) }))
+    .sort((left, right) => right.score - left.score)
+    .slice(0, 5) : [];
+  const matched = predictions
+    .map(prediction => ({ prediction, mapping: CLASS_MAPPINGS.find(entry => entry.terms.some(term => prediction.label.toLowerCase().includes(term))) }))
+    .find(entry => entry.mapping && entry.prediction.score >= .12);
+  const speciesId = matched?.mapping.speciesId || null;
+  const confidence = matched?.prediction.score || 0;
+  const reason = matched?.mapping.reason || "云端分类器未发现足够明确的湿地图鉴物种特征，暂时无法可靠确认。";
 
   return {
     speciesId,
     label: speciesId ? SPECIES[speciesId].label : "无法确认",
     latin: speciesId ? SPECIES[speciesId].latin : "Unknown observation",
     confidence,
-    reason
+    reason,
+    predictions
   };
 }
 
@@ -71,36 +64,9 @@ async function identify(request, env) {
   if (!image.size || image.size > MAX_IMAGE_BYTES) return json({ error: "image_too_large" }, 413);
   if (!env.AI) return json({ error: "recognition_unavailable" }, 503);
 
-  const prompt = `Inspect only visible morphology in this wildlife photo. Do not guess from filename or habitat.
-只能从以下 speciesId 中选择一个：
-kandelia=秋茄；fiddler=弧边招潮蟹；spoonbill=黑脸琵鹭；egret=白鹭；mudskipper=弹涂鱼；avicenna=白骨壤；kingfisher=普通翠鸟；snail=红树拟蟹守螺；heron=夜鹭；unknown=无法可靠确认。
-白鹭 egret 必须是细长、笔直、尖锐的黑嘴，脸不全黑；黑脸琵鹭 spoonbill 必须能看见扁平、宽阔、末端像汤匙的长嘴以及黑色面部。尖嘴白鸟绝不能选 spoonbill，匙状嘴白鸟绝不能选 egret。
-只有关键形态清楚且与具体物种相符时才能选择物种；普通物品、其他动物、其他鸟类、模糊或遮挡照片必须选择 unknown。
-只返回一行合法 JSON，不要 Markdown：{"speciesId":"unknown","confidence":0.0,"reason":"不超过60字的中文视觉依据"}`;
-
   try {
     const bytes = new Uint8Array(await image.arrayBuffer());
-    const output = await env.AI.run(MODEL, {
-      messages: [{
-        role: "user",
-        content: [
-          { type: "text", text: prompt },
-          { type: "image_url", image_url: { url: imageDataUri(image, bytes) } }
-        ]
-      }],
-      guided_json: {
-        type: "object",
-        properties: {
-          speciesId: { type: "string", enum: [...Object.keys(SPECIES), "unknown"] },
-          confidence: { type: "number", minimum: 0, maximum: 1 },
-          reason: { type: "string" }
-        },
-        required: ["speciesId", "confidence", "reason"]
-      },
-      temperature: 0,
-      max_tokens: 220,
-      stream: false
-    });
+    const output = await env.AI.run(MODEL, { image: Array.from(bytes) });
     return json({ result: parseModelResult(output), provider: "cloudflare-workers-ai" });
   } catch (error) {
     console.error("Workers AI recognition failed", error?.message || error);
@@ -116,4 +82,4 @@ export default {
   }
 };
 
-export { imageDataUri, parseModelResult };
+export { parseModelResult };

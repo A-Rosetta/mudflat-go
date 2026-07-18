@@ -1,19 +1,20 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import worker, { imageDataUri, parseModelResult } from "../worker.mjs";
+import worker, { parseModelResult } from "../worker.mjs";
 
 test("cloud recognition accepts a known species JSON result", () => {
-  assert.deepEqual(parseModelResult({ answer: '{"speciesId":"spoonbill","confidence":0.86,"reason":"黑脸和匙状长嘴清晰"}' }), {
+  assert.deepEqual(parseModelResult([{ label: "spoonbill", score: 0.86 }, { label: "pelican", score: 0.04 }]), {
     speciesId: "spoonbill",
     label: "黑脸琵鹭",
     latin: "Platalea minor",
     confidence: 0.86,
-    reason: "黑脸和匙状长嘴清晰"
+    reason: "云端分类器检测到琵鹭类轮廓，请结合黑脸与匙状长嘴人工复核。",
+    predictions: [{ label: "spoonbill", score: 0.86 }, { label: "pelican", score: 0.04 }]
   });
 });
 
 test("cloud recognition rejects unknown ids and clamps confidence", () => {
-  const result = parseModelResult({ description: '```json\n{"speciesId":"laptop","confidence":8,"reason":"普通物品"}\n```' });
+  const result = parseModelResult([{ label: "laptop", score: 8 }]);
   assert.equal(result.speciesId, null);
   assert.equal(result.label, "无法确认");
   assert.equal(result.confidence, 0);
@@ -26,10 +27,6 @@ test("cloud recognition safely handles malformed model output", () => {
   assert.match(result.reason, /无法可靠确认/);
 });
 
-test("worker encodes uploaded bytes as a model data URI", () => {
-  assert.equal(imageDataUri({ type: "image/jpeg" }, new Uint8Array([255, 216, 255, 217])), "data:image/jpeg;base64,/9j/2Q==");
-});
-
 test("worker sends valid images to Workers AI and returns constrained JSON", async () => {
   const form = new FormData();
   form.append("image", new File([new Uint8Array([255, 216, 255, 217])], "bird.jpg", { type: "image/jpeg" }));
@@ -40,17 +37,14 @@ test("worker sends valid images to Workers AI and returns constrained JSON", asy
     body: form
   }), {
     AI: { run: async (model, input) => {
-      assert.equal(model, "@cf/mistralai/mistral-small-3.1-24b-instruct");
+      assert.equal(model, "@cf/microsoft/resnet-50");
       receivedInput = input;
-      return { answer: '{"speciesId":"egret","confidence":0.91,"reason":"白色鹭鸟与黑腿清晰"}' };
+      return [{ label: "American egret, great white heron", score: .91 }];
     }}
   });
   assert.equal(response.status, 200);
   assert.equal((await response.json()).result.speciesId, "egret");
-  assert.equal(receivedInput.messages[0].content[1].image_url.url, "data:image/jpeg;base64,/9j/2Q==");
-  assert.match(receivedInput.messages[0].content[0].text, /unknown=无法可靠确认/);
-  assert.match(receivedInput.messages[0].content[0].text, /尖嘴白鸟绝不能选 spoonbill/);
-  assert.deepEqual(receivedInput.guided_json.required, ["speciesId", "confidence", "reason"]);
+  assert.deepEqual(receivedInput.image, [255, 216, 255, 217]);
 });
 
 test("worker rejects cross-origin and oversized recognition requests", async () => {
