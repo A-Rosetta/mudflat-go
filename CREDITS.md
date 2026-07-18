@@ -27,3 +27,5 @@
 - TensorFlow.js 4.22.0，Apache License 2.0，https://github.com/tensorflow/tfjs 。
 - TensorFlow.js MobileNet 2.1.1，Apache License 2.0，https://github.com/tensorflow/tfjs-models/tree/master/mobilenet 。
 - MobileNet V2 0.5 ImageNet classification 模型来自 Google TensorFlow Hub/Kaggle Models；模型文件保存在 `assets/models/mobilenet/`，仅在浏览器本地执行推理。
+- `chriamue/bird-species-classifier` EfficientNet B2 鸟类分类权重，MIT License，固定来源提交 `558944ca4448f5b311af8393c8b894eff20a06da`，https://huggingface.co/chriamue/bird-species-classifier 。本项目从 `model.safetensors` 权重重新导出，将不兼容的自适应池化导出替换为数学等价的空间均值，并转换为 FP16 ONNX；未使用模型仓库自带的 ONNX 文件。
+- ONNX Runtime Web 1.22.0，MIT License，https://github.com/microsoft/onnxruntime 。运行文件保存在 `assets/vendor/`，用于浏览器本地鸟类模型推理。
