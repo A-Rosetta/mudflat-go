@@ -155,8 +155,9 @@
           <button type="button" data-view-target="collection"><i data-lucide="arrow-left"></i> 返回图鉴</button>
           <span><i data-lucide="sparkles"></i><b data-points>3,000</b> 积分</span>
         </header>
+<div class="blind-box-pool-tabs" id="blindBoxPoolTabs" role="tablist" aria-label="盲盒卡池"><button type="button" role="tab" aria-selected="true" class="is-active" data-pool-id="tide-watch"><strong id="blindBoxPoolName">潮汐守望</strong><small>迁徙鸟群 UP</small></button><button type="button" role="tab" aria-selected="false" data-pool-id="mangrove-echo"><strong>红树林回声</strong><small>泥滩生命 UP</small></button></div>
         <section class="blind-box-hero">
-          <div class="blind-box-copy">
+          <div class="blind-box-copy"><p id="blindBoxSubtitle">黑脸琵鹭与冬候鸟的迁徙信号</p><p id="blindBoxCopy">当潮线退去，远方的翅膀替你记住季节。</p>
             <span class="blind-box-kicker">WETLAND COLLECTION · SERIES 01</span>
             <h1 id="blindBoxTitle">深圳湿地藏品<br><em>第一辑</em></h1>
             <p>以深圳常见湿地物种为原型的系列收藏。各等级概率完整公示，重复藏品自动转化为生态碎片。</p>
@@ -164,7 +165,7 @@
               <button type="button" data-draw-count="1"><span>开启一份</span><b><i data-lucide="sparkles"></i> 500</b></button>
               <button class="is-featured" type="button" data-draw-count="5"><span>开启五份</span><b><i data-lucide="sparkles"></i> 2,000</b><small>节省 500</small></button>
             </div>
-            <div class="blind-box-odds"><span><b>0.99%</b> SSR</span><span><b>0.01%</b> CHASE</span><span><b>11</b> 全系列</span></div>
+            <div class="blind-box-odds"><span><b>0.99%</b> SSR</span><span><b id="blindBoxPity">0 / 10</b> 保底进度</span><span><b>11</b> 全系列</span></div><p class="blind-box-rules" id="blindBoxRules">10 抽内必得 SSR/CHASE；UP 保底跨池继承</p>
             <button class="spirit-gate" type="button" data-view-target="bird-sanctuary"><i data-lucide="swords"></i><span><small>COLLECTION CONTINUES</small><b>前往鸟灵档案与湿地竞技</b></span><i data-lucide="arrow-up-right"></i></button>
           </div>
           <div class="blind-box-stage" id="blindBoxStage" aria-live="polite">
@@ -348,7 +349,7 @@
     <div class="reveal-panel">
       <div class="reveal-head"><span><small>TIDAL SIGNAL RECEIVED</small><h2 id="blindBoxRevealTitle">潮汐送来了新伙伴</h2></span><button type="button" id="closeBlindBoxReveal" aria-label="关闭开奖结果"><i data-lucide="x"></i></button></div>
       <div class="reveal-grid" id="blindBoxResults"></div>
-      <button class="reveal-done" type="button" id="finishBlindBoxReveal">收入收藏柜 <i data-lucide="arrow-right"></i></button>
+      <button class="reveal-skip" type="button" data-reveal-skip>全部揭示</button><button class="reveal-done" type="button" id="finishBlindBoxReveal">收入收藏柜 <i data-lucide="arrow-right"></i></button>
     </div>
   </section>
 

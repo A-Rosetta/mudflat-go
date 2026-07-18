@@ -11,7 +11,9 @@ const initialState = {
   supply: { lastClaimDate: "", streak: 0, frameFragments: 0 },
   alarm: { enabled: false, time: "07:00", speciesId: "", lastTriggeredDate: "" },
   blindBoxCollection: {},
-  blindBoxFragments: 0
+  blindBoxFragments: 0,
+  blindBoxPity: {},
+  blindBoxGuarantee: {}
 };
 const MOBILE_NET_MODEL_URL = "assets/models/mobilenet/model.json";
 const BLIND_BOX_COSTS = { 1: 500, 5: 2000 };
@@ -53,6 +55,15 @@ const blindBoxPool = [
   { id: "pond-heron", name: "鹭小红", species: "池鹭", rarity: "N", weight: 12.67, fragments: 10, image: "assets/images/blind-box/12-pond-heron-n.webp" },
   { id: "golden-spoonbill", name: "金琵小鹭", species: "黑脸琵鹭金色变体", rarity: "CHASE", weight: 0.01, fragments: 100, image: "assets/images/blind-box/13-golden-spoonbill-chase.webp" }
 ];
+
+const blindBoxPools = [
+  { id: "tide-watch", title: "潮汐守望", subtitle: "黑脸琵鹭与冬候鸟的迁徙信号", upIds: ["spoonbill", "kingfisher"], carryOver: true, copy: "当潮线退去，远方的翅膀替你记住季节。", items: blindBoxPool },
+  { id: "mangrove-echo", title: "红树林回声", subtitle: "根系、泥滩与夜行者的秘密", upIds: ["fiddler", "mudskipper", "golden-spoonbill"], carryOver: true, copy: "每一根露出潮面的根，都藏着一段没有被听见的故事。", items: blindBoxPool.filter(item => ["fiddler", "mudskipper", "greenshank", "stilt", "golden-spoonbill"].includes(item.id)) }
+];
+let activeBlindBoxPool = "tide-watch";
+let blindBoxRevealIndex = 0;
+const getBlindBoxPool = () => blindBoxPools.find(pool => pool.id === activeBlindBoxPool) || blindBoxPools[0];
+const BLIND_BOX_CARRY_KEY = "shared-up";
 
 const sites = [
   { name: "福田红树林", short: "福田", feature: "黑脸琵鹭越冬栖息地", lat: 22.51187, lng: 114.04258, limited: "黑脸琵鹭限定", habitat: "潮间带 · 红树林", season: "候鸟季 11-3月", description: "从红树与浅水交界开始，辨认匙状长嘴、白色涉禽和泥滩上的微小生命。", targets: ["spoonbill", "egret", "kandelia", "fiddler", "snail"] },
@@ -115,6 +126,8 @@ function readState() {
     if (!Array.isArray(migrated.collectedSpecies)) migrated.collectedSpecies = [];
     if (!migrated.blindBoxCollection || typeof migrated.blindBoxCollection !== "object" || Array.isArray(migrated.blindBoxCollection)) migrated.blindBoxCollection = {};
     if (!Number.isFinite(migrated.blindBoxFragments)) migrated.blindBoxFragments = 0;
+    migrated.blindBoxPity = { ...(migrated.blindBoxPity || {}) };
+    migrated.blindBoxGuarantee = { ...(migrated.blindBoxGuarantee || {}) };
     if (!migrated.cardProgress || typeof migrated.cardProgress !== "object") migrated.cardProgress = {};
     if (!migrated.daily || migrated.daily.date !== todayKey()) migrated.daily = { date: todayKey(), supplyClaimed: false, viewedCard: false, identified: false };
     migrated.supply = { ...initialState.supply, ...(migrated.supply || {}) };
@@ -278,14 +291,26 @@ function updateUI() {
 }
 
 function pickBlindBox() {
-  let roll = Math.random() * 100;
-  for (const item of blindBoxPool) {
-    roll -= item.weight;
-    if (roll < 0) return item;
-  }
-  return blindBoxPool[blindBoxPool.length - 1];
+  const pool = getBlindBoxPool();
+  const pity = Number(state.blindBoxPity[BLIND_BOX_CARRY_KEY]) || 0;
+  const guaranteedUp = Boolean(state.blindBoxGuarantee[BLIND_BOX_CARRY_KEY]);
+  if (guaranteedUp) return pool.items.find(item => pool.upIds.includes(item.id) && ["SSR", "CHASE"].includes(item.rarity)) || pool.items[0];
+  if (pity >= 9) return pool.items.find(item => ["SSR", "CHASE"].includes(item.rarity)) || pool.items[0];
+  let roll = Math.random() * pool.items.reduce((sum, item) => sum + item.weight, 0);
+  for (const item of pool.items) { roll -= item.weight; if (roll < 0) return item; }
+  return pool.items[pool.items.length - 1];
 }
-
+function updateBlindBoxPoolMeta() {
+  const pool = getBlindBoxPool();
+  const pity = Number(state.blindBoxPity[BLIND_BOX_CARRY_KEY]) || 0;
+  document.getElementById("blindBoxPoolName").textContent = pool.title;
+  document.getElementById("blindBoxSubtitle").textContent = pool.subtitle;
+  document.getElementById("blindBoxCopy").textContent = pool.copy;
+  document.getElementById("blindBoxPity").textContent = pity + " / 10";
+  document.getElementById("blindBoxRules").textContent = state.blindBoxGuarantee[BLIND_BOX_CARRY_KEY] ? "本池下一次高稀有度必出 UP" : "10 抽内必得 SSR/CHASE；UP 保底跨池继承";
+  document.querySelectorAll("[data-pool-id]").forEach(button => { const active = button.dataset.poolId === pool.id; button.classList.toggle("is-active", active); button.setAttribute("aria-selected", String(active)); });
+}
+function selectBlindBoxPool(poolId) { if (!blindBoxPools.some(pool => pool.id === poolId)) return; activeBlindBoxPool = poolId; updateBlindBoxPoolMeta(); renderBlindBoxCollection(); }
 function renderBlindBoxCollection() {
   const grid = document.getElementById("blindBoxGrid");
   if (!grid) return;
@@ -308,48 +333,29 @@ function buildBlindBoxConfetti(rarity) {
 
 function renderBlindBoxResults(results) {
   const highest = results.find(result => result.item.rarity === "CHASE") || results.find(result => result.item.rarity === "SSR") || results[0];
-  document.getElementById("blindBoxResults").innerHTML = results.map(({ item, duplicate }, index) => `<article class="reveal-card rarity-${item.rarity.toLowerCase()}" style="--delay:${index * 110}ms">
-    <div><span>${item.rarity}</span><img src="${item.image}" alt="${item.name} · ${item.species}"></div>
-    <small>${duplicate ? `重复款 · +${item.fragments} 碎片` : "NEW · 新伙伴"}</small><h3>${item.name}</h3><p>${item.species}</p>
-  </article>`).join("");
+  blindBoxRevealIndex = 0;
+  document.getElementById("blindBoxResults").innerHTML = results.map(({ item, duplicate }, index) => '<article class="reveal-card rarity-' + item.rarity.toLowerCase() + ' ' + (index ? 'is-hidden' : 'is-revealed') + '" data-reveal-index="' + index + '"><div><span>' + item.rarity + '</span><img src="' + item.image + '" alt="' + item.name + '"></div><small>' + (duplicate ? '重复转化 · +' + item.fragments + ' 生态碎片' : 'NEW · 新发现') + '</small><h3>' + item.name + '</h3><p>' + item.species + '</p></article>').join("");
   buildBlindBoxConfetti(highest.item.rarity);
   document.getElementById("blindBoxReveal").dataset.rarity = highest.item.rarity.toLowerCase();
 }
-
+function revealBlindBoxCard(index = blindBoxRevealIndex + 1) { const cards = [...document.querySelectorAll("[data-reveal-index]")]; cards.forEach(card => { const shown = Number(card.dataset.revealIndex) <= index; card.classList.toggle("is-revealed", shown); card.classList.toggle("is-hidden", !shown); }); blindBoxRevealIndex = Math.min(index, cards.length - 1); }
+function revealAllBlindBoxCards() { revealBlindBoxCard(Number.MAX_SAFE_INTEGER); }
 function closeBlindBoxReveal() {
+  clearInterval(blindBoxRevealTimer);
   document.getElementById("blindBoxReveal").hidden = true;
   document.body.style.overflow = "";
 }
 
 function drawBlindBoxes(count) {
-  const cost = BLIND_BOX_COSTS[count];
+  const cost = BLIND_BOX_COSTS[count]; const pool = getBlindBoxPool();
   if (blindBoxDrawing || !cost) return;
-  if (state.points < cost) { toast(`还差 ${formatNumber(cost - state.points)} 积分，完成任务后再来`); return; }
-  blindBoxDrawing = true;
-  document.querySelectorAll("[data-draw-count]").forEach(button => button.disabled = true);
-  document.getElementById("blindBoxStage").classList.add("is-drawing");
-  state.points -= cost;
-  const results = Array.from({ length: count }, () => {
-    const item = pickBlindBox();
-    const duplicate = Boolean(state.blindBoxCollection[item.id]);
-    state.blindBoxCollection[item.id] = (Number(state.blindBoxCollection[item.id]) || 0) + 1;
-    if (duplicate) state.blindBoxFragments += item.fragments;
-    return { item, duplicate };
-  });
-  saveState();
-  updateUI();
-  const delay = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 120 : 1850;
-  window.setTimeout(() => {
-    renderBlindBoxResults(results);
-    document.getElementById("blindBoxReveal").hidden = false;
-    document.body.style.overflow = "hidden";
-    document.getElementById("blindBoxStage").classList.remove("is-drawing");
-    document.querySelectorAll("[data-draw-count]").forEach(button => button.disabled = false);
-    blindBoxDrawing = false;
-    icons();
-  }, delay);
+  if (state.points < cost) { toast('还需要 ' + formatNumber(cost - state.points) + ' 积分'); return; }
+  blindBoxDrawing = true; document.querySelectorAll('[data-draw-count]').forEach(button => button.disabled = true); document.getElementById('blindBoxStage').classList.add('is-drawing'); state.points -= cost;
+  const results = Array.from({ length: count }, () => { const item = pickBlindBox(); const duplicate = Boolean(state.blindBoxCollection[item.id]); const duplicateFragments = item.fragments; const rare = ['SSR', 'CHASE'].includes(item.rarity); state.blindBoxCollection[item.id] = (Number(state.blindBoxCollection[item.id]) || 0) + 1; if (duplicate) state.blindBoxFragments += item.fragments; state.blindBoxPity[pool.id] = rare ? 0 : (Number(state.blindBoxPity[pool.id]) || 0) + 1; if (rare) state.blindBoxGuarantee[pool.id] = !pool.upIds.includes(item.id); return { item, duplicate, duplicateFragments }; });
+  saveState(); updateUI();
+  const delay = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 120 : 1850;
+  window.setTimeout(() => { renderBlindBoxResults(results); document.getElementById('blindBoxReveal').hidden = false; document.body.style.overflow = 'hidden'; blindBoxRevealTimer = window.setInterval(() => { if (blindBoxRevealIndex >= results.length - 1) { clearInterval(blindBoxRevealTimer); return; } revealBlindBoxCard(); }, window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 180 : 700); document.getElementById('blindBoxStage').classList.remove('is-drawing'); document.querySelectorAll('[data-draw-count]').forEach(button => button.disabled = false); blindBoxDrawing = false; icons(); }, delay);
 }
-
 function selectShowroomModel(button) {
   const viewer = document.getElementById("blindBoxModelViewer");
   document.querySelectorAll("[data-model-src]").forEach(item => {
@@ -1190,6 +1196,8 @@ function toast(message) {
 
 document.querySelectorAll("[data-view-target]").forEach(button => button.addEventListener("click", () => navigate(button.dataset.viewTarget)));
 document.querySelectorAll("[data-draw-count]").forEach(button => button.addEventListener("click", () => drawBlindBoxes(Number(button.dataset.drawCount))));
+document.querySelectorAll("[data-pool-id]").forEach(button => button.addEventListener("click", () => selectBlindBoxPool(button.dataset.poolId)));
+document.querySelector("[data-reveal-skip]")?.addEventListener("click", revealAllBlindBoxCards);
 document.querySelectorAll("[data-model-src]").forEach(button => button.addEventListener("click", () => { initializeShowroom(); selectShowroomModel(button); }));
 const showroomTabs = [...document.querySelectorAll("[data-model-src]")];
 showroomTabs.forEach((button, index) => button.addEventListener("keydown", event => {
@@ -1358,7 +1366,7 @@ document.getElementById("posterButton").addEventListener("click", () => {
   generateShareCard(item);
 });
 document.getElementById("creditsButton").addEventListener("click", () => window.open("CREDITS.md", "_blank", "noopener"));
-document.getElementById("resetButton").addEventListener("click", () => { stopBirdSound(); clearTimeout(alarmTimer); state = { ...initialState, siteProgress: emptySiteProgress(), collectedSpecies: [], cardProgress: {}, daily: { ...initialState.daily }, supply: { ...initialState.supply }, alarm: { ...initialState.alarm }, blindBoxCollection: {}, blindBoxFragments: 0 }; localStorage.removeItem(STORAGE_KEY); activeSite = 0; closeBlindBoxReveal(); updateUI(); toast("演示进度已重置"); });
+document.getElementById("resetButton").addEventListener("click", () => { stopBirdSound(); clearTimeout(alarmTimer); state = { ...initialState, siteProgress: emptySiteProgress(), collectedSpecies: [], cardProgress: {}, daily: { ...initialState.daily }, supply: { ...initialState.supply }, alarm: { ...initialState.alarm }, blindBoxCollection: {}, blindBoxFragments: 0, blindBoxPity: {}, blindBoxGuarantee: {} }; localStorage.removeItem(STORAGE_KEY); activeSite = 0; closeBlindBoxReveal(); updateUI(); toast("演示进度已重置"); });
 document.querySelectorAll(".modal-backdrop").forEach(backdrop => backdrop.addEventListener("click", event => {
   if (event.target !== backdrop) return;
   if (backdrop.id === "speciesModal") closeSpecies();

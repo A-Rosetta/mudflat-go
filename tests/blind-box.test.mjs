@@ -83,3 +83,29 @@ test("showroom tabs support roving keyboard navigation", () => {
   assert.match(script, /event\.key === "End"/);
   assert.match(script, /setAttribute\("tabindex"/);
 });
+
+test("blind-box supports multiple concurrent UP pools with independent metadata", () => {
+  assert.match(html, /id="blindBoxPoolTabs"/);
+  assert.match(html, /data-pool-id="tide-watch"/);
+  assert.match(html, /data-pool-id="mangrove-echo"/);
+  assert.match(script, /const blindBoxPools = \[/);
+  assert.match(script, /id: "tide-watch"/);
+  assert.match(script, /id: "mangrove-echo"/);
+  assert.match(script, /activeBlindBoxPool/);
+});
+
+test("UP pool draws expose pity, guarantee, carry-over, and duplicate conversion", () => {
+  assert.match(script, /blindBoxPity/);
+  assert.match(script, /guaranteedUp/);
+  assert.match(script, /carryOver/);
+  assert.match(script, /duplicateFragments/);
+  assert.match(html, /id="blindBoxPity"/);
+  assert.match(html, /id="blindBoxRules"/);
+});
+
+test("blind-box reveals cards sequentially and supports skip", () => {
+  assert.match(script, /revealBlindBoxCard/);
+  assert.match(script, /blindBoxRevealIndex/);
+  assert.match(script, /data-reveal-skip/);
+  assert.match(html, /data-reveal-skip/);
+});
