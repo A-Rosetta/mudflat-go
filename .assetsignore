@@ -1,0 +1,14 @@
+.git
+.git/**
+.wrangler
+.wrangler/**
+output
+output/**
+tests
+tests/**
+docs
+docs/**
+.gitignore
+.assetsignore
+wrangler.jsonc
+README.md
