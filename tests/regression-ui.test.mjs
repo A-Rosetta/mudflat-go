@@ -53,3 +53,10 @@ test("primary navigation stays focused while collection exposes secondary featur
   assert.match(html, /鸟灵档案与竞技/);
   assert.match(script, /\["blind-box", "bird-sanctuary"\]\.includes\(name\) \? "collection" : name/);
 });
+
+test("forest background and refractive top bar remain part of the glass system", () => {
+  assert.match(css, /body \{ background: linear-gradient\(145deg,#fbf8df 0%,#eef4d7 24%,#dceee0 58%,#bcded2 100%\)/);
+  assert.match(css, /\.topbar \{[^}]*backdrop-filter:blur\(34px\) saturate\(1\.55\) contrast\(1\.06\)/);
+  assert.match(css, /\.topbar::before \{[^}]*linear-gradient/);
+  assert.match(css, /\.topbar::after \{[^}]*linear-gradient/);
+});

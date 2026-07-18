@@ -9,3 +9,4 @@
 [2026-07-18 11:35:39 +0800 CST] Ported the second teammate's ten-stage local wetland arena into the current bird-spirit state, with shared formation, points, daily rewards, responsive battle UI, and browser-tested persistence.
 [2026-07-18 11:56:31 +0800 CST] Added stoppable alarm previews, restored repeat recognition, provided a mobile panorama reset, and set new or reset sessions to 3000 points; verified the fixes and arena persistence in a mobile browser.
 [2026-07-18 13:11:02 +0800 CST] Unified navigation and controls with a responsive liquid-glass system, reduced page-title footprint, reorganized collection and arena entry points, and redesigned the blind-box journey as a concrete wetland collection experience.
+[2026-07-18 13:30:33 +0800 CST] Restored the pale forest-green global gradient and increased the top navigation's refractive blur, saturation, edge highlights, and layered glass depth across desktop and mobile.
