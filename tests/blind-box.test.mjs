@@ -26,6 +26,13 @@ test("blind-box pool contains ten standard figures and one chase", () => {
   assert.match(pool[1], /rarity: "CHASE"/);
 });
 
+test("blind-box rarity totals follow the disclosed power-law distribution", () => {
+  const entries = [...script.matchAll(/rarity: "(N|R|SR|SSR|CHASE)", weight: ([\d.]+)/g)];
+  const totals = entries.reduce((result, [, rarity, weight]) => ({ ...result, [rarity]: (result[rarity] || 0) + Number(weight) }), {});
+  assert.deepEqual(totals, { SSR: 0.99, SR: 4, R: 20, N: 75, CHASE: 0.01 });
+  assert.match(html, /CHASE[\s\S]*?0\.01%[\s\S]*?SSR[\s\S]*?0\.99%[\s\S]*?SR[\s\S]*?4%[\s\S]*?R[\s\S]*?20%[\s\S]*?N[\s\S]*?75%/);
+});
+
 test("blind-box collection persists with the main state", () => {
   assert.match(script, /blindBoxCollection: \{\}/);
   assert.match(script, /function drawBlindBoxes\(count\)/);
@@ -41,18 +48,21 @@ test("Cloudflare deploy points Wrangler at the static asset root", () => {
   assert.match(wrangler, /"directory": "\."/);
 });
 
-test("five optimized GLB models are lazy-loaded in one blind-box showroom viewer", async () => {
-  const models = ["mystery-wetland-bird", "fork-tailed-sunbird", "red-whiskered-bulbul", "white-rumped-munia", "common-tailorbird"];
+test("four unlocked GLB models are lazy-loaded while the chase model stays locked", async () => {
+  const models = ["mystery-wetland-bird", "fork-tailed-sunbird", "red-whiskered-bulbul", "white-rumped-munia"];
   for (const model of models) {
     assert.match(html, new RegExp(`data-model-src="assets/models/blind-box/${model}\\.glb"`));
     const file = await stat(new URL(`../assets/models/blind-box/${model}.glb`, import.meta.url));
     assert.ok(file.size < 25 * 1024 * 1024, `${model}.glb exceeds Cloudflare's 25 MiB asset limit`);
   }
-  for (const poster of ["poster-white-rumped-munia.webp", "poster-common-tailorbird.webp"]) {
+  for (const poster of ["poster-white-rumped-munia.webp"]) {
     const file = await stat(new URL(`../assets/images/blind-box/${poster}`, import.meta.url));
     assert.ok(file.size > 0, `${poster} is missing or empty`);
     assert.match(html, new RegExp(`data-model-poster="assets/images/blind-box/${poster}"`));
   }
+  assert.match(html, /id="modelTab5"[^>]+disabled[^>]+aria-label="隐藏款长尾缝叶莺，尚未解锁"/);
+  assert.match(html, /class="secret-silhouette"[\s\S]*?poster-common-tailorbird\.webp/);
+  assert.doesNotMatch(html, /data-model-src="assets\/models\/blind-box\/common-tailorbird\.glb"/);
   assert.equal((html.match(/<model-viewer\b/g) || []).length, 1);
   assert.doesNotMatch(html, /<model-viewer[^>]+\ssrc=/);
 });

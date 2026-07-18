@@ -89,6 +89,20 @@
             </div>
           </section>
         </div>
+        <section class="mangrove-panorama" aria-labelledby="mangrovePanoramaTitle">
+          <header class="mangrove-panorama-head">
+            <div>
+              <span class="eyebrow">MANGROVE VIEW 01 · 360° BIRDING</span>
+              <h2 id="mangrovePanoramaTitle">候鸟视角看深圳红树林</h2>
+              <p>从候鸟高度观察红树林冠层、水道与潮间带。此模块为红树林生态沉浸式演示，使用 P4Panorama 的 Mangrove View 1 全景内容。</p>
+            </div>
+            <a href="https://www.p4panorama.com/panos/mangroves-valanthakad-360-virtual-tour/" target="_blank" rel="noopener noreferrer">全屏观看 <i data-lucide="external-link"></i></a>
+          </header>
+          <div class="mangrove-panorama-frame">
+            <iframe src="https://www.p4panorama.com/panos/mangroves-valanthakad-360-virtual-tour/" title="Mangrove View 1 红树林全景观鸟" loading="lazy" allow="fullscreen; gyroscope; accelerometer" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
+            <span class="mangrove-panorama-note"><i data-lucide="move-3d"></i> 按住并拖动环视 · 支持全屏</span>
+          </div>
+        </section>
       </section>
 
       <section class="view" data-view="collection" aria-labelledby="collectionTitle">
@@ -163,7 +177,7 @@
               <button id="modelTab2" type="button" role="tab" aria-controls="blindBoxModelPanel" aria-selected="false" tabindex="-1" data-model-src="assets/models/blind-box/fork-tailed-sunbird.glb" data-model-poster="assets/images/blind-box/poster-fork-tailed-sunbird.png" data-model-name="叉尾太阳鸟" data-model-species="Aethopyga christinae"><img src="assets/images/blind-box/poster-fork-tailed-sunbird.png" alt=""><span><small>MODEL 02</small><b>叉尾太阳鸟</b><em>2.49 MiB</em></span></button>
               <button id="modelTab3" type="button" role="tab" aria-controls="blindBoxModelPanel" aria-selected="false" tabindex="-1" data-model-src="assets/models/blind-box/red-whiskered-bulbul.glb" data-model-poster="assets/images/blind-box/poster-red-whiskered-bulbul.png" data-model-name="红耳鹎" data-model-species="Pycnonotus jocosus"><img src="assets/images/blind-box/poster-red-whiskered-bulbul.png" alt=""><span><small>MODEL 03</small><b>红耳鹎</b><em>2.35 MiB</em></span></button>
               <button id="modelTab4" type="button" role="tab" aria-controls="blindBoxModelPanel" aria-selected="false" tabindex="-1" data-model-src="assets/models/blind-box/white-rumped-munia.glb" data-model-poster="assets/images/blind-box/poster-white-rumped-munia.webp" data-model-name="白腰文鸟" data-model-species="Lonchura striata"><img src="assets/images/blind-box/poster-white-rumped-munia.webp" alt=""><span><small>MODEL 04</small><b>白腰文鸟</b><em>2.22 MiB</em></span></button>
-              <button id="modelTab5" type="button" role="tab" aria-controls="blindBoxModelPanel" aria-selected="false" tabindex="-1" data-model-src="assets/models/blind-box/common-tailorbird.glb" data-model-poster="assets/images/blind-box/poster-common-tailorbird.webp" data-model-name="长尾缝叶莺" data-model-species="Orthotomus sutorius"><img src="assets/images/blind-box/poster-common-tailorbird.webp" alt=""><span><small>MODEL 05</small><b>长尾缝叶莺</b><em>2.23 MiB</em></span></button>
+              <button class="showroom-secret is-locked" id="modelTab5" type="button" role="tab" aria-selected="false" tabindex="-1" disabled aria-label="隐藏款长尾缝叶莺，尚未解锁"><span class="secret-silhouette"><img src="assets/images/blind-box/poster-common-tailorbird.webp" alt="长尾缝叶莺未解锁轮廓"><i data-lucide="lock-keyhole"></i></span><span><small>CHASE · HIDDEN 05</small><b>长尾缝叶莺</b><em>未解锁 · 等待隐藏款降临</em></span></button>
             </div>
             <div class="showroom-stage" role="tabpanel" id="blindBoxModelPanel" aria-labelledby="modelTab1" tabindex="0">
               <model-viewer id="blindBoxModelViewer" poster="assets/images/blind-box/poster-mystery-wetland-bird.png" alt="神秘湿地精灵 3D 模型" camera-controls auto-rotate rotation-per-second="16deg" shadow-intensity="1.25" shadow-softness=".85" exposure="1.05" environment-image="neutral" interaction-prompt="none" loading="lazy" reveal="auto"></model-viewer>
@@ -185,7 +199,7 @@
         </section>
         <section class="blind-box-probability">
           <div><span class="eyebrow">FAIR DRAW</span><h2>概率透明，惊喜不藏规则。</h2><p>每次抽取相互独立；动画仅用于呈现，不影响抽取结果。</p></div>
-          <div class="probability-bars"><span style="--rate:1"><b>CHASE</b><i></i><em>1%</em></span><span style="--rate:3"><b>SSR</b><i></i><em>3%</em></span><span style="--rate:7"><b>SR</b><i></i><em>7%</em></span><span style="--rate:18"><b>R</b><i></i><em>18%</em></span><span style="--rate:71"><b>N</b><i></i><em>71%</em></span></div>
+          <div class="probability-bars"><span style="--rate:.01"><b>CHASE</b><i></i><em>0.01%</em></span><span style="--rate:.99"><b>SSR</b><i></i><em>0.99%</em></span><span style="--rate:4"><b>SR</b><i></i><em>4%</em></span><span style="--rate:20"><b>R</b><i></i><em>20%</em></span><span style="--rate:75"><b>N</b><i></i><em>75%</em></span></div>
         </section>
       </section>
 

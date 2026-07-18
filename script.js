@@ -33,17 +33,17 @@ const species = [
 ];
 
 const blindBoxPool = [
-  { id: "spoonbill", name: "琵小鹭", species: "黑脸琵鹭", rarity: "SSR", weight: 3, fragments: 60, image: "assets/images/blind-box/03-spoonbill-ssr.webp" },
-  { id: "kingfisher", name: "翠小翠", species: "普通翠鸟", rarity: "SR", weight: 3, fragments: 35, image: "assets/images/blind-box/04-kingfisher-sr.webp" },
-  { id: "avocet", name: "鹬小镜", species: "反嘴鹬", rarity: "SR", weight: 4, fragments: 35, image: "assets/images/blind-box/05-avocet-sr.webp" },
-  { id: "mudskipper", name: "跳跳鱼", species: "弹涂鱼", rarity: "R", weight: 7, fragments: 20, image: "assets/images/blind-box/06-mudskipper-r.webp" },
-  { id: "greenshank", name: "鹬小青", species: "青脚鹬", rarity: "R", weight: 6, fragments: 20, image: "assets/images/blind-box/07-greenshank-r.webp" },
-  { id: "stilt", name: "鹬长腿", species: "黑翅长脚鹬", rarity: "R", weight: 5, fragments: 20, image: "assets/images/blind-box/08-stilt-r.webp" },
-  { id: "fiddler", name: "蟹大钳", species: "弧边招潮蟹", rarity: "N", weight: 24, fragments: 10, image: "assets/images/blind-box/09-fiddler-crab-n.webp" },
-  { id: "egret", name: "鹭小白", species: "白鹭", rarity: "N", weight: 20, fragments: 10, image: "assets/images/blind-box/10-egret-n.webp" },
-  { id: "stint", name: "鹬小圆", species: "红颈滨鹬", rarity: "N", weight: 15, fragments: 10, image: "assets/images/blind-box/11-red-necked-stint-n.webp" },
-  { id: "pond-heron", name: "鹭小红", species: "池鹭", rarity: "N", weight: 12, fragments: 10, image: "assets/images/blind-box/12-pond-heron-n.webp" },
-  { id: "golden-spoonbill", name: "金琵小鹭", species: "黑脸琵鹭金色变体", rarity: "CHASE", weight: 1, fragments: 100, image: "assets/images/blind-box/13-golden-spoonbill-chase.webp" }
+  { id: "spoonbill", name: "琵小鹭", species: "黑脸琵鹭", rarity: "SSR", weight: 0.99, fragments: 60, image: "assets/images/blind-box/03-spoonbill-ssr.webp" },
+  { id: "kingfisher", name: "翠小翠", species: "普通翠鸟", rarity: "SR", weight: 1.72, fragments: 35, image: "assets/images/blind-box/04-kingfisher-sr.webp" },
+  { id: "avocet", name: "鹬小镜", species: "反嘴鹬", rarity: "SR", weight: 2.28, fragments: 35, image: "assets/images/blind-box/05-avocet-sr.webp" },
+  { id: "mudskipper", name: "跳跳鱼", species: "弹涂鱼", rarity: "R", weight: 7.78, fragments: 20, image: "assets/images/blind-box/06-mudskipper-r.webp" },
+  { id: "greenshank", name: "鹬小青", species: "青脚鹬", rarity: "R", weight: 6.67, fragments: 20, image: "assets/images/blind-box/07-greenshank-r.webp" },
+  { id: "stilt", name: "鹬长腿", species: "黑翅长脚鹬", rarity: "R", weight: 5.55, fragments: 20, image: "assets/images/blind-box/08-stilt-r.webp" },
+  { id: "fiddler", name: "蟹大钳", species: "弧边招潮蟹", rarity: "N", weight: 25.35, fragments: 10, image: "assets/images/blind-box/09-fiddler-crab-n.webp" },
+  { id: "egret", name: "鹭小白", species: "白鹭", rarity: "N", weight: 21.13, fragments: 10, image: "assets/images/blind-box/10-egret-n.webp" },
+  { id: "stint", name: "鹬小圆", species: "红颈滨鹬", rarity: "N", weight: 15.85, fragments: 10, image: "assets/images/blind-box/11-red-necked-stint-n.webp" },
+  { id: "pond-heron", name: "鹭小红", species: "池鹭", rarity: "N", weight: 12.67, fragments: 10, image: "assets/images/blind-box/12-pond-heron-n.webp" },
+  { id: "golden-spoonbill", name: "金琵小鹭", species: "黑脸琵鹭金色变体", rarity: "CHASE", weight: 0.01, fragments: 100, image: "assets/images/blind-box/13-golden-spoonbill-chase.webp" }
 ];
 
 const sites = [
