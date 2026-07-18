@@ -9,6 +9,7 @@ const initialState = {
   cardProgress: {},
   daily: { date: todayKey(), supplyClaimed: false, viewedCard: false, identified: false },
   supply: { lastClaimDate: "", streak: 0, frameFragments: 0 },
+  alarm: { enabled: false, time: "07:00", speciesId: "", lastTriggeredDate: "" },
   blindBoxCollection: {},
   blindBoxFragments: 0
 };
@@ -31,6 +32,13 @@ const species = [
   { id: "snail", name: "红树拟蟹守螺", latin: "Cerithidea rhizophorarum", rarity: "R", category: "benthic", season: "全年", image: "assets/images/mangrove-snail.jpg", found: false, description: "常见于红树根部和泥滩表面，以藻类和有机碎屑为食。", fact: "退潮后观察红树根部，常能发现它们留下的细小移动痕迹。" },
   { id: "heron", name: "夜鹭", latin: "Nycticorax nycticorax", rarity: "SSR", category: "bird", season: "全年", image: "assets/images/night-heron.jpg", found: false, description: "黄昏和夜间更活跃的鹭科鸟类，白天常停在水边树丛中。", fact: "幼鸟有褐色纵纹，与成年鸟灰黑相间的羽色差别很大。" }
 ];
+
+const birdSounds = {
+  spoonbill: "assets/audio/birds/black-faced-spoonbill.mp3",
+  egret: "assets/audio/birds/little-egret.mp3",
+  kingfisher: "assets/audio/birds/common-kingfisher.mp3",
+  heron: "assets/audio/birds/night-heron.mp3"
+};
 
 const blindBoxPool = [
   { id: "spoonbill", name: "琵小鹭", species: "黑脸琵鹭", rarity: "SSR", weight: 3, fragments: 60, image: "assets/images/blind-box/03-spoonbill-ssr.webp" },
@@ -73,6 +81,8 @@ let rarityFilter = "all";
 let taskMode = "daily";
 let activeSite = 0;
 let toastTimer;
+let alarmTimer;
+let alarmStopTimer;
 let scanTimers = [];
 let cameraStream = null;
 let cameraFacingMode = "environment";
@@ -81,6 +91,8 @@ let modelPromise = null;
 let birdModelPromise = null;
 let recognitionResult = null;
 let captureSource = null;
+let interactiveMap = null;
+let interactiveMapLayers = null;
 let blindBoxDrawing = false;
 let showroomInitialized = false;
 let locationResult = null;
@@ -106,6 +118,7 @@ function readState() {
     if (!migrated.cardProgress || typeof migrated.cardProgress !== "object") migrated.cardProgress = {};
     if (!migrated.daily || migrated.daily.date !== todayKey()) migrated.daily = { date: todayKey(), supplyClaimed: false, viewedCard: false, identified: false };
     migrated.supply = { ...initialState.supply, ...(migrated.supply || {}) };
+    migrated.alarm = { ...initialState.alarm, ...(migrated.alarm || {}) };
     migrated.unlockedThrough = Math.max(1, Math.min(sites.length - 1, Number(migrated.unlockedThrough) || 1));
     delete migrated.aiIdentified;
     delete migrated.quizDone;
@@ -142,6 +155,91 @@ function cardLevel(item) {
   return { ...progress, level, name: names[level - 1], current, next, percent: level === 5 ? 100 : Math.round((progress.xp - current) / (next - current) * 100) };
 }
 
+function unlockedAlarmBirds() {
+  return species.filter(item => item.category === "bird" && birdSounds[item.id] && found(item));
+}
+
+function nextAlarmDate(time, now = new Date()) {
+  const [hours, minutes] = time.split(":").map(Number);
+  const next = new Date(now);
+  next.setHours(hours, minutes, 0, 0);
+  if (next <= now) next.setDate(next.getDate() + 1);
+  return next;
+}
+
+function renderBirdAlarm() {
+  const birds = unlockedAlarmBirds();
+  const select = document.getElementById("alarmBird");
+  const selected = birds.some(item => item.id === state.alarm.speciesId) ? state.alarm.speciesId : birds[0]?.id || "";
+  state.alarm.speciesId = selected;
+  select.innerHTML = birds.length ? birds.map(item => `<option value="${item.id}" ${item.id === selected ? "selected" : ""}>${item.name} · ${item.latin}</option>`).join("") : `<option value="">暂无已解锁鸟类</option>`;
+  select.disabled = !birds.length;
+  document.getElementById("alarmTime").value = state.alarm.time;
+  document.getElementById("previewAlarm").disabled = !birds.length;
+  const toggle = document.getElementById("toggleAlarm");
+  toggle.disabled = !birds.length;
+  toggle.innerHTML = state.alarm.enabled ? `${icon("alarm-clock-off")} 停用闹钟` : `${icon("alarm-clock")} 启用闹钟`;
+  document.getElementById("alarmBadge").textContent = state.alarm.enabled ? "已启用" : "未启用";
+  document.getElementById("alarmBadge").classList.toggle("is-on", state.alarm.enabled);
+  const item = species.find(entry => entry.id === selected);
+  document.getElementById("alarmStatus").textContent = !birds.length
+    ? "先在图鉴中解锁一种鸟类，才能使用对应鸟鸣。"
+    : state.alarm.enabled
+      ? `每天 ${state.alarm.time} · ${item.name} · 下一次 ${nextAlarmDate(state.alarm.time).toLocaleString("zh-CN", { weekday: "short", hour: "2-digit", minute: "2-digit" })}`
+      : "闹钟设置只保存在当前浏览器。启用时会先播放一次鸟鸣试听。";
+  icons();
+}
+
+function stopBirdSound() {
+  const audio = document.getElementById("alarmAudio");
+  clearTimeout(alarmStopTimer);
+  audio.pause();
+  audio.currentTime = 0;
+  audio.loop = false;
+  document.getElementById("alarmRinging").hidden = true;
+}
+
+async function playBirdSound(speciesId, ringing = false) {
+  const item = species.find(entry => entry.id === speciesId);
+  if (!item || !birdSounds[speciesId]) return;
+  stopBirdSound();
+  const audio = document.getElementById("alarmAudio");
+  audio.src = birdSounds[speciesId];
+  audio.loop = ringing;
+  audio.volume = .82;
+  if (ringing) {
+    document.getElementById("alarmRingingImage").src = item.image;
+    document.getElementById("alarmRingingImage").alt = item.name;
+    document.getElementById("alarmRingingSpecies").textContent = `${item.name} · ${state.alarm.time}`;
+    document.getElementById("alarmRinging").hidden = false;
+    icons();
+  }
+  try {
+    await audio.play();
+    alarmStopTimer = setTimeout(stopBirdSound, ringing ? 60000 : 8000);
+  } catch {
+    if (ringing) document.getElementById("alarmRingingSpecies").textContent = `${item.name} · 点击“重播鸟鸣”允许声音`;
+    else toast("浏览器暂未允许播放声音，请再点一次试听");
+  }
+}
+
+function triggerBirdAlarm() {
+  const item = unlockedAlarmBirds().find(entry => entry.id === state.alarm.speciesId);
+  if (!state.alarm.enabled || !item) return;
+  state.alarm.lastTriggeredDate = todayKey();
+  saveState();
+  playBirdSound(item.id, true);
+  scheduleBirdAlarm();
+}
+
+function scheduleBirdAlarm() {
+  clearTimeout(alarmTimer);
+  if (!state.alarm.enabled || !state.alarm.speciesId) { renderBirdAlarm(); return; }
+  const delay = nextAlarmDate(state.alarm.time).getTime() - Date.now();
+  alarmTimer = setTimeout(triggerBirdAlarm, delay);
+  renderBirdAlarm();
+}
+
 function navigate(name) {
   document.querySelectorAll(".view").forEach(view => view.classList.toggle("is-active", view.dataset.view === name));
   document.querySelectorAll("[data-view-target]").forEach(button => button.classList.toggle("is-active", button.dataset.viewTarget === name));
@@ -168,6 +266,7 @@ function updateUI() {
   renderTasks();
   renderBadges();
   renderBlindBoxCollection();
+  renderBirdAlarm();
   icons();
 }
 
@@ -279,7 +378,56 @@ function renderMap() {
   });
   document.querySelectorAll("[data-route-segment]").forEach((segment, index) => segment.classList.toggle("is-open", index + 1 <= state.unlockedThrough));
   document.getElementById("siteStrip").innerHTML = sites.map((site, index) => `<button type="button" data-strip-site="${index}" ${index > state.unlockedThrough ? "disabled" : ""}><b>${String(index + 1).padStart(2,"0")} · ${site.name}</b><small>${index > state.unlockedThrough ? "尚未解锁" : site.feature}</small></button>`).join("");
+  renderInteractiveMap();
   updateMapFocus();
+  icons();
+}
+
+function initializeInteractiveMap() {
+  if (interactiveMap || !window.L) return;
+  const container = document.getElementById("liveMap");
+  interactiveMap = L.map(container, { zoomControl: false, attributionControl: true, minZoom: 9, maxZoom: 17, tap: true });
+  L.control.zoom({ position: "bottomleft" }).addTo(interactiveMap);
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  }).addTo(interactiveMap);
+  interactiveMapLayers = L.layerGroup().addTo(interactiveMap);
+  interactiveMap.fitBounds(L.latLngBounds(sites.map(site => [site.lat, site.lng])), { padding: [34, 34] });
+  container.closest(".route-map").classList.add("is-interactive");
+}
+
+function renderInteractiveMap() {
+  initializeInteractiveMap();
+  if (!interactiveMap) return;
+  interactiveMapLayers.clearLayers();
+  sites.slice(1).forEach((site, index) => {
+    const open = index + 1 <= state.unlockedThrough;
+    L.polyline([[sites[index].lat, sites[index].lng], [site.lat, site.lng]], {
+      color: open ? "#dff47b" : "#ffffff",
+      weight: open ? 6 : 4,
+      opacity: open ? .95 : .72,
+      dashArray: open ? null : "8 10"
+    }).addTo(interactiveMapLayers);
+  });
+  sites.forEach((site, index) => {
+    const locked = index > state.unlockedThrough;
+    const complete = siteComplete(index);
+    const active = index === activeSite;
+    const marker = L.marker([site.lat, site.lng], {
+      icon: L.divIcon({
+        className: "wetland-map-marker-wrap",
+        html: `<span class="wetland-map-marker ${locked ? "is-locked" : ""} ${complete ? "is-complete" : ""} ${active ? "is-active" : ""}">${locked ? icon("lock") : complete ? icon("check") : String(index + 1).padStart(2, "0")}</span>`,
+        iconSize: [46, 58],
+        iconAnchor: [23, 29]
+      }),
+      keyboard: true,
+      title: site.name
+    }).addTo(interactiveMapLayers);
+    marker.bindTooltip(site.name, { direction: "top", offset: [0, -22], className: "wetland-map-tooltip" });
+    marker.on("click", () => selectSite(index));
+  });
+  requestAnimationFrame(() => interactiveMap.invalidateSize());
 }
 
 function renderAtlas() {
@@ -372,6 +520,7 @@ function selectSite(index) {
   if (index > state.unlockedThrough) { toast(`${sites[index].name}尚未解锁，先完成前序点位`); return; }
   activeSite = index;
   renderMap();
+  interactiveMap?.panTo([sites[index].lat, sites[index].lng]);
 }
 
 function updateMapFocus() {
@@ -678,13 +827,16 @@ function resolveRecognition(mobilePredictions, birdPredictions) {
 
   const birdIsReliable = birdTop.probability >= .35 && birdTop.probability - birdPredictions[1].probability >= .15;
   if (birdIsReliable && birdTop.className === "BLACK FACED SPOONBILL") {
-    return { title: "检测到黑脸琵鹭候选", description: "鸟类专用模型命中黑脸琵鹭，但通用模型没有同步识别到琵鹭。请结合黑色脸部和匙状长嘴人工确认，当前不会自动收入 SSR 卡。", probability: birdTop.probability, candidateOnly: true };
+    return { speciesId: "spoonbill", title: "黑脸琵鹭", description: "鸟类专用模型可靠命中黑脸琵鹭。请结合黑色脸部、匙状长嘴和观察地点进行人工复核。", probability: birdTop.probability };
   }
   if (birdIsReliable && birdTop.className === "SNOWY EGRET") {
     return { speciesId: "egret", title: "白鹭类（接近白鹭）", description: "模型识别到白色小型鹭类。训练标签为雪鹭，请结合黑腿、黄趾和深圳本地物种信息复核是否为白鹭。", probability: birdTop.probability };
   }
   if (birdIsReliable && birdTop.className.includes("KINGFISHER")) {
     return { title: "检测到翠鸟类", description: `最接近 ${birdTop.className}，但模型没有普通翠鸟的精确标签，需人工确认后再记录。`, probability: birdTop.probability, candidateOnly: true };
+  }
+  if (birdIsReliable && birdTop.className === "BLUE HERON") {
+    return { speciesId: "heron", title: "夜鹭类（Blue Heron 近似标签）", description: "模型可靠识别到 Blue Heron 训练标签，并映射为当前图鉴的夜鹭类观察。请结合灰黑色背部、红眼和昼伏夜出习性人工复核。", probability: birdTop.probability };
   }
   if (birdIsReliable && (birdTop.className.includes("HERON") || birdTop.className.includes("EGRET"))) {
     return { title: "检测到鹭类", description: `最接近 ${birdTop.className}，但模型没有夜鹭的精确标签，不会自动收入夜鹭卡。`, probability: birdTop.probability, candidateOnly: true };
@@ -715,6 +867,7 @@ function displayPredictionName(className) {
 function displayBirdPredictionName(className) {
   if (className === "BLACK FACED SPOONBILL") return "黑脸琵鹭";
   if (className === "SNOWY EGRET") return "白色鹭类（雪鹭标签）";
+  if (className === "BLUE HERON") return "夜鹭类候选 · BLUE HERON";
   if (className.includes("KINGFISHER")) return `翠鸟类 · ${className}`;
   if (className.includes("HERON") || className.includes("EGRET")) return `鹭类 · ${className}`;
   return `鸟类候选 · ${className}`;
@@ -752,7 +905,7 @@ async function identify() {
       : `<span>${icon("circle-alert")}</span><p><b>生态场景匹配</b><small>${detectedResult ? (detectedResult.candidateOnly ? "已有鸟类候选，等待人工确认" : "识别有效，但不属于当前点位目标") : "未达到可靠判定阈值"}</small></p><em>ECO</em>`;
     recognitionResult = sceneMatch ? detectedResult : null;
     updateScanProgress(100, recognitionResult ? "扫描完成 · 发现有效目标" : "扫描完成 · 暂未确认目标");
-    const displayBirdPredictions = detectedResult?.candidateOnly || ["spoonbill", "egret"].includes(detectedResult?.speciesId);
+    const displayBirdPredictions = detectedResult?.candidateOnly || ["spoonbill", "egret", "heron"].includes(detectedResult?.speciesId);
     const displayPredictions = displayBirdPredictions ? birdPredictions : mobilePredictions;
     showRecognitionResult(displayPredictions, recognitionResult, detectedResult);
     readout.classList.toggle("is-complete", Boolean(detectedResult));
@@ -1115,6 +1268,35 @@ document.getElementById("closeShare").addEventListener("click", closeShare);
 document.getElementById("downloadShare").addEventListener("click", downloadShareCard);
 document.getElementById("systemShare").addEventListener("click", () => systemShareCard().catch(() => {}));
 document.getElementById("claimSupply").addEventListener("click", claimSupply);
+document.getElementById("alarmTime").addEventListener("change", event => {
+  state.alarm.time = event.target.value || "07:00";
+  saveState();
+  scheduleBirdAlarm();
+});
+document.getElementById("alarmBird").addEventListener("change", event => {
+  state.alarm.speciesId = event.target.value;
+  saveState();
+  scheduleBirdAlarm();
+});
+document.getElementById("previewAlarm").addEventListener("click", () => playBirdSound(state.alarm.speciesId));
+document.getElementById("toggleAlarm").addEventListener("click", async () => {
+  if (state.alarm.enabled) {
+    state.alarm.enabled = false;
+    stopBirdSound();
+    saveState();
+    scheduleBirdAlarm();
+    toast("鸟鸣闹钟已停用");
+    return;
+  }
+  if (!state.alarm.speciesId) return;
+  state.alarm.enabled = true;
+  saveState();
+  scheduleBirdAlarm();
+  await playBirdSound(state.alarm.speciesId);
+  toast("鸟鸣闹钟已启用；请保持页面运行");
+});
+document.getElementById("replayAlarm").addEventListener("click", () => playBirdSound(state.alarm.speciesId, true));
+document.getElementById("stopAlarm").addEventListener("click", stopBirdSound);
 document.getElementById("photoInput").addEventListener("change", event => {
   const file = event.target.files[0];
   if (!file) return;
@@ -1160,7 +1342,7 @@ document.getElementById("posterButton").addEventListener("click", () => {
   generateShareCard(item);
 });
 document.getElementById("creditsButton").addEventListener("click", () => window.open("CREDITS.md", "_blank", "noopener"));
-document.getElementById("resetButton").addEventListener("click", () => { state = { ...initialState, siteProgress: emptySiteProgress(), collectedSpecies: [], cardProgress: {}, daily: { ...initialState.daily }, supply: { ...initialState.supply }, blindBoxCollection: {}, blindBoxFragments: 0 }; localStorage.removeItem(STORAGE_KEY); activeSite = 0; closeBlindBoxReveal(); updateUI(); toast("演示进度已重置"); });
+document.getElementById("resetButton").addEventListener("click", () => { stopBirdSound(); clearTimeout(alarmTimer); state = { ...initialState, siteProgress: emptySiteProgress(), collectedSpecies: [], cardProgress: {}, daily: { ...initialState.daily }, supply: { ...initialState.supply }, alarm: { ...initialState.alarm }, blindBoxCollection: {}, blindBoxFragments: 0 }; localStorage.removeItem(STORAGE_KEY); activeSite = 0; closeBlindBoxReveal(); updateUI(); toast("演示进度已重置"); });
 document.querySelectorAll(".modal-backdrop").forEach(backdrop => backdrop.addEventListener("click", event => {
   if (event.target !== backdrop) return;
   if (backdrop.id === "speciesModal") closeSpecies();
@@ -1174,4 +1356,5 @@ window.addEventListener("mudflat-state-changed", () => {
 });
 
 updateUI();
+scheduleBirdAlarm();
 icons();
