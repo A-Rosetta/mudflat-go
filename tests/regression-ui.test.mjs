@@ -56,6 +56,8 @@ test("primary navigation stays focused while collection exposes secondary featur
 
 test("forest background and refractive top bar remain part of the glass system", () => {
   assert.match(css, /body \{ background: linear-gradient\(145deg,#fbf8df 0%,#eef4d7 24%,#dceee0 58%,#bcded2 100%\)/);
+  assert.match(css, /\.site-view \{[^}]*background: linear-gradient\(145deg,#fbf8df 0%,#eef4d7 24%,#dceee0 58%,#bcded2 100%\)/);
+  assert.match(css, /\.site-view-head \{[^}]*background: rgba\(238,244,215,\.78\)/);
   assert.match(css, /\.topbar \{[^}]*backdrop-filter:blur\(34px\) saturate\(1\.55\) contrast\(1\.06\)/);
   assert.match(css, /\.topbar::before \{[^}]*linear-gradient/);
   assert.match(css, /\.topbar::after \{[^}]*linear-gradient/);
