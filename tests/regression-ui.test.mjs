@@ -46,8 +46,13 @@ test("new sessions start with 88888888 points and legacy balances migrate once",
   assert.doesNotMatch(arena, /input\.points == null \? 3000/);
 });
 
-test("recognition models warm in the background only after capture opens", () => {
-  assert.match(script, /function openCapture\(\)[\s\S]*?startCamera\(\);[\s\S]*?Promise\.allSettled\(\[loadRecognitionModel\(\), loadBirdRecognitionModel\(\)\]\)/);
+test("recognition uses the Cloudflare endpoint without browser model runtimes", () => {
+  assert.match(script, /fetch\("\/api\/identify", \{ method: "POST", body: form, signal: controller\.signal \}\)/);
+  assert.match(script, /prepareRecognitionImage\(input\)/);
+  assert.match(script, /maxDimension = 1024/);
+  assert.doesNotMatch(script, /loadRecognitionModel|loadBirdRecognitionModel|mobilenet\.load|ort\.InferenceSession/);
+  assert.doesNotMatch(html, /tf\.min\.js|mobilenet\.min\.js|onnxruntime-web\.min\.js/);
+  assert.match(html, /识别时会上传压缩照片至 Cloudflare AI/);
 });
 
 test("primary navigation stays focused while collection exposes secondary features", () => {

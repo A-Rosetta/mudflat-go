@@ -33,7 +33,7 @@
           <div class="explore-copy">
             <span class="hero-kicker"><i data-lucide="compass"></i> 深圳湿地观察与物种档案</span>
             <h1 id="exploreTitle">让每一次<br>湿地相遇，<br>成为一张<br><em>生命卡片。</em></h1>
-            <p>查看点位与当季目标，带着图鉴实地寻找。照片在当前设备完成物种辅助识别，并结合地点留下可信的观察记录。</p>
+            <p>查看点位与当季目标，带着图鉴实地寻找。照片通过云端视觉服务完成物种辅助识别，并结合地点留下可信的观察记录。</p>
             <div class="hero-actions">
               <button class="button primary" type="button" data-open-site>查看当前点位 <i data-lucide="arrow-right"></i></button>
               <button class="button secondary" type="button" data-view-target="collection">打开深圳图鉴</button>
@@ -377,7 +377,7 @@
   <section class="capture-view" id="captureView" hidden aria-labelledby="captureTitle">
     <header class="capture-head">
       <button type="button" id="closeCapture"><i data-lucide="arrow-left"></i> 返回</button>
-      <span id="cameraStatus">设备端物种辅助识别</span>
+      <span id="cameraStatus">云端 AI 物种辅助识别</span>
       <label for="photoInput"><i data-lucide="image-up"></i> 相册</label>
       <input id="photoInput" type="file" accept="image/*" hidden>
     </header>
@@ -388,7 +388,7 @@
       <div class="camera-empty" id="cameraEmpty">
         <span><i data-lucide="camera"></i></span>
         <h2>打开相机开始观察</h2>
-        <p>相机画面和照片只在当前设备中处理，不会上传。</p>
+        <p>相机预览留在当前设备；识别时会上传压缩照片至 Cloudflare AI。</p>
         <button type="button" id="startCamera"><i data-lucide="video"></i> 打开相机</button>
       </div>
       <div class="camera-shade"></div>
@@ -449,9 +449,6 @@
   <div class="toast" id="toast" role="status" aria-live="polite"><i data-lucide="check-circle-2"></i><span></span></div>
   <script type="module" src="assets/vendor/model-viewer.min.js"></script>
   <script src="assets/vendor/lucide.min.js"></script>
-  <script src="assets/vendor/tf.min.js"></script>
-  <script src="assets/vendor/mobilenet.min.js"></script>
-  <script src="assets/vendor/onnxruntime-web.min.js"></script>
   <script src="assets/vendor/leaflet.min.js"></script>
   <script src="script.js"></script>
   <script type="module" src="game.js"></script>

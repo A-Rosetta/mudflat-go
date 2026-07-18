@@ -11,4 +11,14 @@ docs/**
 .gitignore
 .assetsignore
 wrangler.jsonc
+worker.mjs
 README.md
+assets/models/bird-species
+assets/models/bird-species/**
+assets/models/mobilenet
+assets/models/mobilenet/**
+assets/vendor/mobilenet.min.js
+assets/vendor/onnxruntime-web.min.js
+assets/vendor/ort-wasm-simd-threaded.mjs
+assets/vendor/ort-wasm-simd-threaded.wasm
+assets/vendor/tf.min.js
