@@ -79,7 +79,7 @@ test("every daily variant changes a battle rule", () => {
   let lowTide = createArenaBattle(levelForVariant("退潮窗口"), team);
   lowTide = performArenaAction(lowTide, { playerId: "spoonbill", enemyId: lowTide.enemies[0].id, action: "attack" });
   assert.equal(lowTide.lastEvent.damage, 19);
-  lowTide = performArenaAction(lowTide, { playerId: "kingfisher", enemyId: lowTide.enemies[0].id, action: "attack" });
+  lowTide = performArenaAction(lowTide, { playerId: "kingfisher", enemyId: lowTide.enemies[1].id, action: "attack" });
   assert.equal(lowTide.lastEvent.damage, 18);
 
   let healedBeforeStrike = chargeSkill(createArenaBattle(levelForVariant("退潮窗口"), team), "egret");
@@ -99,7 +99,9 @@ test("stage modifiers alter the values promised by their copy", () => {
   const stage2 = createArenaBattle(ARENA_LEVELS[1], team);
   const armored = performArenaAction(stage2, { playerId: "spoonbill", enemyId: stage2.enemies[0].id, action: "attack" });
   assert.equal(armored.lastEvent.damage, 9);
-  assert.equal(performArenaAction(armored, { playerId: "kingfisher", enemyId: stage2.enemies[0].id, action: "attack" }).lastEvent.damage, 18);
+  const chained = performArenaAction(armored, { playerId: "kingfisher", enemyId: stage2.enemies[0].id, action: "attack" });
+  assert.equal(chained.lastEvent.damage, 20);
+  assert.equal(chained.lastEvent.chainMultiplier, 1.12);
 
   let stage3 = chargeSkill(createArenaBattle(ARENA_LEVELS[2], team), "spoonbill");
   stage3 = performArenaAction(stage3, { playerId: "spoonbill", enemyId: stage3.enemies[0].id, action: "skill" });
@@ -148,6 +150,46 @@ test("player action preview rejects unavailable actions", () => {
   assert.equal(previewArenaAction(battle, { ...input, action: "invalid" }), null);
   assert.equal(previewArenaAction({ ...battle, status: "enemy" }, { ...input, action: "attack" }), null);
   assert.equal(previewArenaAction({ ...battle, acted: ["spoonbill"] }, { ...input, action: "attack" }), null);
+});
+
+test("same-target attacks build an exact three-step tidal chain", () => {
+  let battle = createArenaBattle(ARENA_LEVELS[0], team);
+  const enemyId = battle.enemies[0].id;
+
+  let preview = previewArenaAction(battle, { playerId: "spoonbill", enemyId, action: "attack" });
+  assert.deepEqual({ damage: preview.damage, chainCount: preview.chainCount, chainMultiplier: preview.chainMultiplier }, { damage: 15, chainCount: 1, chainMultiplier: 1 });
+  battle = performArenaAction(battle, { playerId: "spoonbill", enemyId, action: "attack" });
+
+  preview = previewArenaAction(battle, { playerId: "kingfisher", enemyId, action: "attack" });
+  assert.deepEqual({ damage: preview.damage, chainCount: preview.chainCount, chainMultiplier: preview.chainMultiplier }, { damage: 20, chainCount: 2, chainMultiplier: 1.12 });
+  battle = performArenaAction(battle, { playerId: "kingfisher", enemyId, action: "attack" });
+
+  preview = previewArenaAction(battle, { playerId: "egret", enemyId, action: "attack" });
+  assert.deepEqual({ damage: preview.damage, chainCount: preview.chainCount, chainMultiplier: preview.chainMultiplier }, { damage: 16, chainCount: 3, chainMultiplier: 1.24 });
+  battle = performArenaAction(battle, { playerId: "egret", enemyId, action: "attack" });
+  assert.equal(battle.lastEvent.damage, preview.damage);
+  assert.equal(battle.chainTargetId, enemyId);
+  assert.equal(battle.chainCount, 3);
+
+  battle = performArenaEnemyTurn(battle);
+  assert.equal(battle.chainTargetId, null);
+  assert.equal(battle.chainCount, 0);
+});
+
+test("support actions preserve a tidal chain while switching targets resets it", () => {
+  let battle = createArenaBattle(ARENA_LEVELS[0], team);
+  const [firstEnemy, secondEnemy] = battle.enemies;
+  battle = performArenaAction(battle, { playerId: "spoonbill", enemyId: firstEnemy.id, action: "attack" });
+  battle = chargeSkill(battle, "egret");
+  battle = performArenaAction(battle, { playerId: "egret", enemyId: secondEnemy.id, action: "skill" });
+  assert.equal(battle.chainTargetId, firstEnemy.id);
+  assert.equal(battle.chainCount, 1);
+
+  const preview = previewArenaAction(battle, { playerId: "kingfisher", enemyId: secondEnemy.id, action: "attack" });
+  assert.deepEqual({ damage: preview.damage, chainCount: preview.chainCount, chainMultiplier: preview.chainMultiplier }, { damage: 18, chainCount: 1, chainMultiplier: 1 });
+  battle = performArenaAction(battle, { playerId: "kingfisher", enemyId: secondEnemy.id, action: "attack" });
+  assert.equal(battle.chainTargetId, secondEnemy.id);
+  assert.equal(battle.chainCount, 1);
 });
 
 test("egret preview and event report applied healing by target", () => {

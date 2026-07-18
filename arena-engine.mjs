@@ -129,7 +129,7 @@ export function createArenaBattle(level, team) {
       defeated: false
     };
   });
-  return { levelId: level.id, day: level.day, round: 1, status: "player", players, enemies, acted: [], roundDamageCount: 0, enemyDelay: 0, mechanic, variant, lastEvent: null };
+  return { levelId: level.id, day: level.day, round: 1, status: "player", players, enemies, acted: [], roundDamageCount: 0, chainTargetId: null, chainCount: 0, enemyDelay: 0, mechanic, variant, lastEvent: null };
 }
 
 export function previewArenaAction(state, { playerId, enemyId, action }) {
@@ -154,6 +154,9 @@ export function previewArenaAction(state, { playerId, enemyId, action }) {
     execute = broken || enemy.hp / enemy.maxHp <= .35;
     if (execute) damage = Math.round(damage * 1.5);
   }
+  const chainCount = damage > 0 ? (state.chainTargetId === enemyId ? Math.min(3, (Number(state.chainCount) || 0) + 1) : 1) : Number(state.chainCount) || 0;
+  const chainMultiplier = damage > 0 ? 1 + (chainCount - 1) * .12 : 1;
+  damage = Math.round(damage * chainMultiplier);
   const armorAbsorbed = enemy.armorReady && damage > 0 ? Math.round(damage * (mechanic.firstHitReduction || 0)) : 0;
   damage -= armorAbsorbed;
   const healingByTarget = isEgretSkill
@@ -165,7 +168,7 @@ export function previewArenaAction(state, { playerId, enemyId, action }) {
     ? Object.fromEntries(state.players.filter(alive).map(unit => [unit.id, Math.min(barrierPower, Math.max(0, Math.round(unit.maxHp * .45) - (unit.shield || 0)))]))
     : {};
   const barrier = Object.values(barrierByTarget).reduce((total, value) => total + value, 0);
-  return { damage, healing, healingByTarget, barrier, barrierByTarget, armorAbsorbed, toughnessDamage, broken, execute, delayed: isSkill && playerId === "heron", firstStrikeBonus };
+  return { damage, healing, healingByTarget, barrier, barrierByTarget, armorAbsorbed, toughnessDamage, broken, execute, delayed: isSkill && playerId === "heron", firstStrikeBonus, chainCount, chainMultiplier };
 }
 
 export function performArenaAction(state, { playerId, enemyId, action }) {
@@ -178,7 +181,7 @@ export function performArenaAction(state, { playerId, enemyId, action }) {
   const isSkill = action === "skill";
   const preview = previewArenaAction(state, { playerId, enemyId, action });
   if (!preview) return state;
-  const { damage, healing, healingByTarget, barrier, barrierByTarget, armorAbsorbed, toughnessDamage, broken, execute, delayed, firstStrikeBonus } = preview;
+  const { damage, healing, healingByTarget, barrier, barrierByTarget, armorAbsorbed, toughnessDamage, broken, execute, delayed, firstStrikeBonus, chainCount, chainMultiplier } = preview;
   const players = state.players.map(unit => {
     const next = { ...unit };
     if (unit.id === playerId) next.mp = isSkill ? 0 : clamp(unit.mp + (variant.attackEnergy || 25), 0, 100);
@@ -210,9 +213,11 @@ export function performArenaAction(state, { playerId, enemyId, action }) {
     enemies,
     acted,
     roundDamageCount: state.roundDamageCount + Number(damage > 0),
+    chainTargetId: damage > 0 ? enemyId : state.chainTargetId || null,
+    chainCount: damage > 0 ? chainCount : Number(state.chainCount) || 0,
     enemyDelay: delayed ? 1 : state.enemyDelay,
     status: remainingEnemies.length ? (readyPlayers.length ? "player" : "enemy") : "victory",
-    lastEvent: { side: "player", attackerId: playerId, targetId: enemyId, action, damage, healing, healingByTarget, barrier, barrierByTarget, armorAbsorbed, toughnessDamage, execute, delayed, firstStrikeBonus }
+    lastEvent: { side: "player", attackerId: playerId, targetId: enemyId, action, damage, healing, healingByTarget, barrier, barrierByTarget, armorAbsorbed, toughnessDamage, execute, delayed, firstStrikeBonus, chainCount, chainMultiplier }
   };
 }
 
@@ -251,7 +256,7 @@ export function performArenaEnemyTurn(state) {
   if (!players.length) return { ...state, status: "defeat" };
   const intent = previewArenaEnemyTurn(state);
   if (intent.action === "delayed") {
-    return { ...state, round: state.round + 1, acted: [], roundDamageCount: 0, enemyDelay: Math.max(0, state.enemyDelay - 1), status: "player", lastEvent: { side: "enemy", ...intent } };
+    return { ...state, round: state.round + 1, acted: [], roundDamageCount: 0, chainTargetId: null, chainCount: 0, enemyDelay: Math.max(0, state.enemyDelay - 1), status: "player", lastEvent: { side: "enemy", ...intent } };
   }
   const target = players.find(unit => unit.id === intent.targetId);
   const nextPlayers = state.players.map(unit => {
@@ -267,6 +272,8 @@ export function performArenaEnemyTurn(state) {
     round: state.round + 1,
     acted: [],
     roundDamageCount: 0,
+    chainTargetId: null,
+    chainCount: 0,
     status: nextPlayers.some(alive) ? "player" : "defeat",
     lastEvent: { side: "enemy", ...intent }
   };

@@ -65,6 +65,17 @@ test("arena exposes mechanical rules and each bird's tactical payoff", () => {
   assert.match(css, /\.arena-level-grid em \{[^}]*white-space:normal/);
 });
 
+test("arena exposes order-sensitive tidal chain feedback", () => {
+  assert.match(controller, /function arenaChainCopy\(\)/);
+  assert.match(controller, /arena-chain-label/);
+  assert.match(controller, /event\.chainMultiplier > 1/);
+  assert.match(controller, /const impactChainCount = supportTarget \? 0 : event\.chainCount/);
+  assert.match(controller, /chainCount: impactChainCount/);
+  assert.match(css, /\.arena-chain/);
+  assert.match(css, /\.arena-side button\.is-chain-target/);
+  assert.match(css, /\.arena-impact\.is-chain/);
+});
+
 test("mobile battle keeps fixed and daily mechanics visible", () => {
   assert.match(controller, /<em>\$\{level\.modifier\} · \$\{level\.dailyVariant\} · \$\{level\.dailyEffect\}<\/em>/);
   assert.match(css, /\.arena-status em \{ display:block; grid-column:1\/-1;/);

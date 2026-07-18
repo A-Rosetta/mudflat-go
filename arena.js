@@ -167,11 +167,24 @@ function hpBar(unit) {
 function arenaSkillEffect(unit, preview) {
   if (unit.mp < 100) return `未充能 ${unit.mp}/100`;
   if (!preview) return "无可选目标";
-  if (unit.id === "spoonbill") return `${preview.damage} 伤害 · ${preview.barrier} 屏障并拦截单体攻击`;
-  if (unit.id === "kingfisher") return `${preview.damage} 伤害 · 削韧；击破或低生命目标增伤`;
+  const chain = arenaChainEffect(preview);
+  if (unit.id === "spoonbill") return `${preview.damage} 伤害${chain} · ${preview.barrier} 屏障并拦截单体攻击`;
+  if (unit.id === "kingfisher") return `${preview.damage} 伤害${chain} · 削韧；击破或低生命目标增伤`;
   if (unit.id === "egret") return `${preview.healing} 治疗全队并净化侵蚀`;
-  if (unit.id === "heron") return `${preview.damage} 伤害 · 延后敌方下一次行动`;
-  return `${preview.damage} 伤害`;
+  if (unit.id === "heron") return `${preview.damage} 伤害${chain} · 延后敌方下一次行动`;
+  return `${preview.damage} 伤害${chain}`;
+}
+
+const chainTier = count => ["", "I", "II", "III"][Math.max(0, Math.min(3, Number(count) || 0))];
+function arenaChainEffect(preview) {
+  return preview?.chainMultiplier > 1 ? ` · 潮链 ${chainTier(preview.chainCount)} +${Math.round((preview.chainMultiplier - 1) * 100)}%` : "";
+}
+function arenaChainCopy() {
+  const count = Number(battle?.chainCount) || 0;
+  const target = battle?.enemies.find(unit => unit.id === battle.chainTargetId && unit.hp > 0);
+  if (!count || !target) return `${icon("waves")} 潮链待命`;
+  const bonus = Math.max(0, count - 1) * 12;
+  return `${icon("waves")} 潮链 ${chainTier(count)} · ${target.name}${bonus ? ` +${bonus}%` : ""}`;
 }
 
 function arenaIntentCopy(intent, attacker, target) {
@@ -197,7 +210,7 @@ function cancelArenaEffects() {
   clearArenaEffects();
 }
 
-async function animateArenaAttack(attacker, target, { damage, label, skill = false, enemy = false, support = false }) {
+async function animateArenaAttack(attacker, target, { damage, label, skill = false, enemy = false, support = false, chainCount = 0 }) {
   if (!attacker || !target || window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches) return;
   const start = attacker.getBoundingClientRect();
   const end = target.getBoundingClientRect();
@@ -209,7 +222,7 @@ async function animateArenaAttack(attacker, target, { damage, label, skill = fal
   ghost.removeAttribute("disabled");
   ghost.removeAttribute("aria-label");
   ghost.setAttribute("aria-hidden", "true");
-  ghost.className = `arena-attack-ghost ${enemy ? "is-enemy" : "is-player"} ${skill ? "is-skill" : ""} ${support ? "is-support" : ""}`;
+  ghost.className = `arena-attack-ghost ${enemy ? "is-enemy" : "is-player"} ${skill ? "is-skill" : ""} ${support ? "is-support" : ""} ${chainCount > 1 ? "is-chain" : ""}`;
   Object.assign(ghost.style, {
     top: `${start.top}px`,
     left: `${start.left}px`,
@@ -228,11 +241,11 @@ async function animateArenaAttack(attacker, target, { damage, label, skill = fal
   target.classList.add("is-taking-hit");
   const targetRect = target.getBoundingClientRect();
   const impact = document.createElement("span");
-  impact.className = `arena-impact ${skill ? "is-skill" : ""} ${support ? "is-support" : ""}`;
+  impact.className = `arena-impact ${skill ? "is-skill" : ""} ${support ? "is-support" : ""} ${chainCount > 1 ? "is-chain" : ""}`;
   impact.setAttribute("aria-hidden", "true");
   impact.style.left = `${targetRect.left + targetRect.width / 2}px`;
   impact.style.top = `${targetRect.top + targetRect.height / 2}px`;
-  impact.innerHTML = `<i></i><i></i><i></i><b>${label || `-${damage}`}</b>`;
+  impact.innerHTML = `<i></i><i></i><i></i><b>${label || `-${damage}`}</b>${chainCount > 1 ? `<small>潮链 ${chainTier(chainCount)}</small>` : ""}`;
   document.body.append(impact);
   await animationDelay(350);
   ghost.remove();
@@ -255,7 +268,7 @@ function renderBattle() {
   const attackPreview = activePlayer && activeEnemy && previewArenaAction(battle, { playerId: activePlayer.id, enemyId: activeEnemy.id, action: "attack" });
   const skillPreview = activePlayer && activeEnemy && previewArenaAction(battle, { playerId: activePlayer.id, enemyId: activeEnemy.id, action: "skill" });
   const energyGain = battle.variant.attackEnergy || 25;
-  const lastPulse = !battle.lastEvent ? "READY" : Object.keys(battle.lastEvent.healingByTarget || {}).length ? `+${battle.lastEvent.healing}` : battle.lastEvent.delayed ? "DELAY" : `-${battle.lastEvent.damage}`;
+  const lastPulse = !battle.lastEvent ? "READY" : battle.lastEvent.chainCount > 1 ? `CHAIN ${chainTier(battle.lastEvent.chainCount)}` : Object.keys(battle.lastEvent.healingByTarget || {}).length ? `+${battle.lastEvent.healing}` : battle.lastEvent.delayed ? "DELAY" : `-${battle.lastEvent.damage}`;
   shell.dataset.screen = "battle";
   shell.innerHTML = `<div class="arena-backdrop-art" aria-hidden="true"></div>
     <header class="arena-header arena-battle-header">
@@ -263,15 +276,15 @@ function renderBattle() {
       <div><small>${icon("swords")} BATTLE MODE · STAGE ${String(level.id).padStart(2, "0")}</small><h1>${level.name}</h1><p>${level.zone} · ${level.modifier}</p></div>
       <span class="arena-round"><b>ROUND ${String(battle.round).padStart(2, "0")}</b><em>${battle.status === "enemy" ? "敌方回合" : finished ? "战斗结束" : "我方回合"}</em></span>
     </header>
-    <section class="arena-status"><span>${icon("clock-3")} ${battle.status === "enemy" ? "敌方正在反击" : finished ? "结算完成" : `已行动 ${battle.acted.length}/${battle.players.filter(unit => unit.hp > 0).length}`}</span><strong class="arena-intent">${intent ? arenaIntentCopy(intent, intentAttacker, intentTarget) : "潮线战斗结束"}</strong><em>${level.modifier} · ${level.dailyVariant} · ${level.dailyEffect}</em></section>
+    <section class="arena-status"><span class="arena-turn-state">${icon("clock-3")} ${battle.status === "enemy" ? "敌方正在反击" : finished ? "结算完成" : `已行动 ${battle.acted.length}/${battle.players.filter(unit => unit.hp > 0).length}`}<mark class="arena-chain ${battle.chainCount > 1 ? "is-linked" : ""}">${arenaChainCopy()}</mark></span><strong class="arena-intent">${intent ? arenaIntentCopy(intent, intentAttacker, intentTarget) : "潮线战斗结束"}</strong><em>${level.modifier} · ${level.dailyVariant} · ${level.dailyEffect}</em></section>
     <section class="arena-field">
       <div class="arena-side"><header><span>我方鸟灵</span><b>依次行动</b></header><div>${battle.players.map(unit => `<button type="button" data-arena-player="${unit.id}" class="${unit.id === activePlayerId ? "is-active" : ""} ${battle.acted.includes(unit.id) ? "has-acted" : ""} ${unit.defeated ? "is-defeated" : ""} ${intent?.action !== "delayed" && intent?.targetId === unit.id ? "is-threatened" : ""}" ${unit.defeated || battle.acted.includes(unit.id) || battle.status !== "player" ? "disabled" : ""}>${intent?.action !== "delayed" && intent?.targetId === unit.id ? `<mark class="arena-threat-label">${icon("crosshair")} 预计 -${intent.damage}</mark>` : ""}<img src="${unit.image}" alt=""><span><strong>${unit.name}</strong><small>${unit.role} · Lv.${unit.level}</small>${hpBar(unit)}<em>能量 ${unit.mp}/100</em></span></button>`).join("")}</div></div>
       <div class="arena-vs"><b>VS</b><span>${lastPulse}</span></div>
-      <div class="arena-side arena-enemies"><header><span>入侵扩散队</span><b>点击选择目标</b></header><div>${battle.enemies.map(unit => `<button type="button" data-arena-enemy="${unit.id}" class="${unit.id === activeEnemyId ? "is-active" : ""} ${unit.defeated ? "is-defeated" : ""} ${intent?.attackerId === unit.id ? "is-intent" : ""}" ${unit.defeated || battle.status !== "player" ? "disabled" : ""}>${intent?.attackerId === unit.id ? `<mark class="arena-intent-label">${icon(intent.action === "delayed" ? "pause" : "radio")} ${intent.action === "delayed" ? "行动延后" : "下一行动"}</mark>` : ""}<img src="${unit.image}" alt=""><span><strong>${unit.name}</strong><small>${unit.skillName} · ATK ${unit.attack}</small>${hpBar(unit)}<em>韧性 ${unit.toughness}/${unit.maxToughness}${unit.broken ? " · 已击破" : ""}</em></span></button>`).join("")}</div></div>
+      <div class="arena-side arena-enemies"><header><span>入侵扩散队</span><b>点击选择目标</b></header><div>${battle.enemies.map(unit => `<button type="button" data-arena-enemy="${unit.id}" class="${unit.id === activeEnemyId ? "is-active" : ""} ${unit.defeated ? "is-defeated" : ""} ${intent?.attackerId === unit.id ? "is-intent" : ""} ${battle.chainTargetId === unit.id ? "is-chain-target" : ""}" ${unit.defeated || battle.status !== "player" ? "disabled" : ""}>${intent?.attackerId === unit.id ? `<mark class="arena-intent-label">${icon(intent.action === "delayed" ? "pause" : "radio")} ${intent.action === "delayed" ? "行动延后" : "下一行动"}</mark>` : ""}${battle.chainTargetId === unit.id ? `<mark class="arena-chain-label">${icon("waves")} 潮链 ${chainTier(battle.chainCount)}</mark>` : ""}<img src="${unit.image}" alt=""><span><strong>${unit.name}</strong><small>${unit.skillName} · ATK ${unit.attack}</small>${hpBar(unit)}<em>韧性 ${unit.toughness}/${unit.maxToughness}${unit.broken ? " · 已击破" : ""}</em></span></button>`).join("")}</div></div>
     </section>
     <section class="arena-console">
       <div class="arena-log"><header><span>${icon("shield")} BATTLE LOG</span><small>实时战况</small></header><div>${logs.slice(-8).map(line => `<p>${line}</p>`).join("")}</div></div>
-      <div class="arena-actions"><header><span>${icon("zap")} 鸟灵行动</span><small>普通攻击累积 ${energyGain} 能量</small></header>${activePlayer ? `<div><span><img src="${activePlayer.image}" alt=""><b>${activePlayer.name}</b><small>${battle.acted.includes(activePlayer.id) ? "本回合已行动" : "当前行动"}</small></span><button type="button" data-arena-action="attack" ${battle.status !== "player" || battle.acted.includes(activePlayer.id) ? "disabled" : ""}>${icon("swords")}<span>普通攻击<small>${attackPreview?.damage ?? activePlayer.attack} 伤害 · 能量 +${energyGain}</small></span></button><button type="button" data-arena-action="skill" ${battle.status !== "player" || battle.acted.includes(activePlayer.id) || activePlayer.mp < 100 ? "disabled" : ""}>${icon("sparkles")}<span>${activePlayer.skill}<small>${arenaSkillEffect(activePlayer, skillPreview)}</small></span></button></div>` : ""}</div>
+      <div class="arena-actions"><header><span>${icon("zap")} 鸟灵行动</span><small>普通攻击累积 ${energyGain} 能量</small></header>${activePlayer ? `<div><span><img src="${activePlayer.image}" alt=""><b>${activePlayer.name}</b><small>${battle.acted.includes(activePlayer.id) ? "本回合已行动" : "当前行动"}</small></span><button type="button" data-arena-action="attack" ${battle.status !== "player" || battle.acted.includes(activePlayer.id) ? "disabled" : ""}>${icon("swords")}<span>普通攻击<small>${attackPreview?.damage ?? activePlayer.attack} 伤害${arenaChainEffect(attackPreview)} · 能量 +${energyGain}</small></span></button><button type="button" data-arena-action="skill" ${battle.status !== "player" || battle.acted.includes(activePlayer.id) || activePlayer.mp < 100 ? "disabled" : ""}>${icon("sparkles")}<span>${activePlayer.skill}<small>${arenaSkillEffect(activePlayer, skillPreview)}</small></span></button></div>` : ""}</div>
     </section>
     ${finished ? resultMarkup(level) : ""}`;
   refreshIcons();
@@ -294,7 +307,8 @@ function arenaPlayerLog(attacker, target, event) {
     event.barrier ? `生成 ${event.barrier} 屏障` : "",
     event.toughnessDamage ? `削韧 ${event.toughnessDamage}` : "",
     event.execute ? "触发破势追击" : "",
-    event.delayed ? "压后敌方行动" : ""
+    event.delayed ? "压后敌方行动" : "",
+    event.chainMultiplier > 1 ? `潮链 ${chainTier(event.chainCount)} · 伤害 +${Math.round((event.chainMultiplier - 1) * 100)}%` : ""
   ].filter(Boolean);
   return `【${attacker.name}】${event.action === "skill" ? `释放「${attacker.skill}」` : "普通攻击"}，对【${target.name}】造成 ${event.damage} 点伤害${notes.length ? `；${notes.join("，")}` : ""}。`;
 }
@@ -322,14 +336,15 @@ async function act(action) {
     ? before.players.filter(unit => unit.hp > 0).sort((left, right) => left.hp / left.maxHp - right.hp / right.maxHp)[0]
     : null;
   const supportHealing = supportTarget ? event.healingByTarget[supportTarget.id] : 0;
+  const impactChainCount = supportTarget ? 0 : event.chainCount;
   const token = ++arenaAnimationToken;
   arenaAnimating = true;
   shell.classList.add("is-animating");
-  sound(action === "skill" ? 330 : 180, action === "skill" ? .26 : .14, action === "skill" ? "triangle" : "square", .06);
+  sound((action === "skill" ? 330 : 180) + Math.max(0, impactChainCount - 1) * 72, action === "skill" ? .26 : .14, action === "skill" ? "triangle" : "square", .06);
   await animateArenaAttack(
     shell.querySelector(`[data-arena-player="${activePlayerId}"]`),
     shell.querySelector(supportTarget ? `[data-arena-player="${supportTarget.id}"]` : `[data-arena-enemy="${activeEnemyId}"]`),
-    { damage: event.damage, label: supportTarget ? `+${supportHealing}` : undefined, skill: action === "skill", support: Boolean(supportTarget) }
+    { damage: event.damage, label: supportTarget ? `+${supportHealing}` : undefined, skill: action === "skill", support: Boolean(supportTarget), chainCount: impactChainCount }
   );
   if (token !== arenaAnimationToken || shell.hidden) return;
   battle = nextBattle;
