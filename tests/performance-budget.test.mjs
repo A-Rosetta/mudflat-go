@@ -23,6 +23,12 @@ test("hidden map and panorama do not start third-party requests", () => {
   assert.match(script, /function preparePanorama/);
 });
 
+test("returning from blind-box view refreshes the interactive map size", () => {
+  assert.match(script, /function refreshInteractiveMapViewport\(\)/);
+  assert.match(script, /if \(name === "explore"\) ensureExploreRuntime\(\)\.then\(refreshInteractiveMapViewport\)/);
+  assert.match(script, /interactiveMap\.invalidateSize\(\)/);
+});
+
 test("offscreen media is lazy and camera snapshots avoid synchronous base64", () => {
   assert.match(html, /class="map-tiles"[\s\S]*?loading="lazy"/);
   assert.match(html, /class="blind-box-stage-art"[^>]+loading="lazy"/);
