@@ -94,6 +94,7 @@ main { width: min(1500px, 100%); margin: 0 auto; padding: 0 clamp(24px,3.2vw,52p
 .map-tiles { position: absolute; z-index: 0; inset: 0; display: grid; grid-template-columns: repeat(4,1fr); grid-template-rows: repeat(3,1fr); filter: saturate(.82) contrast(.94); }
 .map-tiles img { width: 100%; height: 100%; object-fit: cover; }
 .live-map { position: absolute; z-index: 2; inset: 0; background: transparent; touch-action: none; }
+.live-map.leaflet-container { background:transparent !important; }
 .live-map:empty { pointer-events: none; }
 .route-map.is-interactive .route-lines, .route-map.is-interactive > .map-node, .route-map.is-interactive > .map-attribution { display: none; }
 .live-map .leaflet-tile-pane { filter: saturate(.82) contrast(.94); }
@@ -110,12 +111,12 @@ main { width: min(1500px, 100%); margin: 0 auto; padding: 0 clamp(24px,3.2vw,52p
 .wetland-map-tooltip { padding: 5px 8px; border: 0; border-radius: 5px; color: var(--ink); background: rgba(255,253,244,.96); box-shadow: 0 5px 16px rgba(23,54,46,.16); font-size: 11px; font-weight: 800; }
 .wetland-map-tooltip::before { display: none; }
 .route-map::after { position: absolute; z-index: 1; inset: 0; content: ""; pointer-events: none; background: linear-gradient(180deg,rgba(16,52,41,.04),transparent 50%,rgba(16,52,41,.14)),radial-gradient(circle at 20% 8%,rgba(223,244,123,.12),transparent 38%); }
-.map-focus-card { position: absolute; z-index: 5; top: 20px; left: 20px; width: 265px; padding: 17px; border: 1px solid rgba(255,255,255,.72); border-radius: 20px; background: rgba(255,253,241,.91); box-shadow: 0 16px 40px rgba(24,68,48,.14); backdrop-filter: blur(14px); }
+.map-focus-card { position: absolute; z-index: 5; top: 20px; left: 20px; width: 265px; padding: 17px; border: 1px solid rgba(255,255,255,.72); border-radius: 20px; background: rgba(255,253,241,.91); box-shadow: 0 16px 40px rgba(24,68,48,.14); pointer-events:none; backdrop-filter: blur(14px); }
 .map-focus-card span, .map-focus-card strong, .map-focus-card small { display: block; }
 .map-focus-card span { color: var(--faint); font-size: 8px; letter-spacing: .12em; }
 .map-focus-card strong { margin: 6px 0; font-size: 17px; }
 .map-focus-card small { color: var(--muted); font-size: 8px; line-height: 1.5; }
-.map-focus-card button { width: 100%; min-height: 38px; margin-top: 13px; border: 0; border-radius: 999px; color: #fff; background: var(--green); font-size: 9px; font-weight: 900; }
+.map-focus-card button { width: 100%; min-height: 38px; margin-top: 13px; border: 0; border-radius: 999px; color: #fff; background: var(--green); font-size: 9px; font-weight: 900; pointer-events:auto; }
 .map-focus-card button:disabled { color: #718078; background: #e1e8df; cursor: not-allowed; }
 .map-attribution { position: absolute; z-index: 4; right: 7px; bottom: 7px; padding: 2px 4px; color: #536b64; background: rgba(255,255,255,.78); font-size: 6px; }
 .map-node { position: absolute; z-index: 4; top: var(--y); left: var(--x); display: grid; justify-items: center; width: 94px; padding: 0; border: 0; background: transparent; transform: translate(-50%,-50%); }

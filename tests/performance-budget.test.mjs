@@ -29,6 +29,13 @@ test("returning from blind-box view refreshes the interactive map size", () => {
   assert.match(script, /interactiveMap\.invalidateSize\(\)/);
 });
 
+test("interactive map keeps the local fallback visible and lets the focus card coexist", () => {
+  assert.match(css, /\.live-map\.leaflet-container \{[^}]*background:transparent !important/);
+  assert.doesNotMatch(css, /\.route-map\.is-interactive \.map-tiles/);
+  assert.match(css, /\.map-focus-card \{[^}]*pointer-events:none/);
+  assert.match(css, /\.map-focus-card button \{[^}]*pointer-events:auto/);
+});
+
 test("offscreen media is lazy and camera snapshots avoid synchronous base64", () => {
   assert.match(html, /class="map-tiles"[\s\S]*?loading="lazy"/);
   assert.match(html, /class="blind-box-stage-art"[^>]+loading="lazy"/);
