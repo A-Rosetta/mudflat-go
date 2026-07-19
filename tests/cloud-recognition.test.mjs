@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import worker, { parseModelResult } from "../worker.mjs";
+import worker, { mapTile, parseModelResult } from "../worker.mjs";
 
 test("cloud recognition accepts a known species JSON result", () => {
   assert.deepEqual(parseModelResult([{ label: "spoonbill", score: 0.86 }, { label: "pelican", score: 0.04 }]), {
@@ -73,4 +73,22 @@ test("worker forwards non-API requests to static assets", async () => {
   const request = new Request("https://mudflat.test/index.html");
   const response = await worker.fetch(request, { ASSETS: { fetch: async value => new Response(new URL(value.url).pathname) } });
   assert.equal(await response.text(), "/index.html");
+});
+
+test("map tile proxy fails over between open map providers", async () => {
+  const urls = [];
+  const response = await mapTile(new Request("https://mudflat.test/api/map-tiles/9/418/223.png"), async url => {
+    urls.push(url);
+    if (urls.length === 1) return new Response("unavailable", { status: 503 });
+    return new Response(new Uint8Array([137, 80, 78, 71]), { headers: { "Content-Type": "image/png" } });
+  });
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("Cache-Control"), "public, max-age=86400");
+  assert.match(urls[0], /tile\.openstreetmap\.org/);
+  assert.match(urls[1], /tile\.openstreetmap\.fr/);
+});
+
+test("map tile proxy rejects invalid coordinates", async () => {
+  const response = await mapTile(new Request("https://mudflat.test/api/map-tiles/9/999/223.png"));
+  assert.equal(response.status, 400);
 });

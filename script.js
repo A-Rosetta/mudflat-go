@@ -23,6 +23,12 @@ const initialState = {
   blindBoxHistory: []
 };
 const BLIND_BOX_COSTS = { 1: 500, 10: 4000 };
+const BIRD_MODEL_URL = "https://raw.githubusercontent.com/A-Rosetta/mudflat-go/main/assets/models/bird-species/model.onnx";
+const BIRD_CONFIG_URL = "https://raw.githubusercontent.com/A-Rosetta/mudflat-go/main/assets/models/bird-species/config.json";
+const MOBILE_NET_MODEL_URL = "https://raw.githubusercontent.com/A-Rosetta/mudflat-go/main/assets/models/mobilenet/model.json";
+const BIRD_IMAGE_SIZE = 260;
+const BIRD_MEAN = [.485, .456, .406];
+const BIRD_STD = [.47853944, .4732864, .47434163];
 
 const species = [
   { id: "kandelia", name: "秋茄", latin: "Kandelia obovata", rarity: "R", category: "plant", season: "全年", image: "assets/images/kandelia-obovata.jpg", found: true, description: "深圳红树林常见的先锋树种，能够在含盐、缺氧的潮间带扎根生长。", fact: "秋茄的种子会在母树上先萌发，成熟后像一支笔一样落入滩涂。" },
@@ -112,6 +118,11 @@ let recognitionResult = null;
 let captureSource = null;
 let interactiveMap = null;
 let interactiveMapLayers = null;
+let interactiveMapReady = false;
+let mapFallbackTimer = null;
+let birdModelPromise = null;
+let onnxRuntimePromise = null;
+let mobileNetPromise = null;
 let blindBoxDrawing = false;
 let showroomInitialized = false;
 let interactiveMapPromise = null;
@@ -182,16 +193,20 @@ function icons() {
     window.lucide?.createIcons({ attrs: { "stroke-width": 1.9 } });
   });
 }
-function loadScriptOnce(src) {
+function loadScriptOnce(src, ready = null) {
+  if (ready?.()) return Promise.resolve();
   const existing = document.querySelector(`script[src="${src}"]`);
-  if (existing) return existing.dataset.loaded === "true" ? Promise.resolve() : new Promise((resolve, reject) => { existing.addEventListener("load", resolve, { once: true }); existing.addEventListener("error", reject, { once: true }); });
+  if (existing?.dataset.loaded === "true") return Promise.resolve();
   return new Promise((resolve, reject) => {
-    const script = document.createElement("script");
-    script.src = src;
-    script.async = true;
-    script.addEventListener("load", () => { script.dataset.loaded = "true"; resolve(); }, { once: true });
-    script.addEventListener("error", reject, { once: true });
-    document.head.append(script);
+    const script = existing || document.createElement("script");
+    const timer = setTimeout(() => reject(new Error("资源加载超时")), 12000);
+    script.addEventListener("load", () => { clearTimeout(timer); script.dataset.loaded = "true"; resolve(); }, { once: true });
+    script.addEventListener("error", () => { clearTimeout(timer); reject(new Error("资源加载失败")); }, { once: true });
+    if (!existing) {
+      script.src = src;
+      script.async = true;
+      document.head.append(script);
+    }
   });
 }
 function loadStylesheetOnce(href) {
@@ -556,11 +571,31 @@ function renderMap() {
 function initializeInteractiveMap() {
   if (interactiveMap || !window.L) return;
   const container = document.getElementById("liveMap");
-  interactiveMap = L.map(container, { zoomControl: false, attributionControl: false, minZoom: 9, maxZoom: 17, tap: true });
+  container.classList.remove("is-unavailable");
+  interactiveMap = L.map(container, { zoomControl: false, attributionControl: true, minZoom: 9, maxZoom: 17, tap: true });
   L.control.zoom({ position: "bottomleft" }).addTo(interactiveMap);
+  const tileLayer = L.tileLayer("/api/map-tiles/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &middot; <a href="https://carto.com/attributions">CARTO</a>'
+  }).addTo(interactiveMap);
+  const activateMap = () => {
+    if (interactiveMapReady) return;
+    interactiveMapReady = true;
+    clearTimeout(mapFallbackTimer);
+    container.closest(".route-map").classList.add("is-interactive");
+  };
+  tileLayer.once("tileload", activateMap);
+  mapFallbackTimer = setTimeout(() => {
+    if (interactiveMapReady) return;
+    container.classList.add("is-unavailable");
+    interactiveMap.remove();
+    interactiveMap = null;
+    interactiveMapLayers = null;
+    interactiveMapReady = false;
+    interactiveMapPromise = null;
+  }, 8000);
   interactiveMapLayers = L.layerGroup().addTo(interactiveMap);
   interactiveMap.fitBounds(L.latLngBounds(sites.map(site => [site.lat, site.lng])), { padding: [34, 34] });
-  container.closest(".route-map").classList.add("is-interactive");
 }
 
 function renderInteractiveMap() {
@@ -959,23 +994,162 @@ async function requestCloudRecognition(blob) {
   const form = new FormData();
   form.append("image", blob, "wetland-observation.jpg");
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 25000);
+  const timer = setTimeout(() => controller.abort(), 10000);
   try {
     const response = await fetch("/api/identify", { method: "POST", body: form, signal: controller.signal });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {
       if (response.status === 413) throw new Error("照片文件过大，请换一张图片");
-      if (response.status === 429) throw new Error("今日识别次数较多，请稍后再试");
-      throw new Error("云端识别暂时繁忙，请重新识别");
+      const error = new Error(response.status === 429 ? "今日云端识别次数较多" : "云端识别暂时繁忙");
+      error.allowLocalFallback = response.status === 429 || response.status >= 500;
+      throw error;
     }
     if (!payload.result) throw new Error("云端没有返回有效结果，请重试");
-    return payload.result;
+    return { ...payload.result, provider: payload.provider };
   } catch (error) {
-    if (error.name === "AbortError") throw new Error("云端识别等待超时，请检查网络后重试");
+    if (error.name === "AbortError") {
+      const timeoutError = new Error("云端识别等待超时");
+      timeoutError.allowLocalFallback = true;
+      throw timeoutError;
+    }
+    if (error instanceof TypeError) error.allowLocalFallback = true;
     throw error;
   } finally {
     clearTimeout(timer);
   }
+}
+
+function loadOnnxRuntime() {
+  if (window.ort) return Promise.resolve(window.ort);
+  if (!onnxRuntimePromise) {
+    onnxRuntimePromise = loadScriptOnce("assets/vendor/onnxruntime-web.min.js", () => Boolean(window.ort)).then(() => window.ort).catch(error => {
+      onnxRuntimePromise = null;
+      throw error;
+    });
+  }
+  return onnxRuntimePromise;
+}
+
+async function loadMobileNet() {
+  if (!mobileNetPromise) {
+    mobileNetPromise = (async () => {
+      await loadScriptOnce("assets/vendor/tf.min.js", () => Boolean(window.tf));
+      await loadScriptOnce("assets/vendor/mobilenet.min.js", () => Boolean(window.mobilenet));
+      await window.tf.ready();
+      return window.mobilenet.load({ version: 2, alpha: .5, modelUrl: MOBILE_NET_MODEL_URL, inputRange: [-1, 1] });
+    })().catch(error => {
+      mobileNetPromise = null;
+      throw error;
+    });
+  }
+  return mobileNetPromise;
+}
+
+async function loadBirdRecognitionModel() {
+  if (!birdModelPromise) {
+    birdModelPromise = (async () => {
+      const ort = await loadOnnxRuntime();
+      ort.env.wasm.numThreads = 1;
+      ort.env.wasm.wasmPaths = new URL("assets/vendor/", document.baseURI).href;
+      updateScanProgress(58, "云端未连接 · 正在下载设备端鸟类模型");
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 60000);
+      try {
+        const [modelResponse, configResponse] = await Promise.all([
+          fetch(BIRD_MODEL_URL, { cache: "force-cache", signal: controller.signal }),
+          fetch(BIRD_CONFIG_URL, { cache: "force-cache", signal: controller.signal })
+        ]);
+        if (!modelResponse.ok || !configResponse.ok) throw new Error("GitHub 鸟类模型下载失败");
+        const [modelBytes, config] = await Promise.all([modelResponse.arrayBuffer(), configResponse.json()]);
+        const session = await ort.InferenceSession.create(new Uint8Array(modelBytes), { executionProviders: ["wasm"], graphOptimizationLevel: "all" });
+        return { session, labels: config.id2label };
+      } finally {
+        clearTimeout(timer);
+      }
+    })().catch(error => {
+      birdModelPromise = null;
+      throw error;
+    });
+  }
+  return birdModelPromise;
+}
+
+function birdInputTensor(input) {
+  const canvas = document.createElement("canvas");
+  canvas.width = BIRD_IMAGE_SIZE;
+  canvas.height = BIRD_IMAGE_SIZE;
+  const context = canvas.getContext("2d", { willReadFrequently: true });
+  context.drawImage(input, 0, 0, BIRD_IMAGE_SIZE, BIRD_IMAGE_SIZE);
+  const pixels = context.getImageData(0, 0, BIRD_IMAGE_SIZE, BIRD_IMAGE_SIZE).data;
+  const planeSize = BIRD_IMAGE_SIZE * BIRD_IMAGE_SIZE;
+  const values = new Float32Array(planeSize * 3);
+  for (let index = 0; index < planeSize; index += 1) {
+    const pixelIndex = index * 4;
+    values[index] = (pixels[pixelIndex] / 255 - BIRD_MEAN[0]) / BIRD_STD[0];
+    values[planeSize + index] = (pixels[pixelIndex + 1] / 255 - BIRD_MEAN[1]) / BIRD_STD[1];
+    values[planeSize * 2 + index] = (pixels[pixelIndex + 2] / 255 - BIRD_MEAN[2]) / BIRD_STD[2];
+  }
+  return new window.ort.Tensor("float32", values, [1, 3, BIRD_IMAGE_SIZE, BIRD_IMAGE_SIZE]);
+}
+
+async function classifyBird(input, model) {
+  const output = await model.session.run({ [model.session.inputNames[0]]: birdInputTensor(input) });
+  const logits = Array.from(output[model.session.outputNames[0]].data);
+  const maxLogit = Math.max(...logits);
+  const exponents = logits.map(value => Math.exp(value - maxLogit));
+  const total = exponents.reduce((sum, value) => sum + value, 0);
+  return exponents
+    .map((value, index) => ({ label: model.labels[index], score: value / total }))
+    .sort((left, right) => right.score - left.score)
+    .slice(0, 5);
+}
+
+async function requestLocalRecognition(input) {
+  updateScanProgress(58, "云端未连接 · 正在下载设备端双模型");
+  const [mobileModel, birdModel] = await Promise.all([loadMobileNet(), loadBirdRecognitionModel()]);
+  updateScanProgress(76, "正在设备端交叉核对物种特征");
+  const [mobilePredictions, birdPredictions] = await Promise.all([
+    mobileModel.classify(input, 5),
+    classifyBird(input, birdModel)
+  ]);
+  const mobileTop = mobilePredictions[0];
+  const birdTop = birdPredictions[0];
+  const birdReliable = birdTop?.score >= .35 && birdTop.score - (birdPredictions[1]?.score || 0) >= .15;
+  const spoonbill = birdPredictions.find(item => item.label === "BLACK FACED SPOONBILL");
+  if (mobileTop?.className.toLowerCase() === "spoonbill" && mobileTop.probability >= .45 && spoonbill?.score >= .08) {
+    return {
+      speciesId: "spoonbill",
+      confidence: mobileTop.probability,
+      reason: "设备端双模型识别到琵鹭，且鸟类候选包含黑脸琵鹭。请结合黑色脸部与匙状长嘴人工复核。",
+      predictions: birdPredictions,
+      provider: "github-onnx"
+    };
+  }
+  const mappings = {
+    "BLACK FACED SPOONBILL": ["spoonbill", "设备端鸟类模型识别到黑脸琵鹭，请结合黑色脸部与匙状长嘴人工复核。"],
+    "SNOWY EGRET": ["egret", "设备端模型识别到白色小型鹭类，请结合黑腿、黄趾与深圳本地物种信息复核。"],
+    "BLUE HERON": ["heron", "设备端模型识别到鹭类近似标签，请结合红眼、黑冠与灰色背部人工复核夜鹭。"],
+    "DUNLIN": ["dunlin", "设备端鸟类模型识别到黑腹滨鹬，请结合微向下弯的黑嘴与腹部羽色人工复核。"]
+  };
+  const mapping = birdReliable ? mappings[birdTop.label] : null;
+  if (mapping) {
+    return { speciesId: mapping[0], confidence: birdTop.score, reason: mapping[1], predictions: birdPredictions, provider: "github-onnx" };
+  }
+  const nonBirdMappings = {
+    "fiddler crab": ["fiddler", "设备端通用模型识别到招潮蟹特征，请结合不对称大螯人工复核。"],
+    snail: ["snail", "设备端通用模型识别到螺类特征，具体种类仍需结合壳形与栖息环境判断。"]
+  };
+  const nonBird = mobileTop?.probability >= .55 ? nonBirdMappings[mobileTop.className.toLowerCase()] : null;
+  if (nonBird) {
+    return { speciesId: nonBird[0], confidence: mobileTop.probability, reason: nonBird[1], predictions: mobilePredictions, provider: "github-onnx" };
+  }
+  return {
+    speciesId: null,
+    confidence: 0,
+    reason: birdReliable ? `设备端鸟类模型最接近 ${birdTop.label}，但该标签不能直接收入当前图鉴。` : "设备端双模型没有得到足够可靠的结果。",
+    predictions: birdPredictions,
+    provider: "github-onnx"
+  };
 }
 
 function resolveCloudRecognition(result) {
@@ -987,7 +1161,8 @@ function resolveCloudRecognition(result) {
     title: item.name,
     description: result.reason || "云端视觉模型发现了相符特征，请结合形态、地点和季节人工复核。",
     probability,
-    candidateOnly: probability < .5
+    candidateOnly: probability < .5,
+    providerLabel: result.provider === "github-onnx" ? "设备端鸟类模型" : "Cloudflare AI"
   };
 }
 
@@ -1010,9 +1185,17 @@ async function identify() {
     updateScanProgress(28, "正在压缩观察照片");
     const blob = await prepareRecognitionImage(input);
     updateScanProgress(52, "正在加密发送至 Cloudflare AI");
-    const recognitionPromise = requestCloudRecognition(blob);
     updateScanProgress(72, "正在辨认物种关键特征");
-    const [cloudResult, location] = await Promise.all([recognitionPromise, locationPromise]);
+    let cloudResult;
+    try {
+      cloudResult = await requestCloudRecognition(blob);
+    } catch (cloudError) {
+      if (!cloudError.allowLocalFallback) throw cloudError;
+      document.getElementById("cameraStatus").textContent = "云端未连接 · 切换设备端识别";
+      try { cloudResult = await requestLocalRecognition(input); }
+      catch (localError) { throw new Error(`${cloudError.message}；${localError.name === "AbortError" ? "GitHub 模型下载超时" : localError.message}`); }
+    }
+    const location = await locationPromise;
     locationResult = location;
     showLocationResult(location);
     updateScanProgress(88, "正在核对物种特征");
@@ -1047,14 +1230,15 @@ function showRecognitionResult(result, detectedResult = null, cloudResult = null
   document.getElementById("toast").classList.remove("is-visible");
   const panel = document.getElementById("captureResult");
   const collectButton = document.getElementById("collectButton");
+  const providerLabel = cloudResult?.provider === "github-onnx" ? "设备端鸟类模型" : "Cloudflare AI";
   document.getElementById("predictionList").innerHTML = detectedResult
-    ? `<li><span>Cloudflare AI · ${detectedResult.title}</span><b>${(detectedResult.probability * 100).toFixed(1)}%</b></li>`
-    : `<li><span>Cloudflare AI · 无法确认</span><b>待重试</b></li>`;
+    ? `<li><span>${providerLabel} · ${detectedResult.title}</span><b>${(detectedResult.probability * 100).toFixed(1)}%</b></li>`
+    : `<li><span>${providerLabel} · 无法确认</span><b>待重试</b></li>`;
   if (result) {
     const item = species.find(entry => entry.id === result.speciesId);
     const alreadyFound = found(item);
     document.getElementById("resultRarity").className = `rarity ${item.rarity.toLowerCase()}`;
-    document.getElementById("resultRarity").textContent = `${item.rarity} · 云端视觉候选`;
+    document.getElementById("resultRarity").textContent = `${item.rarity} · ${detectedResult.providerLabel || "视觉候选"}`;
     document.getElementById("resultConfidence").textContent = result.confidenceText || `${(result.probability * 100).toFixed(1)}% 匹配`;
     document.getElementById("resultLatin").textContent = item.latin;
     document.getElementById("captureTitle").textContent = result.title;
@@ -1371,14 +1555,25 @@ document.querySelectorAll("[data-open-site]").forEach(button => button.addEventL
 document.querySelectorAll(".map-node").forEach(node => node.addEventListener("click", () => selectSite(Number(node.dataset.site))));
 document.getElementById("siteStrip").addEventListener("click", event => { const button = event.target.closest("[data-strip-site]"); if (button) selectSite(Number(button.dataset.stripSite)); });
 document.getElementById("enterSite").addEventListener("click", openSite);
-document.getElementById("mapAction").addEventListener("click", () => {
+function openNavigationChooser() {
+  document.getElementById("navigationDestination").textContent = `目的地 · ${sites[activeSite].name}`;
+  document.getElementById("navigationChooser").hidden = false;
+  icons();
+}
+function closeNavigationChooser() { document.getElementById("navigationChooser").hidden = true; }
+document.getElementById("mapAction").addEventListener("click", openNavigationChooser);
+document.getElementById("closeNavigation").addEventListener("click", closeNavigationChooser);
+document.querySelectorAll("[data-navigation-provider]").forEach(button => button.addEventListener("click", () => {
   const site = sites[activeSite];
-  const url = `https://uri.amap.com/marker?position=${site.lng},${site.lat}&name=${encodeURIComponent(site.name)}&coordinate=gaode&callnative=0`;
+  const url = button.dataset.navigationProvider === "amap"
+    ? `https://uri.amap.com/marker?position=${site.lng},${site.lat}&name=${encodeURIComponent(site.name)}&coordinate=wgs84&callnative=0`
+    : `https://www.google.com/maps/dir/?api=1&destination=${site.lat},${site.lng}`;
+  closeNavigationChooser();
   window.open(url, "_blank", "noopener");
-});
+}));
 document.getElementById("closeSite").addEventListener("click", closeSite);
 document.getElementById("startObservation").addEventListener("click", () => { closeSite(); openCapture(); });
-document.getElementById("siteNavigation").addEventListener("click", () => document.getElementById("mapAction").click());
+document.getElementById("siteNavigation").addEventListener("click", openNavigationChooser);
 document.getElementById("closeCapture").addEventListener("click", closeCapture);
 document.getElementById("startCamera").addEventListener("click", startCamera);
 document.getElementById("reopenCamera").addEventListener("click", startCamera);
@@ -1462,7 +1657,7 @@ document.getElementById("photoInput").addEventListener("change", event => {
     document.getElementById("cameraStatus").textContent = "相册照片 · 云端 AI 识别";
     document.getElementById("featureReadout").querySelector("small").textContent = "照片就绪，可以开始识别";
     setCaptureReady(true, "识别这张照片");
-    toast("识别时将上传压缩照片至 Cloudflare AI，应用不保存原图");
+    toast("优先使用 Cloudflare AI；连接失败时会按需下载设备端鸟类模型");
   };
   image.onload = activateImage;
   image.onerror = () => toast("无法读取这张照片，请换一张图片");

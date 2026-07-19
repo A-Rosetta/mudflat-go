@@ -42,13 +42,31 @@ test("new sessions start with 88888888 points and legacy balances migrate once",
   assert.match(html, /id="spiritPoints">88,888,888/);
 });
 
-test("recognition uses the Cloudflare endpoint without browser model runtimes", () => {
+test("recognition prefers Cloudflare and lazily falls back to GitHub-hosted dual models", () => {
   assert.match(script, /fetch\("\/api\/identify", \{ method: "POST", body: form, signal: controller\.signal \}\)/);
   assert.match(script, /prepareRecognitionImage\(input\)/);
   assert.match(script, /maxDimension = 768/);
-  assert.doesNotMatch(script, /loadRecognitionModel|loadBirdRecognitionModel|mobilenet\.load|ort\.InferenceSession|ensureRecognitionRuntime/);
+  assert.match(script, /setTimeout\(\(\) => controller\.abort\(\), 10000\)/);
+  assert.match(script, /raw\.githubusercontent\.com\/A-Rosetta\/mudflat-go\/main\/assets\/models\/bird-species\/model\.onnx/);
+  assert.match(script, /raw\.githubusercontent\.com\/A-Rosetta\/mudflat-go\/main\/assets\/models\/mobilenet\/model\.json/);
+  assert.match(script, /loadBirdRecognitionModel\(\)/);
+  assert.match(script, /ort\.InferenceSession\.create\(new Uint8Array\(modelBytes\)/);
+  assert.match(script, /window\.mobilenet\.load/);
+  assert.doesNotMatch(script, /loadRecognitionModel/);
   assert.doesNotMatch(html, /tf\.min\.js|mobilenet\.min\.js|onnxruntime-web\.min\.js/);
-  assert.match(html, /Cloudflare AI/);
+  assert.match(html, /连接失败时按需下载设备端模型/);
+});
+
+test("map uses a same-origin tile proxy and offers Amap or Google navigation", () => {
+  assert.match(script, /L\.tileLayer\("\/api\/map-tiles\/\{z\}\/\{x\}\/\{y\}\.png"/);
+  assert.match(script, /tileLayer\.once\("tileload", activateMap\)/);
+  assert.match(script, /container\.classList\.add\("is-unavailable"\)/);
+  assert.match(html, /id="navigationChooser"[^>]+hidden/);
+  assert.match(html, /data-navigation-provider="amap"/);
+  assert.match(html, /data-navigation-provider="google"/);
+  assert.match(script, /uri\.amap\.com\/marker/);
+  assert.match(script, /coordinate=wgs84/);
+  assert.match(script, /google\.com\/maps\/dir\/\?api=1&destination=/);
 });
 
 test("atlas includes three cloud-recognizable Shenzhen shorebirds without overcrowding sites", () => {

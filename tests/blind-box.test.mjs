@@ -54,13 +54,34 @@ test("duplicate pulls retain collection counts for spirit resonance", () => {
 
 test("Cloudflare deploy points Wrangler at the static asset root", () => {
   assert.match(wrangler, /"compatibility_date": "2026-07-17"/);
+  assert.match(wrangler, /"main": "worker\.mjs"/);
   assert.match(wrangler, /"directory": "\."/);
+  assert.match(wrangler, /"binding": "ASSETS"/);
+  assert.match(wrangler, /"run_worker_first": \["\/api\/\*"\]/);
+  assert.match(wrangler, /"binding": "AI"/);
+});
+
+test("Cloudflare Worker proxies constrained image recognition", () => {
+  assert.match(worker, /url\.pathname === "\/api\/identify"/);
+  assert.match(worker, /@cf\/microsoft\/resnet-50/);
+  assert.match(worker, /MAX_IMAGE_BYTES = 2 \* 1024 \* 1024/);
+  assert.match(worker, /env\.AI\.run/);
+  assert.match(worker, /return env\.ASSETS\.fetch\(request\)/);
+  assert.match(worker, /url\.pathname\.startsWith\("\/api\/map-tiles\/"\)/);
+  assert.match(worker, /TILE_PROVIDERS/);
 });
 
 test("Cloudflare asset upload excludes repository and local build metadata", () => {
   assert.match(assetsIgnore, /^\.git\/?$/m);
   assert.match(assetsIgnore, /^\.wrangler\/?$/m);
   assert.match(assetsIgnore, /^output\/?$/m);
+  assert.match(assetsIgnore, /^worker\.mjs$/m);
+  assert.match(assetsIgnore, /^assets\/models\/bird-species\/\*\*$/m);
+  assert.match(assetsIgnore, /^assets\/models\/mobilenet\/\*\*$/m);
+  assert.doesNotMatch(assetsIgnore, /^assets\/vendor\/tf\.min\.js$/m);
+  assert.doesNotMatch(assetsIgnore, /^assets\/vendor\/mobilenet\.min\.js$/m);
+  assert.doesNotMatch(assetsIgnore, /^assets\/vendor\/onnxruntime-web\.min\.js$/m);
+  assert.doesNotMatch(assetsIgnore, /^assets\/vendor\/ort-wasm-simd-threaded\.wasm$/m);
 });
 
 test("four unlocked GLB models are lazy-loaded while the chase model stays locked", async () => {

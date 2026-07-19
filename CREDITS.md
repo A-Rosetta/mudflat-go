@@ -31,8 +31,8 @@
 
 - TensorFlow.js 4.22.0，Apache License 2.0，https://github.com/tensorflow/tfjs 。
 - TensorFlow.js MobileNet 2.1.1，Apache License 2.0，https://github.com/tensorflow/tfjs-models/tree/master/mobilenet 。
-- 当前在线识别使用 Cloudflare Workers AI 的 `@cf/microsoft/resnet-50` 图像分类模型，由同源 Worker 接收压缩照片并返回受限的图鉴候选；浏览器不再加载本地推理运行时或模型权重。
-- 仓库中保留的 MobileNet、`chriamue/bird-species-classifier` 和 ONNX Runtime Web 文件是早期本地识别方案的归档素材，当前页面不会请求，Cloudflare 部署也会排除这些文件。
+- 当前在线识别优先使用 Cloudflare Workers AI 的 `@cf/microsoft/resnet-50`；10 秒内无法连接时，页面按需加载 TensorFlow.js、MobileNet 与 ONNX Runtime Web，并从 GitHub 仓库下载 MobileNet 和 `chriamue/bird-species-classifier` 权重进行设备端交叉识别。
+- 两组模型权重继续从 Cloudflare 静态资源中排除，避免正常访问时下载；只有云端超时、限额或服务故障才启动 GitHub 回退。
 
 ## 鸟鸣录音
 

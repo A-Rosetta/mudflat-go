@@ -48,7 +48,7 @@
           <section class="route-board" aria-label="深圳六大湿地真实地图">
             <span class="device-speaker" aria-hidden="true"></span>
             <div class="board-head">
-              <div><small>REAL TILE MAP · OPENSTREETMAP</small><strong id="activeSiteName">福田红树林</strong></div>
+              <div><small>REAL TILE MAP · OPEN MAP DATA</small><strong id="activeSiteName">福田红树林</strong></div>
               <button type="button" id="mapAction"><i data-lucide="locate-fixed"></i> 探索点位</button>
             </div>
             <div class="route-map">
@@ -386,7 +386,7 @@
   <section class="capture-view" id="captureView" hidden aria-labelledby="captureTitle">
     <header class="capture-head">
       <button type="button" id="closeCapture"><i data-lucide="arrow-left"></i> 返回</button>
-      <span id="cameraStatus">设备端物种辅助识别</span>
+      <span id="cameraStatus">云端 AI 物种辅助识别</span>
       <label for="photoInput"><i data-lucide="image-up"></i> 相册</label>
       <input id="photoInput" type="file" accept="image/*" hidden>
     </header>
@@ -397,7 +397,7 @@
       <div class="camera-empty" id="cameraEmpty">
         <span><i data-lucide="camera"></i></span>
         <h2>打开相机开始观察</h2>
-        <p>相机预览留在当前设备；识别时会上传压缩照片至 Cloudflare AI，应用不保存原图。</p>
+        <p>相机预览留在当前设备；优先上传压缩照片至 Cloudflare AI，连接失败时按需下载设备端模型。</p>
         <button type="button" id="startCamera"><i data-lucide="video"></i> 打开相机</button>
       </div>
       <div class="camera-shade"></div>
@@ -448,6 +448,13 @@
       <header><div><span class="eyebrow">FIELD CARD POSTER</span><h2 id="shareTitle">生态观察分享卡</h2></div><button type="button" id="closeShare" aria-label="关闭"><i data-lucide="x"></i></button></header>
       <img id="sharePreview" alt="生成的生态观察分享卡">
       <div><button class="button secondary" type="button" id="downloadShare"><i data-lucide="download"></i> 下载图片</button><button class="button primary" type="button" id="systemShare"><i data-lucide="share-2"></i> 分享</button></div>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" id="navigationChooser" hidden>
+    <section class="navigation-sheet" role="dialog" aria-modal="true" aria-labelledby="navigationTitle">
+      <header><div><span class="eyebrow">ROUTE NAVIGATION</span><h2 id="navigationTitle">选择导航应用</h2><p id="navigationDestination"></p></div><button type="button" id="closeNavigation" aria-label="关闭"><i data-lucide="x"></i></button></header>
+      <div><button class="button primary" type="button" data-navigation-provider="amap"><i data-lucide="navigation"></i> 高德地图</button><button class="button secondary" type="button" data-navigation-provider="google"><i data-lucide="map-pinned"></i> Google 地图</button></div>
     </section>
   </div>
 

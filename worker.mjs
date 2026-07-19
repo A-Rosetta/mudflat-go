@@ -1,6 +1,11 @@
 const MODEL = "@cf/microsoft/resnet-50";
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
 const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const TILE_PROVIDERS = [
+  (z, x, y) => `https://tile.openstreetmap.org/${z}/${x}/${y}.png`,
+  (z, x, y) => `https://a.tile.openstreetmap.fr/hot/${z}/${x}/${y}.png`,
+  (z, x, y) => `https://basemaps.cartocdn.com/light_all/${z}/${x}/${y}.png`
+];
 const SPECIES = {
   kandelia: { label: "秋茄", latin: "Kandelia obovata" },
   fiddler: { label: "弧边招潮蟹", latin: "Austruca arcuata" },
@@ -80,12 +85,44 @@ async function identify(request, env) {
   }
 }
 
+async function mapTile(request, fetchTile = fetch) {
+  if (request.method !== "GET") return json({ error: "method_not_allowed" }, 405);
+  const match = new URL(request.url).pathname.match(/^\/api\/map-tiles\/(\d+)\/(\d+)\/(\d+)\.png$/);
+  if (!match) return json({ error: "invalid_tile" }, 400);
+  const [z, x, y] = match.slice(1).map(Number);
+  const edge = 2 ** z;
+  if (z > 19 || x >= edge || y >= edge) return json({ error: "invalid_tile" }, 400);
+
+  for (const provider of TILE_PROVIDERS) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 2500);
+    try {
+      const response = await fetchTile(provider(z, x, y), {
+        headers: { Accept: "image/png,image/*;q=0.8", "User-Agent": "MudflatGo/1.0 (+https://mudflat-go.rosettaclient.workers.dev)" },
+        cf: { cacheEverything: true, cacheTtl: 86400 },
+        signal: controller.signal
+      });
+      if (!response.ok || !response.headers.get("Content-Type")?.startsWith("image/")) continue;
+      return new Response(response.body, {
+        headers: {
+          "Cache-Control": "public, max-age=86400",
+          "Content-Type": response.headers.get("Content-Type"),
+          "X-Content-Type-Options": "nosniff"
+        }
+      });
+    } catch {}
+    finally { clearTimeout(timer); }
+  }
+  return json({ error: "map_tile_unavailable" }, 502);
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (url.pathname === "/api/identify") return identify(request, env);
+    if (url.pathname.startsWith("/api/map-tiles/")) return mapTile(request);
     return env.ASSETS.fetch(request);
   }
 };
 
-export { parseModelResult };
+export { mapTile, parseModelResult };
