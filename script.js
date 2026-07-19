@@ -317,7 +317,7 @@ function navigate(name) {
     const activeView = button.closest(".bottom-nav") && ["blind-box", "bird-sanctuary"].includes(name) ? "collection" : name;
     button.classList.toggle("is-active", button.dataset.viewTarget === activeView);
   });
-  if (name === "explore") ensureExploreRuntime();
+  if (name === "explore") ensureExploreRuntime().then(refreshInteractiveMapViewport).catch(() => {});
   if (name === "bird-sanctuary") ensureGameRuntime();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -592,7 +592,15 @@ function renderInteractiveMap() {
     marker.bindTooltip(site.name, { direction: "top", offset: [0, -22], className: "wetland-map-tooltip" });
     marker.on("click", () => selectSite(index));
   });
-  requestAnimationFrame(() => interactiveMap.invalidateSize());
+  refreshInteractiveMapViewport();
+}
+
+function refreshInteractiveMapViewport() {
+  if (!interactiveMap) return;
+  requestAnimationFrame(() => {
+    interactiveMap.invalidateSize();
+    interactiveMap.panTo([sites[activeSite].lat, sites[activeSite].lng], { animate: false });
+  });
 }
 
 async function ensureInteractiveMap() {
