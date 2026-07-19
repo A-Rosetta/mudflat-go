@@ -42,13 +42,25 @@ test("new sessions start with 88888888 points and legacy balances migrate once",
   assert.match(html, /id="spiritPoints">88,888,888/);
 });
 
-test("recognition prefers Cloudflare and lazily falls back to GitHub-hosted dual models", () => {
+test("recognition prefers Cloudflare and progressively falls back to GitHub-hosted models", () => {
   assert.match(script, /fetch\("\/api\/identify", \{ method: "POST", body: form, signal: controller\.signal \}\)/);
   assert.match(script, /prepareRecognitionImage\(input\)/);
   assert.match(script, /maxDimension = 768/);
   assert.match(script, /setTimeout\(\(\) => controller\.abort\(\), 10000\)/);
   assert.match(script, /raw\.githubusercontent\.com\/A-Rosetta\/mudflat-go\/main\/assets\/models\/bird-species\/model\.onnx/);
   assert.match(script, /raw\.githubusercontent\.com\/A-Rosetta\/mudflat-go\/main\/assets\/models\/mobilenet\/model\.json/);
+  assert.match(script, /raw\.githubusercontent\.com\/A-Rosetta\/mudflat-go\/main\/assets\/vendor\/tf\.min\.js/);
+  assert.match(script, /raw\.githubusercontent\.com\/A-Rosetta\/mudflat-go\/main\/assets\/vendor\/onnxruntime-web\.min\.js/);
+  assert.match(script, /raw\.githubusercontent\.com\/A-Rosetta\/mudflat-go\/main\/assets\/vendor\/ort-wasm-simd-threaded\.mjs/);
+  assert.match(script, /raw\.githubusercontent\.com\/A-Rosetta\/mudflat-go\/main\/assets\/vendor\/ort-wasm-simd-threaded\.wasm/);
+  assert.match(script, /new Blob\(\[source\], \{ type: "text\/javascript" \}\)/);
+  assert.match(script, /ort\.env\.wasm\.wasmPaths = \{ mjs: moduleUrl \}/);
+  assert.match(script, /ort\.env\.wasm\.wasmBinary = new Uint8Array\(wasmBytes\)/);
+  assert.doesNotMatch(script, /loadScriptOnce\("assets\/vendor\/(?:tf|mobilenet|onnxruntime-web)\.min\.js/);
+  assert.match(script, /function resolveMobileNetPrediction\(predictions\)/);
+  assert.match(script, /speciesId: "dunlin", term: "red-backed sandpiper", minScore: \.05, maxRank: 4/);
+  assert.match(script, /const mobileMatch = resolveMobileNetPrediction\(mobilePredictions\);[\s\S]*?if \(mobileMatch\) return mobileMatch;[\s\S]*?loadBirdRecognitionModel\(\)/);
+  assert.match(script, /candidateOnly: result\.collectable === true \? false : probability < \.5/);
   assert.match(script, /loadBirdRecognitionModel\(\)/);
   assert.match(script, /ort\.InferenceSession\.create\(new Uint8Array\(modelBytes\)/);
   assert.match(script, /window\.mobilenet\.load/);

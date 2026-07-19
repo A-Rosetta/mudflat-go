@@ -23,7 +23,7 @@
 
 - 使用 `getUserMedia` 打开设备摄像头，优先选择后置镜头，支持切换镜头和相册照片。
 - 识别通过同源 `/api/identify` 上传压缩后的单张照片，由 Cloudflare Workers AI 完成；相机预览不会上传，应用不保存识别原图。
-- 云端识别 10 秒内无法连接时，浏览器按需加载 TensorFlow.js 与 ONNX Runtime，并从 GitHub 仓库下载 MobileNet 和鸟类模型进行交叉识别；正常情况下不会下载模型。
+- 云端识别 10 秒内无法连接时，浏览器先从 GitHub 仓库按需下载 MobileNet 和 TensorFlow.js；明确命中常见湿地标签时立即返回，否则再下载 ONNX Runtime、WASM 和鸟类专模复核。正常情况下不会下载这些运行组件和模型。
 - 云端视觉模型被限制为当前深圳图鉴类别，无法确认、置信度不足或不属于当前点位目标库时不能收集或获得积分。
 - 相机和定位要求 HTTPS 或 `localhost` 安全上下文。Cloudflare Workers 部署地址满足 HTTPS 要求；拒绝定位时仍可识别和收集，但不会伪造点位抵达任务。
 - 识别结果仅用于辅助观察，所有具体物种仍需结合形态、地点和季节人工复核。

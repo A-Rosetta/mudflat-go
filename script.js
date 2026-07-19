@@ -26,6 +26,11 @@ const BLIND_BOX_COSTS = { 1: 500, 10: 4000 };
 const BIRD_MODEL_URL = "https://raw.githubusercontent.com/A-Rosetta/mudflat-go/main/assets/models/bird-species/model.onnx";
 const BIRD_CONFIG_URL = "https://raw.githubusercontent.com/A-Rosetta/mudflat-go/main/assets/models/bird-species/config.json";
 const MOBILE_NET_MODEL_URL = "https://raw.githubusercontent.com/A-Rosetta/mudflat-go/main/assets/models/mobilenet/model.json";
+const TF_RUNTIME_URL = "https://raw.githubusercontent.com/A-Rosetta/mudflat-go/main/assets/vendor/tf.min.js";
+const MOBILE_NET_RUNTIME_URL = "https://raw.githubusercontent.com/A-Rosetta/mudflat-go/main/assets/vendor/mobilenet.min.js";
+const ONNX_RUNTIME_URL = "https://raw.githubusercontent.com/A-Rosetta/mudflat-go/main/assets/vendor/onnxruntime-web.min.js";
+const ONNX_MODULE_URL = "https://raw.githubusercontent.com/A-Rosetta/mudflat-go/main/assets/vendor/ort-wasm-simd-threaded.mjs";
+const ONNX_WASM_URL = "https://raw.githubusercontent.com/A-Rosetta/mudflat-go/main/assets/vendor/ort-wasm-simd-threaded.wasm";
 const BIRD_IMAGE_SIZE = 260;
 const BIRD_MEAN = [.485, .456, .406];
 const BIRD_STD = [.47853944, .4732864, .47434163];
@@ -207,6 +212,36 @@ function loadScriptOnce(src, ready = null) {
       script.async = true;
       document.head.append(script);
     }
+  });
+}
+async function downloadGithubAsset(url, type, label) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 120000);
+  try {
+    const response = await fetch(url, { cache: "force-cache", mode: "cors", signal: controller.signal });
+    if (!response.ok) throw new Error(`GitHub ${label}下载失败（${response.status}）`);
+    return await response[type]();
+  } catch (error) {
+    if (error.name === "AbortError") throw new Error(`GitHub ${label}下载超时`);
+    if (error.message?.startsWith("GitHub ")) throw error;
+    throw new Error(`GitHub ${label}连接失败`);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+async function loadGithubScript(url, ready, label) {
+  if (ready()) return;
+  const source = await downloadGithubAsset(url, "text", label);
+  const objectUrl = URL.createObjectURL(new Blob([source], { type: "text/javascript" }));
+  try { await loadScriptOnce(objectUrl, ready); }
+  catch { throw new Error(`GitHub ${label}初始化失败`); }
+  finally { URL.revokeObjectURL(objectUrl); }
+  if (!ready()) throw new Error(`GitHub ${label}初始化失败`);
+}
+function withTimeout(promise, message) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(message)), 120000);
+    promise.then(value => { clearTimeout(timer); resolve(value); }, error => { clearTimeout(timer); reject(error); });
   });
 }
 function loadStylesheetOnce(href) {
@@ -1022,7 +1057,7 @@ async function requestCloudRecognition(blob) {
 function loadOnnxRuntime() {
   if (window.ort) return Promise.resolve(window.ort);
   if (!onnxRuntimePromise) {
-    onnxRuntimePromise = loadScriptOnce("assets/vendor/onnxruntime-web.min.js", () => Boolean(window.ort)).then(() => window.ort).catch(error => {
+    onnxRuntimePromise = loadGithubScript(ONNX_RUNTIME_URL, () => Boolean(window.ort), "ONNX 运行组件").then(() => window.ort).catch(error => {
       onnxRuntimePromise = null;
       throw error;
     });
@@ -1033,10 +1068,13 @@ function loadOnnxRuntime() {
 async function loadMobileNet() {
   if (!mobileNetPromise) {
     mobileNetPromise = (async () => {
-      await loadScriptOnce("assets/vendor/tf.min.js", () => Boolean(window.tf));
-      await loadScriptOnce("assets/vendor/mobilenet.min.js", () => Boolean(window.mobilenet));
+      await loadGithubScript(TF_RUNTIME_URL, () => Boolean(window.tf), "TensorFlow 运行组件");
+      await loadGithubScript(MOBILE_NET_RUNTIME_URL, () => Boolean(window.mobilenet), "MobileNet 运行组件");
       await window.tf.ready();
-      return window.mobilenet.load({ version: 2, alpha: .5, modelUrl: MOBILE_NET_MODEL_URL, inputRange: [-1, 1] });
+      return withTimeout(
+        window.mobilenet.load({ version: 2, alpha: .5, modelUrl: MOBILE_NET_MODEL_URL, inputRange: [-1, 1] }),
+        "GitHub MobileNet 模型下载超时"
+      );
     })().catch(error => {
       mobileNetPromise = null;
       throw error;
@@ -1050,21 +1088,25 @@ async function loadBirdRecognitionModel() {
     birdModelPromise = (async () => {
       const ort = await loadOnnxRuntime();
       ort.env.wasm.numThreads = 1;
-      ort.env.wasm.wasmPaths = new URL("assets/vendor/", document.baseURI).href;
-      updateScanProgress(58, "云端未连接 · 正在下载设备端鸟类模型");
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 60000);
+      updateScanProgress(58, "云端未连接 · 正在从 GitHub 下载设备端模型");
+      const [moduleSource, wasmBytes, modelBytes, config] = await Promise.all([
+        downloadGithubAsset(ONNX_MODULE_URL, "text", "ONNX 模块"),
+        downloadGithubAsset(ONNX_WASM_URL, "arrayBuffer", "ONNX WASM"),
+        downloadGithubAsset(BIRD_MODEL_URL, "arrayBuffer", "鸟类模型"),
+        downloadGithubAsset(BIRD_CONFIG_URL, "json", "鸟类标签")
+      ]);
+      const moduleUrl = URL.createObjectURL(new Blob([moduleSource], { type: "text/javascript" }));
+      ort.env.wasm.wasmPaths = { mjs: moduleUrl };
+      ort.env.wasm.wasmBinary = new Uint8Array(wasmBytes);
       try {
-        const [modelResponse, configResponse] = await Promise.all([
-          fetch(BIRD_MODEL_URL, { cache: "force-cache", signal: controller.signal }),
-          fetch(BIRD_CONFIG_URL, { cache: "force-cache", signal: controller.signal })
-        ]);
-        if (!modelResponse.ok || !configResponse.ok) throw new Error("GitHub 鸟类模型下载失败");
-        const [modelBytes, config] = await Promise.all([modelResponse.arrayBuffer(), configResponse.json()]);
-        const session = await ort.InferenceSession.create(new Uint8Array(modelBytes), { executionProviders: ["wasm"], graphOptimizationLevel: "all" });
+        const session = await withTimeout(
+          ort.InferenceSession.create(new Uint8Array(modelBytes), { executionProviders: ["wasm"], graphOptimizationLevel: "all" }),
+          "设备端鸟类模型初始化超时"
+        );
         return { session, labels: config.id2label };
       } finally {
-        clearTimeout(timer);
+        ort.env.wasm.wasmBinary = undefined;
+        URL.revokeObjectURL(moduleUrl);
       }
     })().catch(error => {
       birdModelPromise = null;
@@ -1104,14 +1146,35 @@ async function classifyBird(input, model) {
     .slice(0, 5);
 }
 
+function resolveMobileNetPrediction(predictions) {
+  const rules = [
+    { speciesId: "spoonbill", term: "spoonbill", minScore: .45, maxRank: 0, reason: "设备端通用模型识别到琵鹭，请结合黑色脸部与匙状长嘴人工复核。" },
+    { speciesId: "egret", term: "american egret", minScore: .35, maxRank: 0, reason: "设备端通用模型识别到白色鹭类，请结合黑腿、黄趾与尖直嘴人工复核。" },
+    { speciesId: "dunlin", term: "red-backed sandpiper", minScore: .05, maxRank: 4, reason: "设备端通用模型识别到黑腹滨鹬标签，请结合微向下弯的黑嘴与腹部羽色人工复核。" },
+    { speciesId: "redshank", term: "redshank", minScore: .25, maxRank: 0, reason: "设备端通用模型识别到红脚鹬，请结合橙红色双腿与嘴基部颜色人工复核。" },
+    { speciesId: "turnstone", term: "ruddy turnstone", minScore: .45, maxRank: 0, reason: "设备端通用模型识别到翻石鹬，请结合短楔形嘴、橙色腿与斑驳背羽人工复核。" }
+  ];
+  for (const rule of rules) {
+    const rank = predictions.findIndex(item => item.className.toLowerCase().includes(rule.term));
+    const prediction = predictions[rank];
+    if (rank >= 0 && rank <= rule.maxRank && prediction.probability >= rule.minScore) {
+      return { speciesId: rule.speciesId, confidence: prediction.probability, reason: rule.reason, predictions, provider: "github-mobilenet", collectable: true };
+    }
+  }
+  return null;
+}
+
 async function requestLocalRecognition(input) {
-  updateScanProgress(58, "云端未连接 · 正在下载设备端双模型");
-  const [mobileModel, birdModel] = await Promise.all([loadMobileNet(), loadBirdRecognitionModel()]);
-  updateScanProgress(76, "正在设备端交叉核对物种特征");
-  const [mobilePredictions, birdPredictions] = await Promise.all([
-    mobileModel.classify(input, 5),
-    classifyBird(input, birdModel)
-  ]);
+  updateScanProgress(58, "云端未连接 · 正在从 GitHub 下载识别模型");
+  const mobileModel = await loadMobileNet();
+  updateScanProgress(72, "正在设备端核对常见湿地标签");
+  const mobilePredictions = await mobileModel.classify(input, 5);
+  const mobileMatch = resolveMobileNetPrediction(mobilePredictions);
+  if (mobileMatch) return mobileMatch;
+
+  updateScanProgress(76, "常规模型未确认 · 正在加载鸟类专模");
+  const birdModel = await loadBirdRecognitionModel();
+  const birdPredictions = await classifyBird(input, birdModel);
   const mobileTop = mobilePredictions[0];
   const birdTop = birdPredictions[0];
   const birdReliable = birdTop?.score >= .35 && birdTop.score - (birdPredictions[1]?.score || 0) >= .15;
@@ -1133,7 +1196,7 @@ async function requestLocalRecognition(input) {
   };
   const mapping = birdReliable ? mappings[birdTop.label] : null;
   if (mapping) {
-    return { speciesId: mapping[0], confidence: birdTop.score, reason: mapping[1], predictions: birdPredictions, provider: "github-onnx" };
+    return { speciesId: mapping[0], confidence: birdTop.score, reason: mapping[1], predictions: birdPredictions, provider: "github-onnx", collectable: true };
   }
   const nonBirdMappings = {
     "fiddler crab": ["fiddler", "设备端通用模型识别到招潮蟹特征，请结合不对称大螯人工复核。"],
@@ -1161,8 +1224,8 @@ function resolveCloudRecognition(result) {
     title: item.name,
     description: result.reason || "云端视觉模型发现了相符特征，请结合形态、地点和季节人工复核。",
     probability,
-    candidateOnly: probability < .5,
-    providerLabel: result.provider === "github-onnx" ? "设备端鸟类模型" : "Cloudflare AI"
+    candidateOnly: result.collectable === true ? false : probability < .5,
+    providerLabel: result.provider?.startsWith("github-") ? "设备端 GitHub 模型" : "Cloudflare AI"
   };
 }
 
@@ -1230,7 +1293,7 @@ function showRecognitionResult(result, detectedResult = null, cloudResult = null
   document.getElementById("toast").classList.remove("is-visible");
   const panel = document.getElementById("captureResult");
   const collectButton = document.getElementById("collectButton");
-  const providerLabel = cloudResult?.provider === "github-onnx" ? "设备端鸟类模型" : "Cloudflare AI";
+  const providerLabel = cloudResult?.provider?.startsWith("github-") ? "设备端 GitHub 模型" : "Cloudflare AI";
   document.getElementById("predictionList").innerHTML = detectedResult
     ? `<li><span>${providerLabel} · ${detectedResult.title}</span><b>${(detectedResult.probability * 100).toFixed(1)}%</b></li>`
     : `<li><span>${providerLabel} · 无法确认</span><b>待重试</b></li>`;
