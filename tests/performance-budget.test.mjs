@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 
 const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
 const script = await readFile(new URL("../script.js", import.meta.url), "utf8");
+const css = await readFile(new URL("../styles.css", import.meta.url), "utf8");
 
 test("heavy feature runtimes are loaded only when their feature opens", () => {
   for (const asset of ["model-viewer.min.js", "tf.min.js", "mobilenet.min.js", "onnxruntime-web.min.js", "leaflet.min.js", "game.js", "arena.js"]) {
@@ -32,4 +33,17 @@ test("drawing updates the collection economy without rerendering the entire app"
   const draw = script.match(/function drawBlindBoxes\(count\) \{([\s\S]*?)\n\}/)?.[1] || "";
   assert.doesNotMatch(draw, /updateUI\(\)/);
   assert.match(draw, /updateBlindBoxEconomyUI\(\)/);
+});
+
+test("icon hydration is coalesced instead of rescanning the document after every renderer", () => {
+  assert.match(script, /let iconRefreshQueued = false/);
+  assert.match(script, /if \(!window\.lucide \|\| iconRefreshQueued\) return/);
+  assert.match(script, /queueMicrotask\(\(\) =>/);
+});
+
+test("coarse and compact devices avoid persistent glass-compositor work", () => {
+  assert.match(css, /@media \(max-width:900px\),\(pointer:coarse\)/);
+  assert.match(css, /body \{ background-attachment:scroll; \}/);
+  assert.match(css, /backdrop-filter:none !important/);
+  assert.match(css, /\.blind-box-entry::before,\.blind-box-entry > svg:last-of-type,\.blind-box-stage-art,\.mystery-box,\.stage-orbit \{ animation:none !important; \}/);
 });

@@ -1,5 +1,6 @@
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const alive = unit => !unit.defeated && unit.hp > 0;
+export const ARENA_MASTERY_IDS = ["survival", "chain", "tempo"];
 
 const levelMechanics = {
   1: {},
@@ -99,12 +100,25 @@ export function dailyArenaLevel(levelId, day = arenaDayKey()) {
   };
 }
 
+export function evaluateArenaMastery(level, battle) {
+  const roundLimit = Number(level?.id) + 6;
+  return [
+    { id: "survival", name: "全员归潮", detail: "全员存活完成", icon: "shield-check", complete: Boolean(battle?.players?.every(alive)) },
+    { id: "chain", name: "三潮成势", detail: "达成潮链 III", icon: "waves", complete: Number(battle?.maxChain) >= 3 },
+    { id: "tempo", name: "抢潮净滩", detail: `${roundLimit} 回合内完成`, icon: "timer", complete: Number(battle?.round) <= roundLimit }
+  ];
+}
+
 export function normalizeArenaProgress(value = {}) {
   const claims = value.claims && typeof value.claims === "object" && !Array.isArray(value.claims) ? value.claims : {};
+  const mastery = value.mastery && typeof value.mastery === "object" && !Array.isArray(value.mastery) ? value.mastery : {};
   return {
     unlockedThrough: clamp(Math.round(Number(value.unlockedThrough) || 1), 1, ARENA_LEVELS.length),
     clearedThrough: clamp(Math.round(Number(value.clearedThrough) || 0), 0, ARENA_LEVELS.length),
     claims: Object.fromEntries(Object.entries(claims).map(([day, levels]) => [day, [...new Set((Array.isArray(levels) ? levels : []).map(Number).filter(id => id >= 1 && id <= ARENA_LEVELS.length))]])),
+    mastery: Object.fromEntries(Object.entries(mastery)
+      .map(([levelId, goals]) => [Number(levelId), ARENA_MASTERY_IDS.filter(id => Array.isArray(goals) && goals.includes(id))])
+      .filter(([levelId, goals]) => levelId >= 1 && levelId <= ARENA_LEVELS.length && goals.length)),
     audioEnabled: value.audioEnabled !== false
   };
 }
@@ -129,7 +143,7 @@ export function createArenaBattle(level, team) {
       defeated: false
     };
   });
-  return { levelId: level.id, day: level.day, round: 1, status: "player", players, enemies, acted: [], roundDamageCount: 0, chainTargetId: null, chainCount: 0, enemyDelay: 0, mechanic, variant, lastEvent: null };
+  return { levelId: level.id, day: level.day, round: 1, status: "player", players, enemies, acted: [], roundDamageCount: 0, chainTargetId: null, chainCount: 0, maxChain: 0, enemyDelay: 0, mechanic, variant, lastEvent: null };
 }
 
 export function previewArenaAction(state, { playerId, enemyId, action }) {
@@ -215,6 +229,7 @@ export function performArenaAction(state, { playerId, enemyId, action }) {
     roundDamageCount: state.roundDamageCount + Number(damage > 0),
     chainTargetId: damage > 0 ? enemyId : state.chainTargetId || null,
     chainCount: damage > 0 ? chainCount : Number(state.chainCount) || 0,
+    maxChain: Math.max(Number(state.maxChain) || 0, damage > 0 ? chainCount : 0),
     enemyDelay: delayed ? 1 : state.enemyDelay,
     status: remainingEnemies.length ? (readyPlayers.length ? "player" : "enemy") : "victory",
     lastEvent: { side: "player", attackerId: playerId, targetId: enemyId, action, damage, healing, healingByTarget, barrier, barrierByTarget, armorAbsorbed, toughnessDamage, execute, delayed, firstStrikeBonus, chainCount, chainMultiplier }
@@ -279,18 +294,28 @@ export function performArenaEnemyTurn(state) {
   };
 }
 
-export function claimArenaVictory(progress, levelId, day = arenaDayKey()) {
+export function claimArenaVictory(progress, levelId, day = arenaDayKey(), earnedMastery = []) {
   const current = normalizeArenaProgress(progress);
   const id = clamp(Math.round(Number(levelId) || 1), 1, ARENA_LEVELS.length);
   const claimedToday = current.claims[day] || [];
   const firstWinToday = !claimedToday.includes(id);
+  const previousMastery = current.mastery[id] || [];
+  const validMastery = ARENA_MASTERY_IDS.filter(goalId => earnedMastery.includes(goalId));
+  const newMastery = validMastery.filter(goalId => !previousMastery.includes(goalId));
+  const mastery = ARENA_MASTERY_IDS.filter(goalId => previousMastery.includes(goalId) || validMastery.includes(goalId));
+  const dailyReward = firstWinToday ? dailyArenaLevel(id, day).dailyReward : 0;
+  const masteryReward = newMastery.length * id * 10;
   return {
     progress: {
       ...current,
       unlockedThrough: Math.max(current.unlockedThrough, Math.min(ARENA_LEVELS.length, id + 1)),
       clearedThrough: Math.max(current.clearedThrough, id),
-      claims: firstWinToday ? { ...current.claims, [day]: [...claimedToday, id] } : current.claims
+      claims: firstWinToday ? { ...current.claims, [day]: [...claimedToday, id] } : current.claims,
+      mastery: mastery.length ? { ...current.mastery, [id]: mastery } : current.mastery
     },
-    reward: firstWinToday ? dailyArenaLevel(id, day).dailyReward : 0
+    reward: dailyReward + masteryReward,
+    dailyReward,
+    masteryReward,
+    newMastery
   };
 }

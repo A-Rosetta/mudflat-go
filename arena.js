@@ -6,6 +6,7 @@ import {
   claimArenaVictory,
   createArenaBattle,
   dailyArenaLevel,
+  evaluateArenaMastery,
   normalizeArenaProgress,
   performArenaAction,
   performArenaEnemyTurn,
@@ -29,7 +30,7 @@ let selectedLevelId = 1;
 let activePlayerId = "";
 let activeEnemyId = "";
 let logs = [];
-let lastReward = 0;
+let lastSettlement = null;
 let enemyTimer;
 let returnFocus;
 let audioContext;
@@ -83,6 +84,26 @@ function icon(name) {
   return `<i data-lucide="${name}"></i>`;
 }
 
+function arenaLevelMastery(level, earnedIds = []) {
+  const earned = new Set(earnedIds);
+  const goals = evaluateArenaMastery(level);
+  return `<span class="arena-level-mastery" aria-label="潮印 ${earned.size} / 3">${goals.map(goal => `<i data-lucide="star" class="${earned.has(goal.id) ? "is-earned" : ""}" aria-hidden="true"></i>`).join("")}<small>${earned.size}/3</small></span>`;
+}
+
+function arenaMasteryLive(level) {
+  const goals = evaluateArenaMastery(level, battle);
+  const roundLimit = level.id + 6;
+  return `<section class="arena-mastery-live" aria-label="本关潮印目标">${goals.map(goal => {
+    const failed = goal.id !== "chain" && !goal.complete;
+    const status = goal.id === "survival"
+      ? goal.complete ? "全员在阵" : "本局已失守"
+      : goal.id === "chain"
+        ? goal.complete ? "潮链 III 已达成" : `峰值 ${chainTier(battle.maxChain) || "0"} / III`
+        : goal.complete ? `剩余 ${Math.max(0, roundLimit - battle.round)} 回合` : "本局已超时";
+    return `<span class="${goal.complete ? "is-met" : failed ? "is-failed" : ""}">${icon(goal.icon)}<b>${goal.name}</b><small>${status}</small></span>`;
+  }).join("")}</section>`;
+}
+
 function refreshIcons() {
   window.lucide?.createIcons?.({ attrs: { "stroke-width": 1.8 } });
 }
@@ -116,12 +137,13 @@ function renderLobby() {
   const claimed = new Set(progress.claims[today] || []);
   const team = playerTeam(root);
   const cleared = progress.clearedThrough;
+  const masteryCount = Object.values(progress.mastery).reduce((total, goals) => total + goals.length, 0);
   shell.dataset.screen = "lobby";
   shell.innerHTML = `<div class="arena-backdrop-art" aria-hidden="true"></div>
     <header class="arena-header">
       <button type="button" data-arena-close aria-label="返回鸟灵档案">${icon("arrow-left")}<span>返回鸟灵</span></button>
       <div><small>${icon("trophy")} WETLAND ARENA</small><h1>湿地竞技</h1><p>三人编队 · 十关潮汐防线 · 每日首胜积分</p></div>
-      <span class="arena-progress"><b>${cleared}<small>/10</small></b><em>已通关</em></span>
+      <span class="arena-progress"><b>${cleared}<small>/10</small></b><em>${masteryCount}/30 潮印</em></span>
     </header>
     <section class="arena-lobby-intro">
       <div><small>DAILY STAGES · ${today}</small><h2>选择今日守卫任务</h2><p>完成当前关卡后开放下一关；同一关每天第一次胜利可以领取积分。</p></div>
@@ -136,7 +158,7 @@ function renderLobby() {
       <div class="arena-level-grid">${ARENA_LEVELS.map(level => {
         const daily = dailyArenaLevel(level.id, today);
         const locked = level.id > progress.unlockedThrough;
-        return `<button type="button" data-arena-level="${level.id}" class="${level.id === progress.unlockedThrough ? "is-next" : ""}" ${locked ? "disabled" : ""} aria-label="${locked ? `第${level.id}关未解锁` : `进入第${level.id}关 ${level.name}；${daily.dailyVariant}：${daily.dailyEffect}`}"><b>${String(level.id).padStart(2, "0")}</b><span><strong>${level.name}</strong><small>${level.zone} · ${level.threat}</small><em title="${daily.dailyEffect}">${daily.dailyVariant} · ${daily.dailyEffect}</em></span><span><strong>+${daily.dailyReward}</strong><small>${claimed.has(level.id) ? "今日已领" : locked ? "未解锁" : "积分"}</small></span>${locked ? icon("lock-keyhole") : icon("chevron-right")}</button>`;
+        return `<button type="button" data-arena-level="${level.id}" class="${level.id === progress.unlockedThrough ? "is-next" : ""}" ${locked ? "disabled" : ""} aria-label="${locked ? `第${level.id}关未解锁` : `进入第${level.id}关 ${level.name}；${daily.dailyVariant}：${daily.dailyEffect}`}"><b>${String(level.id).padStart(2, "0")}</b><span><strong>${level.name}</strong><small>${level.zone} · ${level.threat}</small><em title="${daily.dailyEffect}">${daily.dailyVariant} · ${daily.dailyEffect}</em>${arenaLevelMastery(daily, progress.mastery[level.id])}</span><span><strong>+${daily.dailyReward}</strong><small>${claimed.has(level.id) ? "今日已领" : locked ? "未解锁" : "积分"}</small></span>${locked ? icon("lock-keyhole") : icon("chevron-right")}</button>`;
       }).join("")}</div>
     </section>`;
   refreshIcons();
@@ -148,13 +170,13 @@ function startArena(levelId = selectedLevelId) {
   selectedLevelId = Number(levelId);
   const level = dailyArenaLevel(selectedLevelId);
   battle = createArenaBattle(level, playerTeam(root));
-  lastReward = 0;
+  lastSettlement = null;
   activePlayerId = battle.players[0].id;
   activeEnemyId = battle.enemies[0].id;
   const intent = previewArenaEnemyTurn(battle);
   const intentAttacker = battle.enemies.find(unit => unit.id === intent.attackerId);
   const intentTarget = battle.players.find(unit => unit.id === intent.targetId);
-  logs = [`【系统】第 ${level.id} 关「${level.name}」已载入：${level.modifier}。`, `【系统】今日变异：${level.dailyVariant} · ${level.dailyEffect}；首胜 +${level.dailyReward}。`, `【潮讯】${intentAttacker.name}将反击${intentTarget.name}，预计造成 ${intent.damage} 点伤害。`];
+  logs = [`【系统】第 ${level.id} 关「${level.name}」已载入：${level.modifier}。`, `【系统】今日变异：${level.dailyVariant} · ${level.dailyEffect}；首胜 +${level.dailyReward}。`, `【潮印】全员归潮 · 三潮成势 · ${level.id + 6} 回合内完成。`, `【潮讯】${intentAttacker.name}将反击${intentTarget.name}，预计造成 ${intent.damage} 点伤害。`];
   sound(196, .2, "triangle", .05);
   renderBattle();
 }
@@ -277,6 +299,7 @@ function renderBattle() {
       <span class="arena-round"><b>ROUND ${String(battle.round).padStart(2, "0")}</b><em>${battle.status === "enemy" ? "敌方回合" : finished ? "战斗结束" : "我方回合"}</em></span>
     </header>
     <section class="arena-status"><span class="arena-turn-state">${icon("clock-3")} ${battle.status === "enemy" ? "敌方正在反击" : finished ? "结算完成" : `已行动 ${battle.acted.length}/${battle.players.filter(unit => unit.hp > 0).length}`}<mark class="arena-chain ${battle.chainCount > 1 ? "is-linked" : ""}">${arenaChainCopy()}</mark></span><strong class="arena-intent">${intent ? arenaIntentCopy(intent, intentAttacker, intentTarget) : "潮线战斗结束"}</strong><em>${level.modifier} · ${level.dailyVariant} · ${level.dailyEffect}</em></section>
+    ${arenaMasteryLive(level)}
     <section class="arena-field">
       <div class="arena-side"><header><span>我方鸟灵</span><b>依次行动</b></header><div>${battle.players.map(unit => `<button type="button" data-arena-player="${unit.id}" class="${unit.id === activePlayerId ? "is-active" : ""} ${battle.acted.includes(unit.id) ? "has-acted" : ""} ${unit.defeated ? "is-defeated" : ""} ${intent?.action !== "delayed" && intent?.targetId === unit.id ? "is-threatened" : ""}" ${unit.defeated || battle.acted.includes(unit.id) || battle.status !== "player" ? "disabled" : ""}>${intent?.action !== "delayed" && intent?.targetId === unit.id ? `<mark class="arena-threat-label">${icon("crosshair")} 预计 -${intent.damage}</mark>` : ""}<img src="${unit.image}" alt=""><span><strong>${unit.name}</strong><small>${unit.role} · Lv.${unit.level}</small>${hpBar(unit)}<em>能量 ${unit.mp}/100</em></span></button>`).join("")}</div></div>
       <div class="arena-vs"><b>VS</b><span>${lastPulse}</span></div>
@@ -296,7 +319,14 @@ function renderBattle() {
 
 function resultMarkup(level) {
   const victory = battle.status === "victory";
-  return `<div class="arena-result" role="alertdialog" aria-modal="true"><div><span>${victory ? "BATTLE CLEAR" : "BATTLE OVER"}</span><h2>${victory ? "潮汐防线守住了" : "暂时撤回鸟灵档案"}</h2><p>${victory ? `完成「${level.name}」，${lastReward ? `获得 ${lastReward} 积分` : "今日奖励已经领取"}` : "调整阵容或提升鸟灵等级后再次挑战。"}</p><div><button type="button" data-arena-lobby>${icon("arrow-left")} 关卡大厅</button><button type="button" data-arena-replay>${icon("rotate-cw")} 再战一次</button></div></div></div>`;
+  const goals = evaluateArenaMastery(level, battle);
+  const newMastery = new Set(lastSettlement?.newMastery || []);
+  const rewardCopy = [
+    lastSettlement?.dailyReward ? `每日首胜 +${lastSettlement.dailyReward}` : "",
+    lastSettlement?.masteryReward ? `新潮印 +${lastSettlement.masteryReward}` : ""
+  ].filter(Boolean).join("，") || "今日奖励已领取，潮印记录未刷新";
+  const mastery = victory ? `<section class="arena-mastery-result"><header><span>${icon("award")} 潮印评定</span><b>${goals.filter(goal => goal.complete).length}/3</b></header><div>${goals.map(goal => `<span class="${goal.complete ? "is-earned" : ""} ${newMastery.has(goal.id) ? "is-new" : ""}">${icon(goal.icon)}<b>${goal.name}</b><small>${goal.detail}</small><em>${newMastery.has(goal.id) ? "NEW" : goal.complete ? "达成" : "未达成"}</em></span>`).join("")}</div></section>` : "";
+  return `<div class="arena-result" role="alertdialog" aria-modal="true"><div><span>${victory ? "BATTLE CLEAR" : "BATTLE OVER"}</span><h2>${victory ? "潮汐防线守住了" : "暂时撤回鸟灵档案"}</h2><p>${victory ? `完成「${level.name}」，${rewardCopy}` : "调整阵容或提升鸟灵等级后再次挑战。"}</p>${mastery}<div><button type="button" data-arena-lobby>${icon("arrow-left")} 关卡大厅</button><button type="button" data-arena-replay>${icon("rotate-cw")} 再战一次</button></div></div></div>`;
 }
 
 function arenaPlayerLog(attacker, target, event) {
@@ -384,12 +414,13 @@ async function resolveEnemyTurn() {
 
 function settleVictory() {
   const root = normalizeRoot(readRoot());
-  const settlement = claimArenaVictory(root.birdArena, battle.levelId, battle.day);
+  const earnedMastery = evaluateArenaMastery(dailyArenaLevel(battle.levelId, battle.day), battle).filter(goal => goal.complete).map(goal => goal.id);
+  const settlement = claimArenaVictory(root.birdArena, battle.levelId, battle.day, earnedMastery);
   root.birdArena = settlement.progress;
   root.points += settlement.reward;
-  lastReward = settlement.reward;
+  lastSettlement = settlement;
   saveRoot(root);
-  logs.push(settlement.reward ? `【系统】首胜奖励：${settlement.reward} 积分；下一关已开放。` : "【系统】本关今日奖励已经领取。下一关保持开放。");
+  logs.push(settlement.reward ? `【系统】结算奖励：${settlement.reward} 积分${settlement.masteryReward ? `，其中新潮印 +${settlement.masteryReward}` : ""}；下一关已开放。` : "【系统】本关今日奖励已经领取。下一关保持开放。");
   sound(523, .45, "triangle", .08);
 }
 

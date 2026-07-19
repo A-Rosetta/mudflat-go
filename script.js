@@ -169,7 +169,15 @@ function completedSiteCount() { return state.siteProgress.filter(item => item.co
 function badgeCount() { return Math.min(badges.length, 2 + completedSiteCount()); }
 function formatNumber(value) { return new Intl.NumberFormat("zh-CN").format(value); }
 function icon(name) { return `<i data-lucide="${name}"></i>`; }
-function icons() { if (window.lucide) window.lucide.createIcons({ attrs: { "stroke-width": 1.9 } }); }
+let iconRefreshQueued = false;
+function icons() {
+  if (!window.lucide || iconRefreshQueued) return;
+  iconRefreshQueued = true;
+  queueMicrotask(() => {
+    iconRefreshQueued = false;
+    window.lucide?.createIcons({ attrs: { "stroke-width": 1.9 } });
+  });
+}
 function loadScriptOnce(src) {
   const existing = document.querySelector(`script[src="${src}"]`);
   if (existing) return existing.dataset.loaded === "true" ? Promise.resolve() : new Promise((resolve, reject) => { existing.addEventListener("load", resolve, { once: true }); existing.addEventListener("error", reject, { once: true }); });

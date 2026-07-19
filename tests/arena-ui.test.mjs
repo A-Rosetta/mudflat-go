@@ -3,11 +3,12 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 const root = new URL("../", import.meta.url);
-const [html, controller, css, script] = await Promise.all([
+const [html, controller, css, script, engine] = await Promise.all([
   readFile(new URL("index.html", root), "utf8"),
   readFile(new URL("arena.js", root), "utf8"),
   readFile(new URL("styles.css", root), "utf8"),
-  readFile(new URL("script.js", root), "utf8")
+  readFile(new URL("script.js", root), "utf8"),
+  readFile(new URL("arena-engine.mjs", root), "utf8")
 ]);
 
 test("bird sanctuary exposes a separate wetland arena", () => {
@@ -28,7 +29,7 @@ test("arena shares bird-spirit formation and the existing point economy", () => 
 });
 
 test("arena settles victory rewards against the battle day", () => {
-  assert.match(controller, /claimArenaVictory\(root\.birdArena, battle\.levelId, battle\.day\)/);
+  assert.match(controller, /claimArenaVictory\(root\.birdArena, battle\.levelId, battle\.day,/);
 });
 
 test("arena includes lobby, targets, actions, result, and responsive layouts", () => {
@@ -36,6 +37,8 @@ test("arena includes lobby, targets, actions, result, and responsive layouts", (
   assert.match(css, /\.arena-shell/);
   assert.match(css, /\.arena-field/);
   assert.match(css, /@media \(max-width:680px\)[\s\S]*?\.arena-side > div \{ display:flex/);
+  assert.match(css, /\.arena-level-grid,\.arena-team-mini,\.arena-side > div \{ scrollbar-width:none; \}/);
+  assert.match(css, /::-webkit-scrollbar \{ display:none; \}/);
   assert.match(css, /@media \(max-width:390px\)/);
 });
 
@@ -89,4 +92,18 @@ test("arena shows the uncharged skill state when preview is unavailable", () => 
 test("arena animates the selected ally's applied healing", () => {
   assert.match(controller, /event\.healingByTarget\[supportTarget\.id\]/);
   assert.doesNotMatch(controller, /label: event\.healing \? `\+\$\{event\.healing\}`/);
+});
+
+test("arena turns stage mastery into persistent replay goals", () => {
+  assert.match(controller, /evaluateArenaMastery/);
+  for (const token of ["arena-level-mastery", "arena-mastery-live", "arena-mastery-result"]) assert.match(controller, new RegExp(token));
+  assert.match(controller, /claimArenaVictory\(root\.birdArena, battle\.levelId, battle\.day, earnedMastery\)/);
+  assert.match(controller, /lastSettlement\.dailyReward/);
+  assert.match(controller, /settlement\.masteryReward/);
+  assert.match(controller, /lastSettlement\?\.newMastery/);
+  for (const copy of ["全员归潮", "三潮成势", "抢潮净滩"]) assert.match(engine, new RegExp(copy));
+  assert.match(css, /\.arena-level-mastery/);
+  assert.match(css, /\.arena-mastery-live/);
+  assert.match(css, /\.arena-mastery-result/);
+  assert.match(css, /@media \(max-width:520px\)[\s\S]*?\.arena-mastery-result > div \{ grid-template-columns:1fr;/);
 });

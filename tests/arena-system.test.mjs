@@ -5,6 +5,7 @@ import {
   claimArenaVictory,
   createArenaBattle,
   dailyArenaLevel,
+  evaluateArenaMastery,
   normalizeArenaProgress,
   performArenaAction,
   performArenaEnemyTurn,
@@ -170,10 +171,38 @@ test("same-target attacks build an exact three-step tidal chain", () => {
   assert.equal(battle.lastEvent.damage, preview.damage);
   assert.equal(battle.chainTargetId, enemyId);
   assert.equal(battle.chainCount, 3);
+  assert.equal(battle.maxChain, 3);
 
   battle = performArenaEnemyTurn(battle);
   assert.equal(battle.chainTargetId, null);
   assert.equal(battle.chainCount, 0);
+  assert.equal(battle.maxChain, 3);
+});
+
+test("arena mastery evaluates survival, tidal chain, and clear tempo", () => {
+  const level = dailyArenaLevel(3, "2026-07-19");
+  assert.deepEqual(evaluateArenaMastery(level).map(goal => goal.complete), [false, false, false]);
+  const active = createArenaBattle(level, team);
+  assert.deepEqual(evaluateArenaMastery(level, active).map(goal => goal.complete), [true, false, true]);
+  const victory = {
+    ...createArenaBattle(level, team),
+    status: "victory",
+    round: level.id + 6,
+    maxChain: 3
+  };
+  assert.deepEqual(evaluateArenaMastery(level, victory).map(goal => [goal.id, goal.complete]), [
+    ["survival", true],
+    ["chain", true],
+    ["tempo", true]
+  ]);
+
+  const missed = {
+    ...victory,
+    round: level.id + 7,
+    maxChain: 2,
+    players: victory.players.map((unit, index) => index ? unit : { ...unit, hp: 0, defeated: true })
+  };
+  assert.deepEqual(evaluateArenaMastery(level, missed).map(goal => goal.complete), [false, false, false]);
 });
 
 test("support actions preserve a tidal chain while switching targets resets it", () => {
@@ -366,10 +395,29 @@ test("victory unlocks the next stage and pays once per day", () => {
   assert.equal(final.progress.clearedThrough, 10);
 });
 
+test("victory persists best mastery and rewards only newly earned seals", () => {
+  const first = claimArenaVictory({}, 2, "2026-07-18", ["survival", "chain", "invalid"]);
+  assert.deepEqual(first.progress.mastery[2], ["survival", "chain"]);
+  assert.equal(first.masteryReward, 40);
+  assert.equal(first.newMastery.length, 2);
+
+  const repeated = claimArenaVictory(first.progress, 2, "2026-07-18", ["survival", "chain"]);
+  assert.equal(repeated.reward, 0);
+  assert.equal(repeated.masteryReward, 0);
+  assert.deepEqual(repeated.newMastery, []);
+
+  const improved = claimArenaVictory(repeated.progress, 2, "2026-07-18", ["survival", "tempo"]);
+  assert.deepEqual(improved.progress.mastery[2], ["survival", "chain", "tempo"]);
+  assert.equal(improved.reward, 20);
+  assert.equal(improved.masteryReward, 20);
+  assert.deepEqual(improved.newMastery, ["tempo"]);
+});
+
 test("malformed progress is normalized without unlocking extra stages", () => {
-  const progress = normalizeArenaProgress({ unlockedThrough: 99, clearedThrough: -2, claims: { bad: [0, 1, 1, 11, "2"] }, audioEnabled: false });
+  const progress = normalizeArenaProgress({ unlockedThrough: 99, clearedThrough: -2, claims: { bad: [0, 1, 1, 11, "2"] }, mastery: { 0: ["chain"], 1: ["chain", "chain", "invalid"], 11: ["tempo"] }, audioEnabled: false });
   assert.equal(progress.unlockedThrough, 10);
   assert.equal(progress.clearedThrough, 0);
   assert.deepEqual(progress.claims.bad, [1, 2]);
+  assert.deepEqual(progress.mastery, { 1: ["chain"] });
   assert.equal(progress.audioEnabled, false);
 });
