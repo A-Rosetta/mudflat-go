@@ -9,8 +9,7 @@
   <link rel="icon" type="image/png" href="assets/images/brand-mark.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;600;700&amp;family=Noto+Serif+SC:wght@500;600;700;900&amp;family=ZCOOL+XiaoWei&amp;display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/vendor/leaflet.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;600;700&amp;family=Noto+Serif+SC:wght@600&amp;family=ZCOOL+XiaoWei&amp;display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -33,7 +32,7 @@
           <div class="explore-copy">
             <span class="hero-kicker"><i data-lucide="compass"></i> 深圳湿地观察与物种档案</span>
             <h1 id="exploreTitle">让每一次<br>湿地相遇，<br>成为一张<br><em>生命卡片。</em></h1>
-            <p>查看点位与当季目标，带着图鉴实地寻找。照片通过云端视觉服务完成物种辅助识别，并结合地点留下可信的观察记录。</p>
+            <p>查看点位与当季目标，带着图鉴实地寻找。照片在当前设备完成物种辅助识别，并结合地点留下可信的观察记录。</p>
             <div class="hero-actions">
               <button class="button primary" type="button" data-open-site>查看当前点位 <i data-lucide="arrow-right"></i></button>
               <button class="button secondary" type="button" data-view-target="collection">打开深圳图鉴</button>
@@ -54,9 +53,9 @@
             </div>
             <div class="route-map">
               <div class="map-tiles" aria-hidden="true">
-                <img src="assets/map/shenzhen-835-445.png" alt=""><img src="assets/map/shenzhen-836-445.png" alt=""><img src="assets/map/shenzhen-837-445.png" alt=""><img src="assets/map/shenzhen-838-445.png" alt="">
-                <img src="assets/map/shenzhen-835-446.png" alt=""><img src="assets/map/shenzhen-836-446.png" alt=""><img src="assets/map/shenzhen-837-446.png" alt=""><img src="assets/map/shenzhen-838-446.png" alt="">
-                <img src="assets/map/shenzhen-835-447.png" alt=""><img src="assets/map/shenzhen-836-447.png" alt=""><img src="assets/map/shenzhen-837-447.png" alt=""><img src="assets/map/shenzhen-838-447.png" alt="">
+                <img src="assets/map/shenzhen-835-445.png" loading="lazy" decoding="async" alt=""><img src="assets/map/shenzhen-836-445.png" loading="lazy" decoding="async" alt=""><img src="assets/map/shenzhen-837-445.png" loading="lazy" decoding="async" alt=""><img src="assets/map/shenzhen-838-445.png" loading="lazy" decoding="async" alt="">
+                <img src="assets/map/shenzhen-835-446.png" loading="lazy" decoding="async" alt=""><img src="assets/map/shenzhen-836-446.png" loading="lazy" decoding="async" alt=""><img src="assets/map/shenzhen-837-446.png" loading="lazy" decoding="async" alt=""><img src="assets/map/shenzhen-838-446.png" loading="lazy" decoding="async" alt="">
+                <img src="assets/map/shenzhen-835-447.png" loading="lazy" decoding="async" alt=""><img src="assets/map/shenzhen-836-447.png" loading="lazy" decoding="async" alt=""><img src="assets/map/shenzhen-837-447.png" loading="lazy" decoding="async" alt=""><img src="assets/map/shenzhen-838-447.png" loading="lazy" decoding="async" alt="">
               </div>
               <div class="live-map" id="liveMap" aria-label="可拖动缩放的深圳湿地点位地图"></div>
               <svg class="route-lines" viewBox="0 0 1000 600" preserveAspectRatio="none" aria-hidden="true">
@@ -80,7 +79,7 @@
             </div>
             <div class="site-strip" id="siteStrip"></div>
             <div class="current-mission">
-              <div class="mission-photo"><img src="assets/images/shenzhen-mangrove.jpg" alt="深圳湾中的红树"></div>
+              <div class="mission-photo"><img src="assets/images/shenzhen-mangrove.jpg" loading="lazy" decoding="async" alt="深圳湾中的红树"></div>
               <div class="mission-copy">
                 <span class="eyebrow">当前任务</span>
                 <h2 id="missionTitle">解锁红树林守护者</h2>
@@ -101,7 +100,7 @@
             <a href="https://www.p4panorama.com/panos/mangroves-valanthakad-360-virtual-tour/" target="_blank" rel="noopener noreferrer">全屏观看 <i data-lucide="external-link"></i></a>
           </header>
           <div class="mangrove-panorama-frame">
-            <iframe id="mangrovePanoramaFrame" src="https://www.p4panorama.com/panos/mangroves-valanthakad-360-virtual-tour/" data-src="https://www.p4panorama.com/panos/mangroves-valanthakad-360-virtual-tour/" title="Mangrove View 1 红树林全景观鸟" loading="lazy" allow="fullscreen; gyroscope; accelerometer" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
+            <iframe id="mangrovePanoramaFrame" src="about:blank" data-src="https://www.p4panorama.com/panos/mangroves-valanthakad-360-virtual-tour/" title="Mangrove View 1 红树林全景观鸟" loading="lazy" allow="fullscreen; gyroscope; accelerometer" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
             <button class="panorama-reset" type="button" id="resetPanorama" aria-label="关闭全景介绍并返回全景" title="关闭介绍并返回全景"><i data-lucide="x"></i></button>
             <span class="mangrove-panorama-note"><i data-lucide="move-3d"></i> 按住并拖动环视 · 支持全屏</span>
           </div>
@@ -111,16 +110,16 @@
       <section class="view" data-view="collection" aria-labelledby="collectionTitle">
         <header class="page-head atlas-page-head">
           <div><span class="eyebrow">SHENZHEN FIELD ATLAS</span><h1 id="collectionTitle">深圳湿地物种档案</h1><p>观察不是占有。每一张点亮的卡片，都来自一次保持距离的真实相遇。</p></div>
-          <div class="atlas-count"><strong data-found>2</strong><span>/ 9 已发现</span></div>
+          <div class="atlas-count"><strong data-found>2</strong><span>/ 13 已发现</span></div>
         </header>
         <section class="collection-hub" aria-label="收藏与鸟灵功能">
           <button class="collection-entry collection-entry-box" type="button" data-view-target="blind-box" aria-label="进入湿地藏品">
-            <img src="assets/images/blind-box/14-complete-collection.webp" alt="湿地藏品系列陈列">
-            <span><small>WETLAND COLLECTION · SERIES 01</small><strong>湿地藏品</strong><p>用探索积分开启系列收藏，概率公开，重复款会转化为生态碎片。</p><em><i data-lucide="sparkles"></i><b data-points>88,888,888</b> 可用积分</em></span>
+            <img src="assets/images/blind-box/14-complete-collection.webp" loading="lazy" decoding="async" alt="湿地藏品系列陈列">
+            <span><small>深圳湿地典藏 · 第一辑</small><strong>湿地典藏</strong><p>使用探索积分开启藏品；概率公开，重复藏品将转化为生态碎片。</p><em><i data-lucide="sparkles"></i><b data-points>88,888,888</b> 可用积分</em></span>
             <i data-lucide="chevron-right"></i>
           </button>
           <button class="collection-entry collection-entry-spirit" type="button" data-view-target="bird-sanctuary" aria-label="进入鸟灵档案与湿地竞技">
-            <img src="assets/images/black-faced-spoonbill.jpg" alt="黑脸琵鹭鸟灵档案">
+            <img src="assets/images/black-faced-spoonbill.jpg" loading="lazy" decoding="async" alt="黑脸琵鹭鸟灵档案">
             <span><small>BIRD SPIRIT ARCHIVE</small><strong>鸟灵档案与竞技</strong><p>管理三鸟编队、培养已收藏鸟灵，进入十关湿地防线。</p><em><i data-lucide="trophy"></i> 每日首胜积分</em></span>
             <i data-lucide="chevron-right"></i>
           </button>
@@ -152,63 +151,73 @@
       <section class="view blind-box-view" data-view="blind-box" aria-labelledby="blindBoxTitle">
         <div class="blind-box-ambient" aria-hidden="true"><span></span><span></span><span></span></div>
         <header class="blind-box-nav">
-          <button type="button" data-view-target="collection"><i data-lucide="arrow-left"></i> 返回图鉴</button>
-          <span><i data-lucide="sparkles"></i><b data-points>88,888,888</b> 积分</span>
-        </header>
-        <section class="blind-box-hero">
-          <div class="blind-box-copy">
-            <span class="blind-box-kicker">WETLAND COLLECTION · SERIES 01</span>
-            <h1 id="blindBoxTitle">深圳湿地藏品<br><em>第一辑</em></h1>
-            <p>以深圳常见湿地物种为原型的系列收藏。各等级概率完整公示，重复藏品自动转化为生态碎片。</p>
-            <div class="blind-box-actions">
-              <button type="button" data-draw-count="1"><span>开启一份</span><b><i data-lucide="sparkles"></i> 500</b></button>
-              <button class="is-featured" type="button" data-draw-count="5"><span>开启五份</span><b><i data-lucide="sparkles"></i> 2,000</b><small>节省 500</small></button>
-            </div>
-            <div class="blind-box-odds"><span><b>0.99%</b> SSR</span><span><b>0.01%</b> CHASE</span><span><b>11</b> 全系列</span></div>
-            <button class="spirit-gate" type="button" data-view-target="bird-sanctuary"><i data-lucide="swords"></i><span><small>COLLECTION CONTINUES</small><b>前往鸟灵档案与湿地竞技</b></span><i data-lucide="arrow-up-right"></i></button>
+          <button class="blind-box-back" type="button" data-view-target="collection"><i data-lucide="arrow-left"></i><span>返回图鉴</span></button>
+          <div class="blind-box-view-tabs" role="tablist" aria-label="湿地典藏功能">
+            <button class="is-active" type="button" role="tab" aria-selected="true" tabindex="0" data-blind-box-panel-target="draw"><i data-lucide="sparkles"></i><span>抽卡</span></button>
+            <button type="button" role="tab" aria-selected="false" tabindex="-1" data-blind-box-panel-target="showroom"><i data-lucide="box"></i><span>展室</span></button>
+            <button type="button" role="tab" aria-selected="false" tabindex="-1" data-blind-box-panel-target="cabinet"><i data-lucide="panels-top-left"></i><span>藏品柜</span></button>
+            <button type="button" role="tab" aria-selected="false" tabindex="-1" data-blind-box-panel-target="rules"><i data-lucide="list-checks"></i><span>规则</span></button>
           </div>
-          <div class="blind-box-stage" id="blindBoxStage" aria-live="polite">
-            <img class="blind-box-stage-art" src="assets/images/blind-box/01-unboxing-hero.webp" alt="湿地盲盒开盒展示">
-            <div class="blind-box-stage-vignette"></div>
-            <div class="mystery-box" aria-hidden="true"><img src="assets/images/blind-box/02-package-flatlay.webp" alt=""><span></span></div>
+          <span class="blind-box-points"><i data-lucide="sparkles"></i><b data-points>88,888,888</b><span class="blind-box-points-label">积分</span></span>
+        </header>
+        <section class="blind-box-panel is-active" data-blind-box-panel-content="draw">
+<div class="blind-box-pool-tabs" id="blindBoxPoolTabs" role="tablist" aria-label="湿地典藏"><button type="button" role="tab" aria-selected="true" class="is-active" data-pool-id="standard-atlas"><span class="pool-tab-index">01</span><strong>潮间万象</strong><small>常驻典藏 · 不限时开放</small></button><button type="button" role="tab" aria-selected="false" data-pool-id="tide-watch"><span class="pool-tab-index">02</span><strong>潮有信</strong><small>限定典藏 · 候鸟季</small><em>概率提升</em></button><button type="button" role="tab" aria-selected="false" data-pool-id="mangrove-echo"><span class="pool-tab-index">03</span><strong>团团联动</strong><small>特别联动 · 团魂登场</small><em>联动</em></button></div>
+        <section class="blind-box-hero">
+          <div class="blind-box-copy"><p id="blindBoxSubtitle">深圳湿地物种典藏 · 不限时开放</p><p id="blindBoxCopy">潮来潮往，滩涂上的每一次相遇，都值得被记住。</p>
+            <span class="blind-box-kicker" id="blindBoxKicker">深圳湿地典藏 · 第一辑</span>
+            <h1 id="blindBoxTitle">潮间万象<br><em>常驻典藏</em></h1>
+            <p>收录深圳常见湿地物种。获取概率与保底规则均完整公示，重复藏品将转化为生态碎片。</p>
+            <div class="blind-box-actions">
+              <button type="button" data-draw-count="1"><span>开启一次</span><b><i data-lucide="sparkles"></i> 500</b></button>
+              <button class="is-featured" type="button" data-draw-count="10"><span>开启十次</span><b><i data-lucide="sparkles"></i> 4,000</b><small>十次内必得 SSR 或典藏款</small></button>
+            </div>
+            <div class="blind-box-odds"><span><b>0.99%</b> SSR</span><span><b id="blindBoxPity">0 / 10</b> 保底计数</span><span><b>11</b> 全系列藏品</span></div><p class="blind-box-rules" id="blindBoxRules">10 次开启内必得 SSR 或典藏款；本池独立计数。</p>
+            <button class="spirit-gate" type="button" data-view-target="bird-sanctuary"><i data-lucide="swords"></i><span><small>藏品用途</small><b>前往鸟灵档案</b></span><i data-lucide="arrow-up-right"></i></button>
+          </div>
+          <div class="blind-box-stage" id="blindBoxStage" aria-live="polite"><div class="blind-box-banner"><div class="blind-box-banner-copy"><span id="blindBoxHeroBadge">常驻典藏</span><strong id="blindBoxHeroSpecies">全系列收录 · 不限时开放</strong><p id="blindBoxHeroQuote">潮来潮往，滩涂上的每一次相遇，都值得被记住。</p></div><div class="blind-box-portrait-stack"><img class="thumb-standard thumb-tide" src="assets/images/black-faced-spoonbill.jpg" loading="lazy" decoding="async" alt=""><img class="thumb-standard thumb-tide" src="assets/images/common-kingfisher.jpg" loading="lazy" decoding="async" alt=""><img class="thumb-standard" src="assets/images/fiddler-crab.jpg" loading="lazy" decoding="async" alt=""><img class="thumb-night" src="assets/images/night-heron.jpg" loading="lazy" decoding="async" alt=""><img class="thumb-night" src="assets/images/little-egret.jpg" loading="lazy" decoding="async" alt=""><img class="thumb-collab" src="assets/images/blind-box/tuantuan-collab.jpg" loading="lazy" decoding="async" alt=""></div></div>
+            <img class="blind-box-stage-art" src="assets/images/blind-box/01-unboxing-hero.webp" loading="lazy" decoding="async" alt="湿地盲盒开盒展示">
+            <div class="blind-box-stage-vignette"></div><div class="pool-character-art" aria-hidden="true"><span class="pool-character-title">本期<br>概率<br>提升</span><img class="character-spoonbill" src="assets/images/black-faced-spoonbill.jpg" loading="lazy" decoding="async" alt=""><img class="character-kingfisher" src="assets/images/common-kingfisher.jpg" loading="lazy" decoding="async" alt=""><img class="character-night-heron" src="assets/images/night-heron.jpg" loading="lazy" decoding="async" alt=""><img class="character-egret" src="assets/images/little-egret.jpg" loading="lazy" decoding="async" alt=""><img class="character-tuantuan" src="assets/images/blind-box/tuantuan-collab.jpg" loading="lazy" decoding="async" alt=""><i class="character-up-mark">限定</i></div>
+            <div class="mystery-box" aria-hidden="true"><img src="assets/images/blind-box/02-package-flatlay.webp" loading="lazy" decoding="async" alt=""><span></span></div>
             <div class="stage-orbit" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></div>
-            <p><span></span> SERIES 01 · SHENZHEN WETLANDS</p>
+            <p><span></span> 深圳湿地典藏 · 第一辑</p>
           </div>
         </section>
-        <section class="blind-box-showroom" id="blindBoxShowroom" aria-labelledby="showroomTitle">
+        </section>
+        <section class="blind-box-panel blind-box-showroom" id="blindBoxShowroom" data-blind-box-panel-content="showroom" aria-labelledby="showroomTitle" hidden>
           <header class="showroom-head">
-            <div><span class="eyebrow">DIGITAL SPECIMEN ROOM</span><h2 id="showroomTitle">湿地藏品数字展室</h2><p>以本地常见鸟类为原型建立的立体藏品档案，完整保留物种名称与形态特征。</p></div>
-            <span class="showroom-performance"><i data-lucide="box"></i><b>4</b><small>款可查看</small></span>
+            <div><span class="eyebrow">立体藏品展室</span><h2 id="showroomTitle">湿地藏品展室</h2><p>以本地常见鸟类为原型制作，可旋转查看藏品形态与物种信息。</p></div>
+            <span class="showroom-performance"><i data-lucide="box"></i><b>4</b><small>款已开放</small></span>
           </header>
           <div class="showroom-layout">
-            <div class="showroom-selector" role="tablist" aria-label="选择三维湿地精灵">
-              <button class="is-active" id="modelTab1" type="button" role="tab" aria-controls="blindBoxModelPanel" aria-selected="true" tabindex="0" data-model-src="assets/models/blind-box/mystery-wetland-bird.glb" data-model-poster="assets/images/blind-box/poster-mystery-wetland-bird.png" data-model-name="神秘湿地精灵" data-model-species="SERIES 01 · 未定名原型"><img src="assets/images/blind-box/poster-mystery-wetland-bird.png" alt=""><span><small>MODEL 01</small><b>神秘湿地精灵</b><em>2.45 MiB</em></span></button>
-              <button id="modelTab2" type="button" role="tab" aria-controls="blindBoxModelPanel" aria-selected="false" tabindex="-1" data-model-src="assets/models/blind-box/fork-tailed-sunbird.glb" data-model-poster="assets/images/blind-box/poster-fork-tailed-sunbird.png" data-model-name="叉尾太阳鸟" data-model-species="Aethopyga christinae"><img src="assets/images/blind-box/poster-fork-tailed-sunbird.png" alt=""><span><small>MODEL 02</small><b>叉尾太阳鸟</b><em>2.49 MiB</em></span></button>
-              <button id="modelTab3" type="button" role="tab" aria-controls="blindBoxModelPanel" aria-selected="false" tabindex="-1" data-model-src="assets/models/blind-box/red-whiskered-bulbul.glb" data-model-poster="assets/images/blind-box/poster-red-whiskered-bulbul.png" data-model-name="红耳鹎" data-model-species="Pycnonotus jocosus"><img src="assets/images/blind-box/poster-red-whiskered-bulbul.png" alt=""><span><small>MODEL 03</small><b>红耳鹎</b><em>2.35 MiB</em></span></button>
-              <button id="modelTab4" type="button" role="tab" aria-controls="blindBoxModelPanel" aria-selected="false" tabindex="-1" data-model-src="assets/models/blind-box/white-rumped-munia.glb" data-model-poster="assets/images/blind-box/poster-white-rumped-munia.webp" data-model-name="白腰文鸟" data-model-species="Lonchura striata"><img src="assets/images/blind-box/poster-white-rumped-munia.webp" alt=""><span><small>MODEL 04</small><b>白腰文鸟</b><em>2.22 MiB</em></span></button>
-              <button class="showroom-secret is-locked" id="modelTab5" type="button" role="tab" aria-selected="false" tabindex="-1" disabled aria-label="隐藏款长尾缝叶莺，尚未解锁"><span class="secret-silhouette"><img src="assets/images/blind-box/poster-common-tailorbird.webp" alt="长尾缝叶莺未解锁轮廓"><i data-lucide="lock-keyhole"></i></span><span><small>CHASE · HIDDEN 05</small><b>长尾缝叶莺</b><em>未解锁 · 等待隐藏款降临</em></span></button>
+            <div class="showroom-selector" role="tablist" aria-label="选择立体藏品">
+              <button class="is-active" id="modelTab1" type="button" role="tab" aria-controls="blindBoxModelPanel" aria-selected="true" tabindex="0" data-model-src="assets/models/blind-box/mystery-wetland-bird.glb" data-model-poster="assets/images/blind-box/poster-mystery-wetland-bird.png" data-model-name="潮间来客" data-model-species="第一辑 · 鸟类原型" data-model-lore="潮水退去以后，它替整片泥滩守住第一束蓝光。" data-model-accent="#75d9ff"><img src="assets/images/blind-box/poster-mystery-wetland-bird.png" loading="lazy" decoding="async" alt=""><span><small>藏品 01</small><b>潮间来客</b><em>可查看</em></span></button>
+              <button id="modelTab2" type="button" role="tab" aria-controls="blindBoxModelPanel" aria-selected="false" tabindex="-1" data-model-src="assets/models/blind-box/fork-tailed-sunbird.glb" data-model-poster="assets/images/blind-box/poster-fork-tailed-sunbird.png" data-model-name="叉尾太阳鸟" data-model-species="Aethopyga christinae" data-model-lore="花冠深处的一瞬赤金，被凝成永不褪色的迁飞姿态。" data-model-accent="#ff8a62"><img src="assets/images/blind-box/poster-fork-tailed-sunbird.png" loading="lazy" decoding="async" alt=""><span><small>藏品 02</small><b>叉尾太阳鸟</b><em>可查看</em></span></button>
+              <button id="modelTab3" type="button" role="tab" aria-controls="blindBoxModelPanel" aria-selected="false" tabindex="-1" data-model-src="assets/models/blind-box/red-whiskered-bulbul.glb" data-model-poster="assets/images/blind-box/poster-red-whiskered-bulbul.png" data-model-name="红耳鹎" data-model-species="Pycnonotus jocosus" data-model-lore="林缘最清亮的一声晨鸣，落在红色耳羽与轻盈尾梢之间。" data-model-accent="#ff6178"><img src="assets/images/blind-box/poster-red-whiskered-bulbul.png" loading="lazy" decoding="async" alt=""><span><small>藏品 03</small><b>红耳鹎</b><em>可查看</em></span></button>
+              <button id="modelTab4" type="button" role="tab" aria-controls="blindBoxModelPanel" aria-selected="false" tabindex="-1" data-model-src="assets/models/blind-box/white-rumped-munia.glb" data-model-poster="assets/images/blind-box/poster-white-rumped-munia.webp" data-model-name="白腰文鸟" data-model-species="Lonchura striata" data-model-lore="芦苇摇曳时，它把细碎的风与谷粒一同收进羽毛。" data-model-accent="#e8c98f"><img src="assets/images/blind-box/poster-white-rumped-munia.webp" loading="lazy" decoding="async" alt=""><span><small>藏品 04</small><b>白腰文鸟</b><em>可查看</em></span></button>
+              <button class="showroom-secret is-locked" id="modelTab5" type="button" role="tab" aria-selected="false" tabindex="-1" disabled aria-label="隐藏款长尾缝叶莺，尚未收录"><span class="secret-silhouette"><img src="assets/images/blind-box/poster-common-tailorbird.webp" loading="lazy" decoding="async" alt="长尾缝叶莺未收录轮廓"><i data-lucide="lock-keyhole"></i></span><span><small>典藏款 · 隐藏 05</small><b>长尾缝叶莺</b><em>获得隐藏款后解锁</em></span></button>
             </div>
             <div class="showroom-stage" role="tabpanel" id="blindBoxModelPanel" aria-labelledby="modelTab1" tabindex="0">
-              <model-viewer id="blindBoxModelViewer" poster="assets/images/blind-box/poster-mystery-wetland-bird.png" alt="神秘湿地精灵 3D 模型" camera-controls auto-rotate rotation-per-second="16deg" shadow-intensity="1.25" shadow-softness=".85" exposure="1.05" environment-image="neutral" interaction-prompt="none" loading="lazy" reveal="auto"></model-viewer>
+              <aside class="showroom-curator" aria-live="polite"><span><i data-lucide="scan-line"></i> CURATED SPECIMEN</span><b id="showroomIndex">01 / 04</b><p id="showroomLore">潮水退去以后，它替整片泥滩守住第一束蓝光。</p><small>深圳湿地典藏 · 立体原型档案</small></aside>
+              <model-viewer id="blindBoxModelViewer" poster="assets/images/blind-box/poster-mystery-wetland-bird.png" alt="潮间来客立体模型" camera-controls auto-rotate rotation-per-second="16deg" shadow-intensity="1.25" shadow-softness=".85" exposure="1.05" environment-image="neutral" interaction-prompt="none" loading="lazy" reveal="auto"></model-viewer>
               <div class="showroom-halo" aria-hidden="true"></div>
-              <div class="showroom-loader" id="showroomLoader"><i></i><span id="showroomStatus">滑到这里后加载 3D 模型</span></div>
+              <div class="showroom-loader" id="showroomLoader"><i></i><span id="showroomStatus">进入展室后载入立体模型</span></div>
               <div class="showroom-tools">
-                <button class="is-active" type="button" id="toggleModelRotation"><i data-lucide="rotate-3d"></i><span>自动巡航</span></button>
+                <button class="is-active" type="button" id="toggleModelRotation"><i data-lucide="rotate-3d"></i><span>自动旋转</span></button>
                 <button type="button" id="resetModelCamera"><i data-lucide="focus"></i><span>重置视角</span></button>
               </div>
-              <div class="showroom-caption"><span><small id="showroomSpecies">SERIES 01 · 未定名原型</small><strong id="showroomName">神秘湿地精灵</strong></span><em>DRACO · WEBP · LAZY</em></div>
+              <div class="showroom-caption"><span><small id="showroomSpecies">第一辑 · 鸟类原型</small><strong id="showroomName">潮间来客</strong></span><em>可旋转查看</em></div>
             </div>
           </div>
         </section>
-        <section class="blind-box-cabinet" aria-labelledby="blindBoxCabinetTitle">
-          <div class="section-head blind-box-section-head"><div><span class="eyebrow">YOUR TIDAL CABINET</span><h2 id="blindBoxCabinetTitle">湿地精灵收藏柜</h2></div><div class="cabinet-head-actions"><button class="ai-glasses-preview" type="button" aria-disabled="true" title="展览预览，暂未开放"><i data-lucide="glasses"></i><span>AI眼镜预览</span></button><span><b id="blindBoxOwned">0</b> / 11</span></div></div>
-          <div class="blind-box-summary"><span><i data-lucide="gem"></i><b id="blindBoxFragments">0</b> 生态碎片</span><p>重复 N / R / SR / SSR / CHASE 分别转化为 10 / 20 / 35 / 60 / 100 碎片。</p></div>
-          <img class="cabinet-collection-art" src="assets/images/blind-box/14-complete-collection.webp" alt="湿地精灵完整系列陈列">
+        <section class="blind-box-panel blind-box-cabinet" data-blind-box-panel-content="cabinet" aria-labelledby="blindBoxCabinetTitle" hidden>
+          <div class="section-head blind-box-section-head"><div><span class="eyebrow">个人典藏</span><h2 id="blindBoxCabinetTitle">湿地藏品柜</h2></div><div class="cabinet-head-actions"><button class="ai-glasses-preview" type="button" aria-disabled="true" title="空间预览功能尚未开放"><i data-lucide="glasses"></i><span>空间预览</span></button><div class="cabinet-pager"><button type="button" id="blindBoxCabinetPrev" aria-label="上一页藏品"><i data-lucide="chevron-left"></i></button><span id="blindBoxCabinetPage">1 / 2</span><button type="button" id="blindBoxCabinetNext" aria-label="下一页藏品"><i data-lucide="chevron-right"></i></button><em><b id="blindBoxOwned">0</b> / 11</em></div></div></div>
+          <div class="blind-box-summary"><span><i data-lucide="gem"></i><b id="blindBoxFragments">0</b> 生态碎片</span><p>重复获得的 N / R / SR / SSR / 典藏款将分别转化为 10 / 20 / 35 / 60 / 100 碎片。</p></div>
+          <img class="cabinet-collection-art" src="assets/images/blind-box/14-complete-collection.webp" loading="lazy" decoding="async" alt="湿地藏品完整系列陈列">
           <div class="blind-box-grid" id="blindBoxGrid"></div>
         </section>
-        <section class="blind-box-probability">
-          <div><span class="eyebrow">FAIR DRAW</span><h2>概率透明，惊喜不藏规则。</h2><p>每次抽取相互独立；动画仅用于呈现，不影响抽取结果。</p></div>
-          <div class="probability-bars"><span style="--rate:.01"><b>CHASE</b><i></i><em>0.01%</em></span><span style="--rate:.99"><b>SSR</b><i></i><em>0.99%</em></span><span style="--rate:4"><b>SR</b><i></i><em>4%</em></span><span style="--rate:20"><b>R</b><i></i><em>20%</em></span><span style="--rate:75"><b>N</b><i></i><em>75%</em></span></div>
+        <section class="blind-box-panel blind-box-probability" data-blind-box-panel-content="rules" aria-labelledby="blindBoxRulesTitle" hidden>
+          <div class="blind-box-rules-overview"><span class="eyebrow">规则与回溯</span><h2 id="blindBoxRulesTitle">每次开启，都有据可查</h2><p>概率、保底进度与主推保障同步记录；演出效果不影响获取结果。</p><div class="blind-box-audit-status" aria-live="polite"><article><small>当前典藏</small><b id="blindBoxAuditPool">潮间万象</b><span id="blindBoxAuditPoolHint">本池独立计数</span></article><article><small>珍稀保底</small><b id="blindBoxAuditPity">0 / 10</b><span id="blindBoxAuditPityHint">至多再开启 10 次</span></article><article><small>主推保障</small><b id="blindBoxAuditGuarantee">未触发</b><span id="blindBoxAuditGuaranteeHint">常驻池不设主推保障</span></article></div></div>
+          <div class="blind-box-audit"><div class="probability-bars" aria-label="基础获取概率"><span style="--rate:.01"><b>典藏款</b><i></i><em>0.01%</em></span><span style="--rate:.99"><b>SSR</b><i></i><em>0.99%</em></span><span style="--rate:4"><b>SR</b><i></i><em>4%</em></span><span style="--rate:20"><b>R</b><i></i><em>20%</em></span><span style="--rate:75"><b>N</b><i></i><em>75%</em></span></div><section class="blind-box-history-shell" aria-labelledby="blindBoxHistoryTitle"><header><span><small>设备内记录</small><b id="blindBoxHistoryTitle">最近开启</b></span><em>累计 <b id="blindBoxHistoryCount">0</b> 次</em></header><ol class="blind-box-history" id="blindBoxHistory" aria-live="polite"><li class="is-empty">尚无开启记录</li></ol></section></div>
         </section>
       </section>
 
@@ -304,8 +313,8 @@
             <div class="profile-title"><span>湾</span><div><h1 id="profileTitle">林小湾</h1><p>LV.3 · 潮汐观察员</p></div></div>
             <div class="level-line"><span id="levelBar"></span></div>
             <p class="level-caption">再获得 <b id="pointsNeeded">720</b> 守护值，晋级「湿地探索家」</p>
-            <div class="profile-stats">
-              <span><b data-points>88,888,888</b><small>生态守护值</small></span>
+                <div class="profile-stats">
+                  <span><b data-points>88,888,888</b><small>生态守护值</small></span>
               <span><b data-found>2</b><small>图鉴收集</small></span>
               <span><b id="streakCount">0</b><small>连续补给天数</small></span>
             </div>
@@ -325,7 +334,7 @@
             <aside class="profile-menu">
               <button type="button" id="posterButton"><i data-lucide="share-2"></i><span><b>生成守护官海报</b><small>分享本次湿地探索</small></span><i data-lucide="chevron-right"></i></button>
               <button type="button" id="creditsButton"><i data-lucide="image"></i><span><b>图片与鸟鸣来源</b><small>查看素材授权信息</small></span><i data-lucide="chevron-right"></i></button>
-              <button type="button" id="resetButton"><i data-lucide="rotate-ccw"></i><span><b>重置演示进度</b><small>恢复初始图鉴与任务</small></span><i data-lucide="chevron-right"></i></button>
+              <button type="button" id="resetButton"><i data-lucide="sparkles"></i><span><b>初始化守护值</b><small>重置演示进度并恢复 88,888,888 积分</small></span><i data-lucide="chevron-right"></i></button>
             </aside>
           </div>
         </div>
@@ -346,9 +355,9 @@
   <section class="blind-box-reveal" id="blindBoxReveal" hidden aria-modal="true" role="dialog" aria-labelledby="blindBoxRevealTitle">
     <div class="reveal-flash" aria-hidden="true"></div><div class="reveal-rays" aria-hidden="true"></div><div class="reveal-confetti" id="blindBoxConfetti" aria-hidden="true"></div>
     <div class="reveal-panel">
-      <div class="reveal-head"><span><small>TIDAL SIGNAL RECEIVED</small><h2 id="blindBoxRevealTitle">潮汐送来了新伙伴</h2></span><button type="button" id="closeBlindBoxReveal" aria-label="关闭开奖结果"><i data-lucide="x"></i></button></div>
+      <div class="reveal-head"><span><small>典藏揭晓</small><h2 id="blindBoxRevealTitle">本次开启结果</h2></span><button type="button" id="closeBlindBoxReveal" aria-label="关闭开奖结果"><i data-lucide="x"></i></button></div>
       <div class="reveal-grid" id="blindBoxResults"></div>
-      <button class="reveal-done" type="button" id="finishBlindBoxReveal">收入收藏柜 <i data-lucide="arrow-right"></i></button>
+      <button class="reveal-skip" type="button" data-reveal-skip>全部揭晓</button><button class="reveal-done" type="button" id="finishBlindBoxReveal">收入藏品柜 <i data-lucide="arrow-right"></i></button>
     </div>
   </section>
 
@@ -377,7 +386,7 @@
   <section class="capture-view" id="captureView" hidden aria-labelledby="captureTitle">
     <header class="capture-head">
       <button type="button" id="closeCapture"><i data-lucide="arrow-left"></i> 返回</button>
-      <span id="cameraStatus">云端 AI 物种辅助识别</span>
+      <span id="cameraStatus">设备端物种辅助识别</span>
       <label for="photoInput"><i data-lucide="image-up"></i> 相册</label>
       <input id="photoInput" type="file" accept="image/*" hidden>
     </header>
@@ -388,7 +397,7 @@
       <div class="camera-empty" id="cameraEmpty">
         <span><i data-lucide="camera"></i></span>
         <h2>打开相机开始观察</h2>
-        <p>相机预览留在当前设备；识别时会上传压缩照片至 Cloudflare AI。</p>
+        <p>相机预览留在当前设备；识别时会上传压缩照片至 Cloudflare AI，应用不保存原图。</p>
         <button type="button" id="startCamera"><i data-lucide="video"></i> 打开相机</button>
       </div>
       <div class="camera-shade"></div>
@@ -447,11 +456,7 @@
   </section>
 
   <div class="toast" id="toast" role="status" aria-live="polite"><i data-lucide="check-circle-2"></i><span></span></div>
-  <script type="module" src="assets/vendor/model-viewer.min.js"></script>
   <script src="assets/vendor/lucide.min.js"></script>
-  <script src="assets/vendor/leaflet.min.js"></script>
-  <script src="script.js"></script>
-  <script type="module" src="game.js"></script>
-  <script type="module" src="arena.js"></script>
+  <script type="module" src="script.js"></script>
 </body>
 </html>

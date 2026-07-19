@@ -59,6 +59,17 @@ const SPIRIT_TALENTS = {
       { id: "nightfall_pressure", trigger: "debuff_applied", limit: "always", description: "Weaken effects gain magnitude when an enemy intent is visible." },
       { id: "nightfall_delay", trigger: "first_weaken", limit: "once_per_battle", description: "The first successful weaken delays the next hostile action." }
     ]
+  },
+  tuantuan: {
+    id: "team_aura",
+    name: "Team Aura",
+    focus: "morale",
+    description: "TuanTuan converts high morale into a steadier team buffer, keeping the formation energetic through pressure turns.",
+    effects: { healingPower: .08, shieldPower: .08, ultimatePower: .08 },
+    rules: [
+      { id: "team_aura", trigger: "support_action", limit: "always", description: "Support actions add a small morale buffer to the formation." },
+      { id: "lucky_smile", trigger: "ultimate", limit: "once_per_battle", description: "The first ultimate improves the team's recovery and shield tempo." }
+    ]
   }
 };
 
@@ -78,6 +89,10 @@ const SPIRIT_TRACE_NODES = {
   heron: {
     "heron-nightfall": { branch: "mechanism", name: "Nightfall Pressure", description: "Debuffs become stronger when played into a revealed enemy intention.", level: 5, ascension: 1, requires: "mechanism-tide", skillPower: .04, debuffPower: .15, points: 260, traceSeed: 4 },
     "heron-patient-hunt": { branch: "mechanism", name: "Patient Hunt", description: "Control effects delay dangerous actions and reinforce the next ultimate window.", level: 15, ascension: 2, requires: "heron-nightfall", ultimatePower: .08, controlPower: .15, points: 520, traceSeed: 8 }
+  },
+  tuantuan: {
+    "tuantuan-morale": { branch: "mechanism", name: "Morale Halo", description: "Support skills restore more health while keeping the front line confident.", level: 5, ascension: 1, requires: "mechanism-tide", healingPower: .1, hpPercent: .04, points: 260, traceSeed: 4 },
+    "tuantuan-lucky-core": { branch: "mechanism", name: "Lucky Core", description: "Ultimate turns create stronger team buffers without replacing dedicated guardians.", level: 15, ascension: 2, requires: "tuantuan-morale", shieldPower: .1, ultimatePower: .08, points: 520, traceSeed: 8 }
   }
 };
 

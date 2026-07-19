@@ -83,7 +83,8 @@ export const BATTLE_ROSTER = {
   spoonbill: { id: "spoonbill", affinity: "tide", role: "guardian", hp: 1120, attack: 118, defense: 96, speed: 92, strike: { type: "damage", power: 1.04 }, tactic: { type: "shield", power: .72 }, ultimate: { type: "shield", power: 1.45 } },
   kingfisher: { id: "kingfisher", affinity: "wing", role: "striker", hp: 820, attack: 158, defense: 62, speed: 116, strike: { type: "damage", power: 1.34 }, tactic: { type: "pierce", power: .92 }, ultimate: { type: "damage", power: 2.72 } },
   egret: { id: "egret", affinity: "grove", role: "healer", hp: 930, attack: 126, defense: 74, speed: 103, strike: { type: "damage", power: 1.02 }, tactic: { type: "heal", power: .7 }, ultimate: { type: "heal", power: 1.35 } },
-  heron: { id: "heron", affinity: "tide", role: "support", hp: 880, attack: 144, defense: 70, speed: 108, strike: { type: "damage", power: 1.18 }, tactic: { type: "weaken", power: .78 }, ultimate: { type: "weaken", power: 2.18 } }
+  heron: { id: "heron", affinity: "tide", role: "support", hp: 880, attack: 144, defense: 70, speed: 108, strike: { type: "damage", power: 1.18 }, tactic: { type: "weaken", power: .78 }, ultimate: { type: "weaken", power: 2.18 } },
+  tuantuan: { id: "tuantuan", affinity: "grove", role: "support", hp: 980, attack: 132, defense: 82, speed: 112, strike: { type: "damage", power: 1.12 }, tactic: { type: "heal", power: .62 }, ultimate: { type: "shield", power: 1.22 } }
 };
 
 const cloneBattle = value => JSON.parse(JSON.stringify(value));

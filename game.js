@@ -20,8 +20,8 @@ import {
 
 const STORAGE_KEY = "mudflat-go-compact-state-v1";
 const INITIAL_POINTS = 88888888;
-const STARTERS = ["spoonbill", "kingfisher", "egret"];
-const DEFAULT_LEVELS = { spoonbill: 5, kingfisher: 5, egret: 5, heron: 4 };
+const STARTERS = ["spoonbill", "kingfisher", "egret", "tuantuan"];
+const DEFAULT_LEVELS = { spoonbill: 5, kingfisher: 5, egret: 5, heron: 4, tuantuan: 5 };
 const affinityNames = { tide: "潮", wing: "羽", grove: "林" };
 const skillTypeNames = { damage: "单体攻击", pierce: "穿透攻击", shield: "群体护盾", heal: "群体治疗", weaken: "攻击并削弱" };
 const skillNames = { basic: "普攻", spell: "战技", ultimate: "终结技" };
@@ -36,7 +36,8 @@ const talentCopy = {
   tidal_bulwark: { name: "潮汐壁垒", focus: "守护循环", description: "强化全队护盾，并在每回合拦截一次指向濒危队友的致命单体攻击。" },
   azure_break: { name: "苍蓝俯冲", focus: "弱点击破", description: "克制攻击会额外削减韧性，对已击破或低生命目标触发有限追击增伤。" },
   reed_rescue: { name: "苇荡祈祝", focus: "濒危救援", description: "每回合首次治疗濒危队友时提高回复量，高星治疗还能净化一项负面状态。" },
-  nightfall_pressure: { name: "夜幕压制", focus: "削弱控制", description: "强化削弱幅度，终结技每场可将一次危险意图延后，制造安全输出窗口。" }
+  nightfall_pressure: { name: "夜幕压制", focus: "削弱控制", description: "强化削弱幅度，终结技每场可将一次危险意图延后，制造安全输出窗口。" },
+  team_aura: { name: "团魂光环", focus: "亲和增幅", description: "团团的笑容提升全队元气，兼顾回复与护盾节奏，是联动限定的团队 BUFF 核心。" }
 };
 
 function bird(id, details) {
@@ -56,7 +57,8 @@ const birds = {
   spoonbill: bird("spoonbill", { name: "黑脸琵鹭", title: "潮汐守望", role: "守护", rarity: "SSR", image: "assets/images/black-faced-spoonbill.jpg", strike: "琵影横扫", tactic: "浅滩守望", ultimate: "万顷白潮", blindBoxId: "spoonbill" }),
   kingfisher: bird("kingfisher", { name: "普通翠鸟", title: "苍蓝瞬羽", role: "输出", rarity: "SR", image: "assets/images/common-kingfisher.jpg", strike: "破水一闪", tactic: "折光俯冲", ultimate: "碧空坠星", blindBoxId: "kingfisher" }),
   egret: bird("egret", { name: "白鹭", title: "芦雪回声", role: "支援", rarity: "SR", image: "assets/images/little-egret.jpg", strike: "雪羽轻击", tactic: "风过苇荡", ultimate: "澄明栖所", blindBoxId: "egret" }),
-  heron: bird("heron", { name: "夜鹭", title: "暮色猎手", role: "控制", rarity: "SSR", image: "assets/images/night-heron.jpg", strike: "暮影啄击", tactic: "夜幕压制", ultimate: "月落无声", blindBoxId: "pond-heron" })
+  heron: bird("heron", { name: "夜鹭", title: "暮色猎手", role: "控制", rarity: "SSR", image: "assets/images/night-heron.jpg", strike: "暮影啄击", tactic: "夜幕压制", ultimate: "月落无声", blindBoxId: "pond-heron" }),
+  tuantuan: bird("tuantuan", { name: "团团", title: "联动团宠核心", role: "支援", rarity: "SSR", image: "assets/images/blind-box/tuantuan-collab.jpg", strike: "元气拍击", tactic: "幸运笑容", ultimate: "团魂光环", blindBoxId: "tuantuan" })
 };
 
 const reduceMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");

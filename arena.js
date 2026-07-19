@@ -6,20 +6,24 @@ import {
   claimArenaVictory,
   createArenaBattle,
   dailyArenaLevel,
+  evaluateArenaMastery,
   normalizeArenaProgress,
   performArenaAction,
-  performArenaEnemyTurn
+  performArenaEnemyTurn,
+  previewArenaAction,
+  previewArenaEnemyTurn
 } from "./arena-engine.mjs";
 
 const STORAGE_KEY = "mudflat-go-compact-state-v1";
 const INITIAL_POINTS = 88888888;
 const STARTERS = ["spoonbill", "kingfisher", "egret"];
-const DEFAULT_LEVELS = { spoonbill: 5, kingfisher: 5, egret: 5, heron: 4 };
+const DEFAULT_LEVELS = { spoonbill: 5, kingfisher: 5, egret: 5, heron: 4, tuantuan: 5 };
 const birdCopy = {
   spoonbill: { name: "黑脸琵鹭", role: "守护", image: "assets/images/black-faced-spoonbill.jpg", skill: "琵琶扫食" },
   kingfisher: { name: "普通翠鸟", role: "输出", image: "assets/images/common-kingfisher.jpg", skill: "破水一闪" },
   egret: { name: "白鹭", role: "支援", image: "assets/images/little-egret.jpg", skill: "风过苇荡" },
-  heron: { name: "夜鹭", role: "控制", image: "assets/images/night-heron.jpg", skill: "夜幕压制" }
+  heron: { name: "夜鹭", role: "控制", image: "assets/images/night-heron.jpg", skill: "夜幕压制" },
+  tuantuan: { name: "团团", role: "联动支援", image: "assets/images/blind-box/tuantuan-collab.jpg", skill: "团魂光环" }
 };
 
 const shell = document.getElementById("birdArenaShell");
@@ -28,7 +32,7 @@ let selectedLevelId = 1;
 let activePlayerId = "";
 let activeEnemyId = "";
 let logs = [];
-let lastReward = 0;
+let lastSettlement = null;
 let enemyTimer;
 let returnFocus;
 let audioContext;
@@ -82,6 +86,26 @@ function icon(name) {
   return `<i data-lucide="${name}"></i>`;
 }
 
+function arenaLevelMastery(level, earnedIds = []) {
+  const earned = new Set(earnedIds);
+  const goals = evaluateArenaMastery(level);
+  return `<span class="arena-level-mastery" aria-label="潮印 ${earned.size} / 3">${goals.map(goal => `<i data-lucide="star" class="${earned.has(goal.id) ? "is-earned" : ""}" aria-hidden="true"></i>`).join("")}<small>${earned.size}/3</small></span>`;
+}
+
+function arenaMasteryLive(level) {
+  const goals = evaluateArenaMastery(level, battle);
+  const roundLimit = level.id + 6;
+  return `<section class="arena-mastery-live" aria-label="本关潮印目标">${goals.map(goal => {
+    const failed = goal.id !== "chain" && !goal.complete;
+    const status = goal.id === "survival"
+      ? goal.complete ? "全员在阵" : "本局已失守"
+      : goal.id === "chain"
+        ? goal.complete ? "潮链 III 已达成" : `峰值 ${chainTier(battle.maxChain) || "0"} / III`
+        : goal.complete ? `剩余 ${Math.max(0, roundLimit - battle.round)} 回合` : "本局已超时";
+    return `<span class="${goal.complete ? "is-met" : failed ? "is-failed" : ""}">${icon(goal.icon)}<b>${goal.name}</b><small>${status}</small></span>`;
+  }).join("")}</section>`;
+}
+
 function refreshIcons() {
   window.lucide?.createIcons?.({ attrs: { "stroke-width": 1.8 } });
 }
@@ -115,12 +139,13 @@ function renderLobby() {
   const claimed = new Set(progress.claims[today] || []);
   const team = playerTeam(root);
   const cleared = progress.clearedThrough;
+  const masteryCount = Object.values(progress.mastery).reduce((total, goals) => total + goals.length, 0);
   shell.dataset.screen = "lobby";
   shell.innerHTML = `<div class="arena-backdrop-art" aria-hidden="true"></div>
     <header class="arena-header">
       <button type="button" data-arena-close aria-label="返回鸟灵档案">${icon("arrow-left")}<span>返回鸟灵</span></button>
       <div><small>${icon("trophy")} WETLAND ARENA</small><h1>湿地竞技</h1><p>三人编队 · 十关潮汐防线 · 每日首胜积分</p></div>
-      <span class="arena-progress"><b>${cleared}<small>/10</small></b><em>已通关</em></span>
+      <span class="arena-progress"><b>${cleared}<small>/10</small></b><em>${masteryCount}/30 潮印</em></span>
     </header>
     <section class="arena-lobby-intro">
       <div><small>DAILY STAGES · ${today}</small><h2>选择今日守卫任务</h2><p>完成当前关卡后开放下一关；同一关每天第一次胜利可以领取积分。</p></div>
@@ -135,7 +160,7 @@ function renderLobby() {
       <div class="arena-level-grid">${ARENA_LEVELS.map(level => {
         const daily = dailyArenaLevel(level.id, today);
         const locked = level.id > progress.unlockedThrough;
-        return `<button type="button" data-arena-level="${level.id}" class="${level.id === progress.unlockedThrough ? "is-next" : ""}" ${locked ? "disabled" : ""} aria-label="${locked ? `第${level.id}关未解锁` : `进入第${level.id}关 ${level.name}`}"><b>${String(level.id).padStart(2, "0")}</b><span><strong>${level.name}</strong><small>${level.zone} · ${level.threat}</small><em>${daily.dailyVariant}</em></span><span><strong>+${daily.dailyReward}</strong><small>${claimed.has(level.id) ? "今日已领" : locked ? "未解锁" : "积分"}</small></span>${locked ? icon("lock-keyhole") : icon("chevron-right")}</button>`;
+        return `<button type="button" data-arena-level="${level.id}" class="${level.id === progress.unlockedThrough ? "is-next" : ""}" ${locked ? "disabled" : ""} aria-label="${locked ? `第${level.id}关未解锁` : `进入第${level.id}关 ${level.name}；${daily.dailyVariant}：${daily.dailyEffect}`}"><b>${String(level.id).padStart(2, "0")}</b><span><strong>${level.name}</strong><small>${level.zone} · ${level.threat}</small><em title="${daily.dailyEffect}">${daily.dailyVariant} · ${daily.dailyEffect}</em>${arenaLevelMastery(daily, progress.mastery[level.id])}</span><span><strong>+${daily.dailyReward}</strong><small>${claimed.has(level.id) ? "今日已领" : locked ? "未解锁" : "积分"}</small></span>${locked ? icon("lock-keyhole") : icon("chevron-right")}</button>`;
       }).join("")}</div>
     </section>`;
   refreshIcons();
@@ -147,16 +172,53 @@ function startArena(levelId = selectedLevelId) {
   selectedLevelId = Number(levelId);
   const level = dailyArenaLevel(selectedLevelId);
   battle = createArenaBattle(level, playerTeam(root));
-  lastReward = 0;
+  lastSettlement = null;
   activePlayerId = battle.players[0].id;
   activeEnemyId = battle.enemies[0].id;
-  logs = [`【系统】第 ${level.id} 关「${level.name}」已载入。`, `【系统】今日变异：${level.dailyVariant}；首胜奖励 +${level.dailyReward} 积分。`, "【系统】每位鸟灵每回合可以行动一次。"];
+  const intent = previewArenaEnemyTurn(battle);
+  const intentAttacker = battle.enemies.find(unit => unit.id === intent.attackerId);
+  const intentTarget = battle.players.find(unit => unit.id === intent.targetId);
+  logs = [`【系统】第 ${level.id} 关「${level.name}」已载入：${level.modifier}。`, `【系统】今日变异：${level.dailyVariant} · ${level.dailyEffect}；首胜 +${level.dailyReward}。`, `【潮印】全员归潮 · 三潮成势 · ${level.id + 6} 回合内完成。`, `【潮讯】${intentAttacker.name}将反击${intentTarget.name}，预计造成 ${intent.damage} 点伤害。`];
   sound(196, .2, "triangle", .05);
   renderBattle();
 }
 
 function hpBar(unit) {
-  return `<span class="arena-hp"><span><b>HP</b><em>${Math.max(0, unit.hp)} / ${unit.maxHp}</em></span><i><b style="width:${Math.max(0, unit.hp / unit.maxHp * 100)}%"></b></i></span>`;
+  const states = [unit.shield > 0 ? `屏障 ${unit.shield}` : "", unit.debuff || ""].filter(Boolean).join(" · ");
+  return `<span class="arena-hp"><span><b>HP</b><em>${Math.max(0, unit.hp)} / ${unit.maxHp}</em></span><i><b style="width:${Math.max(0, unit.hp / unit.maxHp * 100)}%"></b></i>${states ? `<small>${states}</small>` : ""}</span>`;
+}
+
+function arenaSkillEffect(unit, preview) {
+  if (unit.mp < 100) return `未充能 ${unit.mp}/100`;
+  if (!preview) return "无可选目标";
+  const chain = arenaChainEffect(preview);
+  if (unit.id === "spoonbill") return `${preview.damage} 伤害${chain} · ${preview.barrier} 屏障并拦截单体攻击`;
+  if (unit.id === "kingfisher") return `${preview.damage} 伤害${chain} · 削韧；击破或低生命目标增伤`;
+  if (unit.id === "egret") return `${preview.healing} 治疗全队并净化侵蚀`;
+  if (unit.id === "heron") return `${preview.damage} 伤害${chain} · 延后敌方下一次行动`;
+  if (unit.id === "tuantuan") return `${preview.healing} 治疗全队 · ${preview.barrier} 团魂护盾`;
+  return `${preview.damage} 伤害${chain}`;
+}
+
+const chainTier = count => ["", "I", "II", "III"][Math.max(0, Math.min(3, Number(count) || 0))];
+function arenaChainEffect(preview) {
+  return preview?.chainMultiplier > 1 ? ` · 潮链 ${chainTier(preview.chainCount)} +${Math.round((preview.chainMultiplier - 1) * 100)}%` : "";
+}
+function arenaChainCopy() {
+  const count = Number(battle?.chainCount) || 0;
+  const target = battle?.enemies.find(unit => unit.id === battle.chainTargetId && unit.hp > 0);
+  if (!count || !target) return `${icon("waves")} 潮链待命`;
+  const bonus = Math.max(0, count - 1) * 12;
+  return `${icon("waves")} 潮链 ${chainTier(count)} · ${target.name}${bonus ? ` +${bonus}%` : ""}`;
+}
+
+function arenaIntentCopy(intent, attacker, target) {
+  if (intent.action === "delayed") return `${icon("pause")} ${attacker.name} · 行动已延后`;
+  const protectedUnit = intent.protectedTargetId && battle.players.find(unit => unit.id === intent.protectedTargetId);
+  const action = intent.action === "skill" ? "技能" : "攻击";
+  const intercept = protectedUnit ? ` · 替${protectedUnit.name}拦截` : "";
+  const absorbed = intent.absorbed ? ` · 屏障吸收 ${intent.absorbed}` : "";
+  return `${icon("radio")} ${attacker.name} → ${target.name} · ${action} ${intent.damage}${intercept}${absorbed}`;
 }
 
 const animationDelay = duration => new Promise(resolve => window.setTimeout(resolve, duration));
@@ -173,7 +235,7 @@ function cancelArenaEffects() {
   clearArenaEffects();
 }
 
-async function animateArenaAttack(attacker, target, { damage, skill = false, enemy = false }) {
+async function animateArenaAttack(attacker, target, { damage, label, skill = false, enemy = false, support = false, chainCount = 0 }) {
   if (!attacker || !target || window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches) return;
   const start = attacker.getBoundingClientRect();
   const end = target.getBoundingClientRect();
@@ -185,7 +247,7 @@ async function animateArenaAttack(attacker, target, { damage, skill = false, ene
   ghost.removeAttribute("disabled");
   ghost.removeAttribute("aria-label");
   ghost.setAttribute("aria-hidden", "true");
-  ghost.className = `arena-attack-ghost ${enemy ? "is-enemy" : "is-player"} ${skill ? "is-skill" : ""}`;
+  ghost.className = `arena-attack-ghost ${enemy ? "is-enemy" : "is-player"} ${skill ? "is-skill" : ""} ${support ? "is-support" : ""} ${chainCount > 1 ? "is-chain" : ""}`;
   Object.assign(ghost.style, {
     top: `${start.top}px`,
     left: `${start.left}px`,
@@ -204,11 +266,11 @@ async function animateArenaAttack(attacker, target, { damage, skill = false, ene
   target.classList.add("is-taking-hit");
   const targetRect = target.getBoundingClientRect();
   const impact = document.createElement("span");
-  impact.className = `arena-impact ${skill ? "is-skill" : ""}`;
+  impact.className = `arena-impact ${skill ? "is-skill" : ""} ${support ? "is-support" : ""} ${chainCount > 1 ? "is-chain" : ""}`;
   impact.setAttribute("aria-hidden", "true");
   impact.style.left = `${targetRect.left + targetRect.width / 2}px`;
   impact.style.top = `${targetRect.top + targetRect.height / 2}px`;
-  impact.innerHTML = `<i></i><i></i><i></i><b>-${damage}</b>`;
+  impact.innerHTML = `<i></i><i></i><i></i><b>${label || `-${damage}`}</b>${chainCount > 1 ? `<small>潮链 ${chainTier(chainCount)}</small>` : ""}`;
   document.body.append(impact);
   await animationDelay(350);
   ghost.remove();
@@ -219,12 +281,19 @@ async function animateArenaAttack(attacker, target, { damage, skill = false, ene
 
 function renderBattle() {
   if (!battle) return;
-  const level = dailyArenaLevel(battle.levelId);
+  const level = dailyArenaLevel(battle.levelId, battle.day);
   const activePlayer = battle.players.find(unit => unit.id === activePlayerId && unit.hp > 0) || battle.players.find(unit => unit.hp > 0);
   const activeEnemy = battle.enemies.find(unit => unit.id === activeEnemyId && unit.hp > 0) || battle.enemies.find(unit => unit.hp > 0);
   activePlayerId = activePlayer?.id || "";
   activeEnemyId = activeEnemy?.id || "";
   const finished = battle.status === "victory" || battle.status === "defeat";
+  const intent = finished ? null : previewArenaEnemyTurn(battle);
+  const intentAttacker = intent && battle.enemies.find(unit => unit.id === intent.attackerId);
+  const intentTarget = intent && battle.players.find(unit => unit.id === intent.targetId);
+  const attackPreview = activePlayer && activeEnemy && previewArenaAction(battle, { playerId: activePlayer.id, enemyId: activeEnemy.id, action: "attack" });
+  const skillPreview = activePlayer && activeEnemy && previewArenaAction(battle, { playerId: activePlayer.id, enemyId: activeEnemy.id, action: "skill" });
+  const energyGain = battle.variant.attackEnergy || 25;
+  const lastPulse = !battle.lastEvent ? "READY" : battle.lastEvent.chainCount > 1 ? `CHAIN ${chainTier(battle.lastEvent.chainCount)}` : Object.keys(battle.lastEvent.healingByTarget || {}).length ? `+${battle.lastEvent.healing}` : battle.lastEvent.delayed ? "DELAY" : `-${battle.lastEvent.damage}`;
   shell.dataset.screen = "battle";
   shell.innerHTML = `<div class="arena-backdrop-art" aria-hidden="true"></div>
     <header class="arena-header arena-battle-header">
@@ -232,15 +301,16 @@ function renderBattle() {
       <div><small>${icon("swords")} BATTLE MODE · STAGE ${String(level.id).padStart(2, "0")}</small><h1>${level.name}</h1><p>${level.zone} · ${level.modifier}</p></div>
       <span class="arena-round"><b>ROUND ${String(battle.round).padStart(2, "0")}</b><em>${battle.status === "enemy" ? "敌方回合" : finished ? "战斗结束" : "我方回合"}</em></span>
     </header>
-    <section class="arena-status"><span>${icon("clock-3")} ${battle.status === "enemy" ? "敌方正在反击" : finished ? "结算完成" : `已行动 ${battle.acted.length}/${battle.players.filter(unit => unit.hp > 0).length}`}</span><strong>${activePlayer && activeEnemy ? `${activePlayer.name} → ${activeEnemy.name}` : "潮线战斗结束"}</strong><em>${level.description}</em></section>
+    <section class="arena-status"><span class="arena-turn-state">${icon("clock-3")} ${battle.status === "enemy" ? "敌方正在反击" : finished ? "结算完成" : `已行动 ${battle.acted.length}/${battle.players.filter(unit => unit.hp > 0).length}`}<mark class="arena-chain ${battle.chainCount > 1 ? "is-linked" : ""}">${arenaChainCopy()}</mark></span><strong class="arena-intent">${intent ? arenaIntentCopy(intent, intentAttacker, intentTarget) : "潮线战斗结束"}</strong><em>${level.modifier} · ${level.dailyVariant} · ${level.dailyEffect}</em></section>
+    ${arenaMasteryLive(level)}
     <section class="arena-field">
-      <div class="arena-side"><header><span>我方鸟灵</span><b>依次行动</b></header><div>${battle.players.map(unit => `<button type="button" data-arena-player="${unit.id}" class="${unit.id === activePlayerId ? "is-active" : ""} ${battle.acted.includes(unit.id) ? "has-acted" : ""} ${unit.defeated ? "is-defeated" : ""}" ${unit.defeated || battle.acted.includes(unit.id) || battle.status !== "player" ? "disabled" : ""}><img src="${unit.image}" alt=""><span><strong>${unit.name}</strong><small>${unit.role} · Lv.${unit.level}</small>${hpBar(unit)}<em>能量 ${unit.mp}/100</em></span></button>`).join("")}</div></div>
-      <div class="arena-vs"><b>VS</b><span>${battle.lastEvent ? `-${battle.lastEvent.damage}` : "READY"}</span></div>
-      <div class="arena-side arena-enemies"><header><span>入侵扩散队</span><b>点击选择目标</b></header><div>${battle.enemies.map(unit => `<button type="button" data-arena-enemy="${unit.id}" class="${unit.id === activeEnemyId ? "is-active" : ""} ${unit.defeated ? "is-defeated" : ""}" ${unit.defeated || battle.status !== "player" ? "disabled" : ""}><img src="${unit.image}" alt=""><span><strong>${unit.name}</strong><small>${unit.skillName} · ATK ${unit.attack}</small>${hpBar(unit)}</span></button>`).join("")}</div></div>
+      <div class="arena-side"><header><span>我方鸟灵</span><b>依次行动</b></header><div>${battle.players.map(unit => `<button type="button" data-arena-player="${unit.id}" class="${unit.id === activePlayerId ? "is-active" : ""} ${battle.acted.includes(unit.id) ? "has-acted" : ""} ${unit.defeated ? "is-defeated" : ""} ${intent?.action !== "delayed" && intent?.targetId === unit.id ? "is-threatened" : ""}" ${unit.defeated || battle.acted.includes(unit.id) || battle.status !== "player" ? "disabled" : ""}>${intent?.action !== "delayed" && intent?.targetId === unit.id ? `<mark class="arena-threat-label">${icon("crosshair")} 预计 -${intent.damage}</mark>` : ""}<img src="${unit.image}" alt=""><span><strong>${unit.name}</strong><small>${unit.role} · Lv.${unit.level}</small>${hpBar(unit)}<em>能量 ${unit.mp}/100</em></span></button>`).join("")}</div></div>
+      <div class="arena-vs"><b>VS</b><span>${lastPulse}</span></div>
+      <div class="arena-side arena-enemies"><header><span>入侵扩散队</span><b>点击选择目标</b></header><div>${battle.enemies.map(unit => `<button type="button" data-arena-enemy="${unit.id}" class="${unit.id === activeEnemyId ? "is-active" : ""} ${unit.defeated ? "is-defeated" : ""} ${intent?.attackerId === unit.id ? "is-intent" : ""} ${battle.chainTargetId === unit.id ? "is-chain-target" : ""}" ${unit.defeated || battle.status !== "player" ? "disabled" : ""}>${intent?.attackerId === unit.id ? `<mark class="arena-intent-label">${icon(intent.action === "delayed" ? "pause" : "radio")} ${intent.action === "delayed" ? "行动延后" : "下一行动"}</mark>` : ""}${battle.chainTargetId === unit.id ? `<mark class="arena-chain-label">${icon("waves")} 潮链 ${chainTier(battle.chainCount)}</mark>` : ""}<img src="${unit.image}" alt=""><span><strong>${unit.name}</strong><small>${unit.skillName} · ATK ${unit.attack}</small>${hpBar(unit)}<em>韧性 ${unit.toughness}/${unit.maxToughness}${unit.broken ? " · 已击破" : ""}</em></span></button>`).join("")}</div></div>
     </section>
     <section class="arena-console">
       <div class="arena-log"><header><span>${icon("shield")} BATTLE LOG</span><small>实时战况</small></header><div>${logs.slice(-8).map(line => `<p>${line}</p>`).join("")}</div></div>
-      <div class="arena-actions"><header><span>${icon("zap")} 鸟灵行动</span><small>普通攻击累积 25 能量</small></header>${activePlayer ? `<div><span><img src="${activePlayer.image}" alt=""><b>${activePlayer.name}</b><small>${battle.acted.includes(activePlayer.id) ? "本回合已行动" : "当前行动"}</small></span><button type="button" data-arena-action="attack" ${battle.status !== "player" || battle.acted.includes(activePlayer.id) ? "disabled" : ""}>${icon("swords")}<span>普通攻击<small>${activePlayer.attack} 伤害 · 能量 +25</small></span></button><button type="button" data-arena-action="skill" ${battle.status !== "player" || battle.acted.includes(activePlayer.id) || activePlayer.mp < 100 ? "disabled" : ""}>${icon("sparkles")}<span>${activePlayer.skill}<small>${activePlayer.mp < 100 ? `未充能 ${activePlayer.mp}/100` : `${activePlayer.skillDamage} 伤害`}</small></span></button></div>` : ""}</div>
+      <div class="arena-actions"><header><span>${icon("zap")} 鸟灵行动</span><small>普通攻击累积 ${energyGain} 能量</small></header>${activePlayer ? `<div><span><img src="${activePlayer.image}" alt=""><b>${activePlayer.name}</b><small>${battle.acted.includes(activePlayer.id) ? "本回合已行动" : "当前行动"}</small></span><button type="button" data-arena-action="attack" ${battle.status !== "player" || battle.acted.includes(activePlayer.id) ? "disabled" : ""}>${icon("swords")}<span>普通攻击<small>${attackPreview?.damage ?? activePlayer.attack} 伤害${arenaChainEffect(attackPreview)} · 能量 +${energyGain}</small></span></button><button type="button" data-arena-action="skill" ${battle.status !== "player" || battle.acted.includes(activePlayer.id) || activePlayer.mp < 100 ? "disabled" : ""}>${icon("sparkles")}<span>${activePlayer.skill}<small>${arenaSkillEffect(activePlayer, skillPreview)}</small></span></button></div>` : ""}</div>
     </section>
     ${finished ? resultMarkup(level) : ""}`;
   refreshIcons();
@@ -252,7 +322,40 @@ function renderBattle() {
 
 function resultMarkup(level) {
   const victory = battle.status === "victory";
-  return `<div class="arena-result" role="alertdialog" aria-modal="true"><div><span>${victory ? "BATTLE CLEAR" : "BATTLE OVER"}</span><h2>${victory ? "潮汐防线守住了" : "暂时撤回鸟灵档案"}</h2><p>${victory ? `完成「${level.name}」，${lastReward ? `获得 ${lastReward} 积分` : "今日奖励已经领取"}` : "调整阵容或提升鸟灵等级后再次挑战。"}</p><div><button type="button" data-arena-lobby>${icon("arrow-left")} 关卡大厅</button><button type="button" data-arena-replay>${icon("rotate-cw")} 再战一次</button></div></div></div>`;
+  const goals = evaluateArenaMastery(level, battle);
+  const newMastery = new Set(lastSettlement?.newMastery || []);
+  const rewardCopy = [
+    lastSettlement?.dailyReward ? `每日首胜 +${lastSettlement.dailyReward}` : "",
+    lastSettlement?.masteryReward ? `新潮印 +${lastSettlement.masteryReward}` : ""
+  ].filter(Boolean).join("，") || "今日奖励已领取，潮印记录未刷新";
+  const mastery = victory ? `<section class="arena-mastery-result"><header><span>${icon("award")} 潮印评定</span><b>${goals.filter(goal => goal.complete).length}/3</b></header><div>${goals.map(goal => `<span class="${goal.complete ? "is-earned" : ""} ${newMastery.has(goal.id) ? "is-new" : ""}">${icon(goal.icon)}<b>${goal.name}</b><small>${goal.detail}</small><em>${newMastery.has(goal.id) ? "NEW" : goal.complete ? "达成" : "未达成"}</em></span>`).join("")}</div></section>` : "";
+  return `<div class="arena-result" role="alertdialog" aria-modal="true"><div><span>${victory ? "BATTLE CLEAR" : "BATTLE OVER"}</span><h2>${victory ? "潮汐防线守住了" : "暂时撤回鸟灵档案"}</h2><p>${victory ? `完成「${level.name}」，${rewardCopy}` : "调整阵容或提升鸟灵等级后再次挑战。"}</p>${mastery}<div><button type="button" data-arena-lobby>${icon("arrow-left")} 关卡大厅</button><button type="button" data-arena-replay>${icon("rotate-cw")} 再战一次</button></div></div></div>`;
+}
+
+function arenaPlayerLog(attacker, target, event) {
+  if (event.action === "skill" && attacker.id === "egret") return `【${attacker.name}】释放「${attacker.skill}」，治疗全队 ${event.healing} 点并净化侵蚀。`;
+  if (event.action === "skill" && attacker.id === "tuantuan") return `【${attacker.name}】释放「${attacker.skill}」，治疗全队 ${event.healing} 点并生成 ${event.barrier} 点团魂护盾。`;
+  const notes = [
+    event.firstStrikeBonus > 1 ? "退潮首击" : "",
+    event.armorAbsorbed ? `护甲吸收 ${event.armorAbsorbed}` : "",
+    event.barrier ? `生成 ${event.barrier} 屏障` : "",
+    event.toughnessDamage ? `削韧 ${event.toughnessDamage}` : "",
+    event.execute ? "触发破势追击" : "",
+    event.delayed ? "压后敌方行动" : "",
+    event.chainMultiplier > 1 ? `潮链 ${chainTier(event.chainCount)} · 伤害 +${Math.round((event.chainMultiplier - 1) * 100)}%` : ""
+  ].filter(Boolean);
+  return `【${attacker.name}】${event.action === "skill" ? `释放「${attacker.skill}」` : "普通攻击"}，对【${target.name}】造成 ${event.damage} 点伤害${notes.length ? `；${notes.join("，")}` : ""}。`;
+}
+
+function arenaEnemyLog(attacker, target, event, players) {
+  if (event.action === "delayed") return `【控制】夜幕压住【${attacker.name}】，本次行动延后。`;
+  const protectedUnit = event.protectedTargetId && players.find(unit => unit.id === event.protectedTargetId);
+  const notes = [
+    protectedUnit ? `${target.name}替${protectedUnit.name}拦截` : "",
+    event.absorbed ? `屏障吸收 ${event.absorbed}` : "",
+    event.appliesDebuff ? `施加${event.appliesDebuff}` : ""
+  ].filter(Boolean);
+  return `【${attacker.name}】${event.action === "skill" ? "发动技能" : "反击"}【${target.name}】，造成 ${event.damage} 点伤害${notes.length ? `；${notes.join("，")}` : ""}。`;
 }
 
 async function act(action) {
@@ -262,18 +365,24 @@ async function act(action) {
   const target = before.enemies.find(unit => unit.id === activeEnemyId);
   const nextBattle = performArenaAction(before, { playerId: activePlayerId, enemyId: activeEnemyId, action });
   if (nextBattle === before || nextBattle.lastEvent === before.lastEvent) return;
+  const event = nextBattle.lastEvent;
+  const supportTarget = event.action === "skill" && ["egret", "tuantuan"].includes(event.attackerId)
+    ? before.players.filter(unit => unit.hp > 0).sort((left, right) => left.hp / left.maxHp - right.hp / right.maxHp)[0]
+    : null;
+  const supportHealing = supportTarget ? event.healingByTarget[supportTarget.id] : 0;
+  const impactChainCount = supportTarget ? 0 : event.chainCount;
   const token = ++arenaAnimationToken;
   arenaAnimating = true;
   shell.classList.add("is-animating");
-  sound(action === "skill" ? 330 : 180, action === "skill" ? .26 : .14, action === "skill" ? "triangle" : "square", .06);
+  sound((action === "skill" ? 330 : 180) + Math.max(0, impactChainCount - 1) * 72, action === "skill" ? .26 : .14, action === "skill" ? "triangle" : "square", .06);
   await animateArenaAttack(
     shell.querySelector(`[data-arena-player="${activePlayerId}"]`),
-    shell.querySelector(`[data-arena-enemy="${activeEnemyId}"]`),
-    { damage: nextBattle.lastEvent.damage, skill: action === "skill" }
+    shell.querySelector(supportTarget ? `[data-arena-player="${supportTarget.id}"]` : `[data-arena-enemy="${activeEnemyId}"]`),
+    { damage: event.damage, label: supportTarget ? `+${supportHealing}` : undefined, skill: action === "skill", support: Boolean(supportTarget), chainCount: impactChainCount }
   );
   if (token !== arenaAnimationToken || shell.hidden) return;
   battle = nextBattle;
-  logs.push(`【${attacker.name}】${action === "skill" ? `释放「${attacker.skill}」` : "普通攻击"}，对【${target.name}】造成 ${battle.lastEvent.damage} 点伤害。`);
+  logs.push(arenaPlayerLog(attacker, target, event));
   const targetAfter = battle.enemies.find(unit => unit.id === activeEnemyId);
   if (!targetAfter || targetAfter.defeated) activeEnemyId = battle.enemies.find(unit => unit.hp > 0)?.id || "";
   activePlayerId = battle.players.find(unit => unit.hp > 0 && !battle.acted.includes(unit.id))?.id || activePlayerId;
@@ -291,15 +400,16 @@ async function resolveEnemyTurn() {
   const token = ++arenaAnimationToken;
   arenaAnimating = true;
   shell.classList.add("is-animating");
-  sound(82, .2, "sawtooth", .07);
-  await animateArenaAttack(
+  sound(event.action === "delayed" ? 156 : 82, .2, event.action === "delayed" ? "triangle" : "sawtooth", .07);
+  if (event.action === "delayed") await animationDelay(260);
+  else await animateArenaAttack(
     shell.querySelector(`[data-arena-enemy="${event.attackerId}"]`),
     shell.querySelector(`[data-arena-player="${event.targetId}"]`),
-    { damage: event.damage, enemy: true }
+    { damage: event.damage, label: event.damage ? undefined : "BLOCK", skill: event.action === "skill", enemy: true }
   );
   if (token !== arenaAnimationToken || shell.hidden) return;
   battle = nextBattle;
-  logs.push(`【${attacker.name}】反击【${target.name}】，造成 ${event.damage} 点伤害。`);
+  logs.push(arenaEnemyLog(attacker, target, event, battle.players));
   activePlayerId = battle.players.find(unit => unit.hp > 0)?.id || "";
   if (battle.status === "player") logs.push("【系统】敌方行动结束，轮到我方三位鸟灵行动。");
   clearArenaEffects();
@@ -308,12 +418,13 @@ async function resolveEnemyTurn() {
 
 function settleVictory() {
   const root = normalizeRoot(readRoot());
-  const settlement = claimArenaVictory(root.birdArena, battle.levelId);
+  const earnedMastery = evaluateArenaMastery(dailyArenaLevel(battle.levelId, battle.day), battle).filter(goal => goal.complete).map(goal => goal.id);
+  const settlement = claimArenaVictory(root.birdArena, battle.levelId, battle.day, earnedMastery);
   root.birdArena = settlement.progress;
   root.points += settlement.reward;
-  lastReward = settlement.reward;
+  lastSettlement = settlement;
   saveRoot(root);
-  logs.push(settlement.reward ? `【系统】首胜奖励：${settlement.reward} 积分；下一关已开放。` : "【系统】本关今日奖励已经领取。下一关保持开放。");
+  logs.push(settlement.reward ? `【系统】结算奖励：${settlement.reward} 积分${settlement.masteryReward ? `，其中新潮印 +${settlement.masteryReward}` : ""}；下一关已开放。` : "【系统】本关今日奖励已经领取。下一关保持开放。");
   sound(523, .45, "triangle", .08);
 }
 

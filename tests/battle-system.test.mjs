@@ -132,6 +132,8 @@ test("combat roles remain specialized", () => {
   assert.notEqual(topAttack.id, healer.id);
   assert.notEqual(topAttack.id, guardian.id);
   assert.notEqual(healer.id, guardian.id);
+  assert.equal(BATTLE_ROSTER.tuantuan.ultimate.type, "shield");
+  assert.equal(createBattleState({ team: ["spoonbill", "kingfisher", "tuantuan"] }).team[2].id, "tuantuan");
 });
 
 test("action preview reflects the real free player phase before the enemy phase", () => {

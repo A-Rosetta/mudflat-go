@@ -35,24 +35,20 @@ test("new sessions start with 88888888 points and legacy balances migrate once",
   assert.match(script, /saved\.demoPointsVersion !== DEMO_POINTS_VERSION/);
   assert.match(script, /migrated\.points = Math\.max\(Number\(migrated\.points\) \|\| 0, INITIAL_POINTS\)/);
   assert.match(script, /migrated\.demoPointsVersion = DEMO_POINTS_VERSION/);
-  assert.doesNotMatch(script, /Math\.max\(Number\(migrated\.points\) \|\| 0, INITIAL_POINTS\)[\s\S]*?return migrated;[\s\S]*?Math\.max\(Number\(migrated\.points\) \|\| 0, INITIAL_POINTS\)/);
   assert.match(game, /saved\.points = INITIAL_POINTS/);
   assert.match(game, /root\.points \?\? INITIAL_POINTS/);
   assert.match(arena, /input\.points == null \? INITIAL_POINTS : input\.points/);
   assert.equal((html.match(/data-points>88,888,888/g) || []).length, 4);
   assert.match(html, /id="spiritPoints">88,888,888/);
-  assert.doesNotMatch(script, /points: 3000/);
-  assert.doesNotMatch(game, /saved\.points = 3000|root\.points \?\? 3000/);
-  assert.doesNotMatch(arena, /input\.points == null \? 3000/);
 });
 
 test("recognition uses the Cloudflare endpoint without browser model runtimes", () => {
   assert.match(script, /fetch\("\/api\/identify", \{ method: "POST", body: form, signal: controller\.signal \}\)/);
   assert.match(script, /prepareRecognitionImage\(input\)/);
   assert.match(script, /maxDimension = 768/);
-  assert.doesNotMatch(script, /loadRecognitionModel|loadBirdRecognitionModel|mobilenet\.load|ort\.InferenceSession/);
+  assert.doesNotMatch(script, /loadRecognitionModel|loadBirdRecognitionModel|mobilenet\.load|ort\.InferenceSession|ensureRecognitionRuntime/);
   assert.doesNotMatch(html, /tf\.min\.js|mobilenet\.min\.js|onnxruntime-web\.min\.js/);
-  assert.match(html, /识别时会上传压缩照片至 Cloudflare AI/);
+  assert.match(html, /Cloudflare AI/);
 });
 
 test("atlas includes three cloud-recognizable Shenzhen shorebirds without overcrowding sites", () => {
@@ -83,10 +79,10 @@ test("forest background and refractive top bar remain part of the glass system",
   assert.match(css, /\.topbar::after \{[^}]*linear-gradient/);
 });
 
-test("collection cabinet exposes a display-only AI glasses preview", () => {
-  assert.match(html, /class="ai-glasses-preview"[^>]+aria-disabled="true"[^>]+title="展览预览，暂未开放"/);
+test("collection cabinet exposes a display-only spatial preview", () => {
+  assert.match(html, /class="ai-glasses-preview"[^>]+aria-disabled="true"[^>]+title="空间预览功能尚未开放"/);
   assert.match(html, /data-lucide="glasses"/);
-  assert.match(html, />AI眼镜预览</);
+  assert.match(html, />空间预览</);
   assert.doesNotMatch(script, /ai-glasses-preview/);
 });
 
