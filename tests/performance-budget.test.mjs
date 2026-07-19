@@ -10,7 +10,8 @@ test("heavy feature runtimes are loaded only when their feature opens", () => {
   for (const asset of ["model-viewer.min.js", "tf.min.js", "mobilenet.min.js", "onnxruntime-web.min.js", "leaflet.min.js", "game.js", "arena.js"]) {
     assert.doesNotMatch(html, new RegExp(`<script[^>]+src="(?:assets/vendor/)?${asset.replace(".", "\\.")}"`));
   }
-  assert.match(script, /function ensureRecognitionRuntime/);
+  assert.match(script, /fetch\("\/api\/identify"/);
+  assert.doesNotMatch(script, /function ensureRecognitionRuntime/);
   assert.match(script, /function initializeShowroom/);
   assert.match(script, /function ensureInteractiveMap/);
   assert.match(script, /function ensureGameRuntime/);

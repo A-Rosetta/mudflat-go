@@ -2,7 +2,7 @@
 
 深圳湿地生态文旅打卡平台前端交互原型。项目使用原生 HTML、CSS 和 JavaScript，可直接部署到 Cloudflare Workers 或 Cloudflare Pages。
 
-当前版本采用精简的探索主线：首页聚焦深圳六大湿地路线，保留浏览器端 AI 识别与真实 GPS 校验、九宫格生态图鉴、任务积分、点位解锁和本地进度。
+当前版本采用精简的探索主线：首页聚焦深圳六大湿地路线，保留云端 AI 识别与真实 GPS 校验、九宫格生态图鉴、任务积分、点位解锁和本地进度。
 
 ## 探索闭环
 
@@ -22,12 +22,11 @@
 ## 浏览器端相机与识别
 
 - 使用 `getUserMedia` 打开设备摄像头，优先选择后置镜头，支持切换镜头和相册照片。
-- 识别完全在浏览器本地执行，照片和相机帧不会上传。
-- 使用 MobileNet V2 0.5 通用模型和 EfficientNet B2 鸟类专用模型进行双模型判断。专用模型覆盖 525 个鸟类标签；新增鸟类模型与运行文件首次约需加载 28 MB，之后可由浏览器缓存。
-- 白鹭类达到严格阈值后可匹配现有卡片；鸟类专用模型可靠命中黑脸琵鹭时可以收集。`BLUE HERON` 作为夜鹭类近似标签映射，界面会明确要求结合形态与地点人工复核。
-- 鸟类模型是闭集分类器，结果还会检查置信度和前两名差值；未通过阈值、只有近似标签或不属于当前点位目标库时不能收集或获得积分。
+- 识别通过同源 `/api/identify` 上传压缩后的单张照片，由 Cloudflare Workers AI 完成；相机预览不会上传，应用不保存识别原图。
+- 浏览器不再下载或编译 TensorFlow、ONNX 和鸟类模型权重，移动端首次识别只依赖网络请求。
+- 云端视觉模型被限制为当前深圳图鉴类别，无法确认、置信度不足或不属于当前点位目标库时不能收集或获得积分。
 - 相机和定位要求 HTTPS 或 `localhost` 安全上下文。Cloudflare Workers 部署地址满足 HTTPS 要求；拒绝定位时仍可识别和收集，但不会伪造点位抵达任务。
-- 通用模型继续辅助识别招潮蟹和螺类；具体红树植物仍需人工确认。
+- 识别结果仅用于辅助观察，所有具体物种仍需结合形态、地点和季节人工复核。
 
 ## 本地预览
 
@@ -37,12 +36,14 @@ python3 -m http.server 4173
 
 然后访问 `http://localhost:4173/`。
 
-## Cloudflare Pages
+该命令只预览静态页面；云端识别需要使用 Wrangler 启动带 `AI` binding 的 Worker，或访问已部署的 Cloudflare 地址。
 
-- Framework preset: `None`
-- Build command: 留空
-- Build output directory: `/`
+## Cloudflare Workers
+
 - Production branch: `main`
+- Build command: 留空
+- Deploy command: `npx wrangler deploy`
+- `wrangler.jsonc` 已配置 `AI` 与 `ASSETS` binding。
 
 Cloudflare Workers 静态资产部署可直接使用仓库根目录作为资产目录，不需要构建命令。
 

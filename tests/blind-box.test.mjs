@@ -10,6 +10,7 @@ const historyScript = await readFile(new URL("../blind-box-history.mjs", import.
 const engineScript = await readFile(new URL("../blind-box-engine.mjs", import.meta.url), "utf8").catch(() => "");
 const historyModule = await import(new URL("../blind-box-history.mjs", import.meta.url)).catch(() => ({}));
 const engineModule = await import(new URL("../blind-box-engine.mjs", import.meta.url)).catch(() => ({}));
+const worker = await readFile(new URL("../worker.mjs", import.meta.url), "utf8").catch(() => "");
 const wrangler = await readFile(new URL("../wrangler.jsonc", import.meta.url), "utf8").catch(() => "");
 const assetsIgnore = await readFile(new URL("../.assetsignore", import.meta.url), "utf8").catch(() => "");
 
@@ -30,6 +31,8 @@ test("blind-box pool contains ten standard figures and one chase", () => {
   assert.ok(pool, "blindBoxPool is missing");
   assert.equal((pool[1].match(/id:/g) || []).length, 11);
   assert.match(pool[1], /rarity: "CHASE"/);
+  assert.match(pool[1], /id: "tuantuan"/);
+  assert.match(pool[1], /assets\/images\/blind-box\/tuantuan-collab\.jpg/);
 });
 
 test("blind-box rarity totals follow the disclosed power-law distribution", () => {
@@ -89,6 +92,18 @@ test("showroom tabs support roving keyboard navigation", () => {
   assert.match(script, /setAttribute\("tabindex"/);
 });
 
+test("showroom uses a cinematic collectible deck instead of a utility list", () => {
+  assert.match(html, /class="showroom-curator"/);
+  assert.match(html, /id="showroomLore"/);
+  assert.equal((html.match(/data-model-lore=/g) || []).length, 4);
+  assert.match(script, /showroomLore/);
+  assert.match(styles, /.showroom-layout{position:relative/);
+  assert.match(styles, /\.showroom-selector\{position:absolute/);
+  assert.match(styles, /grid-template-columns:repeat\(5/);
+  assert.match(styles, /.showroom-stage::before/);
+  assert.doesNotMatch(styles, /showroom-stage model-viewer\{[^}]*filter:/);
+});
+
 test("blind-box supports multiple concurrent UP pools with independent metadata", () => {
   assert.match(html, /id="blindBoxPoolTabs"/);
   assert.match(html, /data-pool-id="standard-atlas"/);
@@ -98,6 +113,15 @@ test("blind-box supports multiple concurrent UP pools with independent metadata"
   assert.match(script, /id: "tide-watch"/);
   assert.match(script, /id: "mangrove-echo"/);
   assert.match(script, /activeBlindBoxPool/);
+});
+
+test("third blind-box pool is a TuanTuan collaboration screenshot shift", () => {
+  assert.match(html, /data-pool-id="mangrove-echo"[\s\S]*?<strong>团团联动<\/strong>[\s\S]*?<em>联动<\/em>/);
+  assert.match(script, /id: "mangrove-echo", title: "团团联动"/);
+  assert.match(script, /heroBadge: "特别联动 · 团团"/);
+  assert.match(script, /heroSpecies: "亲和力 · 元气值 · 战斗力 · 幸运值"/);
+  assert.match(script, /必杀技「团魂光环」/);
+  assert.match(styles, /character-tuantuan/);
 });
 
 test("blind-box picker preserves rarity odds and resolves pity guarantees deterministically", () => {
@@ -234,14 +258,14 @@ test("blind-box copy uses one polished Chinese product vocabulary", () => {
   ]) assert.doesNotMatch(source, new RegExp(phrase));
   assert.match(source, /潮间万象/);
   assert.match(source, /潮有信/);
-  assert.match(source, /暮栖红林/);
+  assert.match(source, /团团联动/);
   assert.match(source, /限定典藏 · 概率提升/);
 });
 
 test("recording mode starts with enough points for repeated ten-pulls", () => {
-  assert.match(script, /points: 300000/);
+  assert.match(script, /points: INITIAL_POINTS/);
   assert.match(html, /初始化守护值/);
-  assert.match(html, /300,000/);
+  assert.match(html, /88,888,888/);
 });
 
 test("rare reveals have dedicated rotating shine animation", () => {

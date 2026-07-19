@@ -8,6 +8,9 @@
 - `kandelia-obovata.jpg`：Minghong，CC BY-SA 4.0，https://commons.wikimedia.org/wiki/File:Kandelia_obovata_1.jpg
 - `fiddler-crab.jpg`：Charles J. Sharp，CC BY-SA 4.0，https://commons.wikimedia.org/wiki/File:Compressed_fiddler_crab_(Uca_coarctata)_male.jpg
 - `little-egret.jpg`：Laitche，CC BY-SA 4.0，https://commons.wikimedia.org/wiki/File:Egretta_garzetta_2015-06-17.jpg
+- `dunlin.jpg`：Hans Hillewaert，CC BY-SA 3.0，https://commons.wikimedia.org/wiki/File:Calidris_alpina_(foraging).jpg
+- `common-redshank.jpg`：Andreas Trepte，CC BY-SA 2.5，https://commons.wikimedia.org/wiki/File:Common_Redshank_Tringa_totanus.jpg
+- `ruddy-turnstone.jpg`：Charles J. Sharp，CC BY-SA 4.0，https://commons.wikimedia.org/wiki/File:Ruddy_turnstone_(Arenaria_interpres_morinella).jpg
 
 物种图片仅用于腾讯青科实训营课题原型展示。若用于公开部署或商业用途，需继续遵守对应许可证的署名、相同方式共享等要求。
 
@@ -28,9 +31,8 @@
 
 - TensorFlow.js 4.22.0，Apache License 2.0，https://github.com/tensorflow/tfjs 。
 - TensorFlow.js MobileNet 2.1.1，Apache License 2.0，https://github.com/tensorflow/tfjs-models/tree/master/mobilenet 。
-- MobileNet V2 0.5 ImageNet classification 模型来自 Google TensorFlow Hub/Kaggle Models；模型文件保存在 `assets/models/mobilenet/`，仅在浏览器本地执行推理。
-- `chriamue/bird-species-classifier` EfficientNet B2 鸟类分类权重，MIT License，固定来源提交 `558944ca4448f5b311af8393c8b894eff20a06da`，https://huggingface.co/chriamue/bird-species-classifier 。本项目从 `model.safetensors` 权重重新导出，将不兼容的自适应池化导出替换为数学等价的空间均值，并转换为 FP16 ONNX；未使用模型仓库自带的 ONNX 文件。
-- ONNX Runtime Web 1.22.0，MIT License，https://github.com/microsoft/onnxruntime 。运行文件保存在 `assets/vendor/`，用于浏览器本地鸟类模型推理。
+- 当前在线识别使用 Cloudflare Workers AI 的 `@cf/microsoft/resnet-50` 图像分类模型，由同源 Worker 接收压缩照片并返回受限的图鉴候选；浏览器不再加载本地推理运行时或模型权重。
+- 仓库中保留的 MobileNet、`chriamue/bird-species-classifier` 和 ONNX Runtime Web 文件是早期本地识别方案的归档素材，当前页面不会请求，Cloudflare 部署也会排除这些文件。
 
 ## 鸟鸣录音
 

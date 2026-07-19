@@ -15,13 +15,15 @@ import {
 } from "./arena-engine.mjs";
 
 const STORAGE_KEY = "mudflat-go-compact-state-v1";
+const INITIAL_POINTS = 88888888;
 const STARTERS = ["spoonbill", "kingfisher", "egret"];
-const DEFAULT_LEVELS = { spoonbill: 5, kingfisher: 5, egret: 5, heron: 4 };
+const DEFAULT_LEVELS = { spoonbill: 5, kingfisher: 5, egret: 5, heron: 4, tuantuan: 5 };
 const birdCopy = {
   spoonbill: { name: "黑脸琵鹭", role: "守护", image: "assets/images/black-faced-spoonbill.jpg", skill: "琵琶扫食" },
   kingfisher: { name: "普通翠鸟", role: "输出", image: "assets/images/common-kingfisher.jpg", skill: "破水一闪" },
   egret: { name: "白鹭", role: "支援", image: "assets/images/little-egret.jpg", skill: "风过苇荡" },
-  heron: { name: "夜鹭", role: "控制", image: "assets/images/night-heron.jpg", skill: "夜幕压制" }
+  heron: { name: "夜鹭", role: "控制", image: "assets/images/night-heron.jpg", skill: "夜幕压制" },
+  tuantuan: { name: "团团", role: "联动支援", image: "assets/images/blind-box/tuantuan-collab.jpg", skill: "团魂光环" }
 };
 
 const shell = document.getElementById("birdArenaShell");
@@ -49,7 +51,7 @@ function readRoot() {
 function normalizeRoot(input) {
   const source = input.birdSpirits && typeof input.birdSpirits === "object" ? input.birdSpirits : {};
   const levels = source.profiles ? source.levels : { ...DEFAULT_LEVELS, ...(source.levels || {}) };
-  const root = normalizeProgression({ ...input, points: input.points == null ? 300000 : input.points, birdSpirits: { ...source, levels } }, Object.keys(birdCopy));
+  const root = normalizeProgression({ ...input, points: input.points == null ? INITIAL_POINTS : input.points, birdSpirits: { ...source, levels } }, Object.keys(birdCopy));
   const saved = Array.isArray(source.team) ? [...new Set(source.team)] : [];
   const team = saved.filter(id => birdCopy[id]).slice(0, 3);
   for (const id of STARTERS) if (team.length < 3 && !team.includes(id)) team.push(id);
@@ -194,6 +196,7 @@ function arenaSkillEffect(unit, preview) {
   if (unit.id === "kingfisher") return `${preview.damage} 伤害${chain} · 削韧；击破或低生命目标增伤`;
   if (unit.id === "egret") return `${preview.healing} 治疗全队并净化侵蚀`;
   if (unit.id === "heron") return `${preview.damage} 伤害${chain} · 延后敌方下一次行动`;
+  if (unit.id === "tuantuan") return `${preview.healing} 治疗全队 · ${preview.barrier} 团魂护盾`;
   return `${preview.damage} 伤害${chain}`;
 }
 
@@ -331,6 +334,7 @@ function resultMarkup(level) {
 
 function arenaPlayerLog(attacker, target, event) {
   if (event.action === "skill" && attacker.id === "egret") return `【${attacker.name}】释放「${attacker.skill}」，治疗全队 ${event.healing} 点并净化侵蚀。`;
+  if (event.action === "skill" && attacker.id === "tuantuan") return `【${attacker.name}】释放「${attacker.skill}」，治疗全队 ${event.healing} 点并生成 ${event.barrier} 点团魂护盾。`;
   const notes = [
     event.firstStrikeBonus > 1 ? "退潮首击" : "",
     event.armorAbsorbed ? `护甲吸收 ${event.armorAbsorbed}` : "",
@@ -362,7 +366,7 @@ async function act(action) {
   const nextBattle = performArenaAction(before, { playerId: activePlayerId, enemyId: activeEnemyId, action });
   if (nextBattle === before || nextBattle.lastEvent === before.lastEvent) return;
   const event = nextBattle.lastEvent;
-  const supportTarget = event.action === "skill" && event.attackerId === "egret"
+  const supportTarget = event.action === "skill" && ["egret", "tuantuan"].includes(event.attackerId)
     ? before.players.filter(unit => unit.hp > 0).sort((left, right) => left.hp / left.maxHp - right.hp / right.maxHp)[0]
     : null;
   const supportHealing = supportTarget ? event.healingByTarget[supportTarget.id] : 0;

@@ -156,7 +156,8 @@ export function previewArenaAction(state, { playerId, enemyId, action }) {
   const variant = state.variant || {};
   const isSkill = action === "skill";
   const isEgretSkill = isSkill && playerId === "egret";
-  let damage = isEgretSkill ? 0 : isSkill ? player.skillDamage * (1 + (mechanic.skillDamageBonus || 0)) : player.attack;
+  const isTuanTuanSkill = isSkill && playerId === "tuantuan";
+  let damage = isEgretSkill || isTuanTuanSkill ? 0 : isSkill ? player.skillDamage * (1 + (mechanic.skillDamageBonus || 0)) : player.attack;
   const firstStrikeBonus = damage > 0 && state.roundDamageCount === 0 ? variant.firstStrikeMultiplier || 1 : 1;
   damage = Math.round(damage * firstStrikeBonus);
   let toughnessDamage = 0;
@@ -173,11 +174,12 @@ export function previewArenaAction(state, { playerId, enemyId, action }) {
   damage = Math.round(damage * chainMultiplier);
   const armorAbsorbed = enemy.armorReady && damage > 0 ? Math.round(damage * (mechanic.firstHitReduction || 0)) : 0;
   damage -= armorAbsorbed;
-  const healingByTarget = isEgretSkill
-    ? Object.fromEntries(state.players.filter(alive).map(unit => [unit.id, Math.min(player.skillDamage, unit.maxHp - unit.hp)]))
+  const healingPower = isTuanTuanSkill ? Math.round(player.skillDamage * .45) : player.skillDamage;
+  const healingByTarget = isEgretSkill || isTuanTuanSkill
+    ? Object.fromEntries(state.players.filter(alive).map(unit => [unit.id, Math.min(healingPower, unit.maxHp - unit.hp)]))
     : {};
   const healing = Object.values(healingByTarget).reduce((total, value) => total + value, 0);
-  const barrierPower = isSkill && playerId === "spoonbill" ? Math.round(player.skillDamage * .7) : 0;
+  const barrierPower = isSkill && playerId === "spoonbill" ? Math.round(player.skillDamage * .7) : isTuanTuanSkill ? Math.round(player.skillDamage * .45) : 0;
   const barrierByTarget = barrierPower
     ? Object.fromEntries(state.players.filter(alive).map(unit => [unit.id, Math.min(barrierPower, Math.max(0, Math.round(unit.maxHp * .45) - (unit.shield || 0)))]))
     : {};

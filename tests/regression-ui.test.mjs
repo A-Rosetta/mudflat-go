@@ -30,17 +30,33 @@ test("mobile panorama has an in-page reset above the cross-origin iframe", () =>
   assert.match(css, /\.panorama-reset \{[^}]*z-index:3/);
 });
 
-test("new and reset sessions consistently start with 300000 points", () => {
-  assert.match(script, /points: 300000/);
-  assert.match(game, /saved\.points = 300000/);
-  assert.match(game, /root\.points \?\? 300000/);
-  assert.match(arena, /input\.points == null \? 300000 : input\.points/);
-  assert.equal((html.match(/data-points>300,000/g) || []).length, 4);
-  assert.match(html, /id="spiritPoints">300,000/);
-  assert.doesNotMatch(html, /data-points>1,280|id="spiritPoints">1,280/);
-  assert.doesNotMatch(script, /points: 1280/);
-  assert.doesNotMatch(game, /saved\.points = 1280|root\.points \?\? 1280/);
-  assert.doesNotMatch(arena, /input\.points == null \? 1280/);
+test("new sessions start with 88888888 points and legacy balances migrate once", () => {
+  assert.match(script, /const INITIAL_POINTS = 88888888/);
+  assert.match(script, /saved\.demoPointsVersion !== DEMO_POINTS_VERSION/);
+  assert.match(script, /migrated\.points = Math\.max\(Number\(migrated\.points\) \|\| 0, INITIAL_POINTS\)/);
+  assert.match(script, /migrated\.demoPointsVersion = DEMO_POINTS_VERSION/);
+  assert.match(game, /saved\.points = INITIAL_POINTS/);
+  assert.match(game, /root\.points \?\? INITIAL_POINTS/);
+  assert.match(arena, /input\.points == null \? INITIAL_POINTS : input\.points/);
+  assert.equal((html.match(/data-points>88,888,888/g) || []).length, 4);
+  assert.match(html, /id="spiritPoints">88,888,888/);
+});
+
+test("recognition uses the Cloudflare endpoint without browser model runtimes", () => {
+  assert.match(script, /fetch\("\/api\/identify", \{ method: "POST", body: form, signal: controller\.signal \}\)/);
+  assert.match(script, /prepareRecognitionImage\(input\)/);
+  assert.match(script, /maxDimension = 768/);
+  assert.doesNotMatch(script, /loadRecognitionModel|loadBirdRecognitionModel|mobilenet\.load|ort\.InferenceSession|ensureRecognitionRuntime/);
+  assert.doesNotMatch(html, /tf\.min\.js|mobilenet\.min\.js|onnxruntime-web\.min\.js/);
+  assert.match(html, /Cloudflare AI/);
+});
+
+test("atlas includes three cloud-recognizable Shenzhen shorebirds without overcrowding sites", () => {
+  assert.match(script, /id: "dunlin", name: "黑腹滨鹬"/);
+  assert.match(script, /id: "redshank", name: "红脚鹬"/);
+  assert.match(script, /id: "turnstone", name: "翻石鹬"/);
+  const targetLists = [...script.matchAll(/targets: \[([^\]]+)\]/g)].map(match => match[1].split(",").length);
+  assert.deepEqual(targetLists, [6, 5, 4, 5, 4, 6]);
 });
 
 test("primary navigation stays focused while collection exposes secondary features", () => {

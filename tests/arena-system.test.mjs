@@ -284,6 +284,20 @@ test("egret skill heals the flock and cleanses exposure", () => {
   assert.equal(battle.lastEvent.healing, team.length * team[2].skillDamage);
 });
 
+test("TuanTuan collaboration skill heals the team and creates an aura shield", () => {
+  const collabTeam = [team[0], team[1], { id: "tuantuan", name: "团团", maxHp: 98, attack: 13, skillDamage: 32 }];
+  let battle = createArenaBattle(ARENA_LEVELS[0], collabTeam);
+  battle.players = battle.players.map(unit => ({ ...unit, hp: Math.max(1, unit.hp - 20) }));
+  battle = chargeSkill(battle, "tuantuan");
+  const preview = previewArenaAction(battle, { playerId: "tuantuan", enemyId: battle.enemies[0].id, action: "skill" });
+  assert.equal(preview.damage, 0);
+  assert.ok(preview.healing > 0);
+  assert.ok(preview.barrier > 0);
+  battle = performArenaAction(battle, { playerId: "tuantuan", enemyId: battle.enemies[0].id, action: "skill" });
+  assert.equal(battle.lastEvent.healing, preview.healing);
+  assert.equal(battle.lastEvent.barrier, preview.barrier);
+});
+
 test("heron skill delays exactly one forecasted enemy intent", () => {
   const controlTeam = [{ id: "heron", name: "夜鹭", maxHp: 88, attack: 14, skillDamage: 32 }, team[1], team[2]];
   let battle = chargeSkill(createArenaBattle(ARENA_LEVELS[0], controlTeam), "heron");

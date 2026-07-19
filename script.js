@@ -2,10 +2,13 @@ import { normalizeBlindBoxHistory, resolveBlindBoxPull } from "./blind-box-histo
 import { pickBlindBoxItem } from "./blind-box-engine.mjs";
 
 const STORAGE_KEY = "mudflat-go-compact-state-v1";
+const INITIAL_POINTS = 88888888;
+const DEMO_POINTS_VERSION = 2;
 const todayKey = () => new Date().toLocaleDateString("en-CA");
 const emptySiteProgress = () => Array.from({ length: 6 }, () => ({ targetsViewed: false, gps: false, identified: false, complete: false }));
 const initialState = {
-  points: 300000,
+  points: INITIAL_POINTS,
+  demoPointsVersion: DEMO_POINTS_VERSION,
   unlockedThrough: 1,
   siteProgress: emptySiteProgress(),
   collectedSpecies: [],
@@ -19,13 +22,7 @@ const initialState = {
   blindBoxGuarantee: {},
   blindBoxHistory: []
 };
-const MOBILE_NET_MODEL_URL = "assets/models/mobilenet/model.json";
 const BLIND_BOX_COSTS = { 1: 500, 10: 4000 };
-const BIRD_MODEL_URL = "assets/models/bird-species/model.onnx";
-const BIRD_CONFIG_URL = "assets/models/bird-species/config.json";
-const BIRD_IMAGE_SIZE = 260;
-const BIRD_MEAN = [.485, .456, .406];
-const BIRD_STD = [.47853944, .4732864, .47434163];
 
 const species = [
   { id: "kandelia", name: "秋茄", latin: "Kandelia obovata", rarity: "R", category: "plant", season: "全年", image: "assets/images/kandelia-obovata.jpg", found: true, description: "深圳红树林常见的先锋树种，能够在含盐、缺氧的潮间带扎根生长。", fact: "秋茄的种子会在母树上先萌发，成熟后像一支笔一样落入滩涂。" },
@@ -36,7 +33,11 @@ const species = [
   { id: "avicenna", name: "白骨壤", latin: "Avicennia marina", rarity: "R", category: "plant", season: "全年", image: "assets/images/avicenna-marina.jpg", found: false, description: "耐盐能力很强的红树植物，根系能帮助稳定海岸并提供栖息空间。", fact: "它的呼吸根会从泥滩中向上伸出，像一支支短小的铅笔。" },
   { id: "kingfisher", name: "普通翠鸟", latin: "Alcedo atthis", rarity: "SR", category: "bird", season: "全年", image: "assets/images/common-kingfisher.jpg", found: false, description: "常在水边停栖，以快速俯冲的方式捕捉小鱼。", fact: "鲜艳蓝色来自羽毛微观结构对光线的散射，而不是蓝色色素。" },
   { id: "snail", name: "红树拟蟹守螺", latin: "Cerithidea rhizophorarum", rarity: "R", category: "benthic", season: "全年", image: "assets/images/mangrove-snail.jpg", found: false, description: "常见于红树根部和泥滩表面，以藻类和有机碎屑为食。", fact: "退潮后观察红树根部，常能发现它们留下的细小移动痕迹。" },
-  { id: "heron", name: "夜鹭", latin: "Nycticorax nycticorax", rarity: "SSR", category: "bird", season: "全年", image: "assets/images/night-heron.jpg", found: false, description: "黄昏和夜间更活跃的鹭科鸟类，白天常停在水边树丛中。", fact: "幼鸟有褐色纵纹，与成年鸟灰黑相间的羽色差别很大。" }
+  { id: "heron", name: "夜鹭", latin: "Nycticorax nycticorax", rarity: "SSR", category: "bird", season: "全年", image: "assets/images/night-heron.jpg", found: false, description: "黄昏和夜间更活跃的鹭科鸟类，白天常停在水边树丛中。", fact: "幼鸟有褐色纵纹，与成年鸟灰黑相间的羽色差别很大。" },
+  { id: "tuantuan", name: "团团", latin: "Collab Core", rarity: "SSR", category: "bird", season: "联动限定", image: "assets/images/blind-box/tuantuan-collab.jpg", found: true, description: "身披红围巾的团宠核心，每位成员的能量来源。遇到困难时，团团的笑容就是最好的 BUFF。", fact: "必杀技「团魂光环」会把亲和力、元气值、战斗力和幸运值一起点亮。" },
+  { id: "dunlin", name: "黑腹滨鹬", latin: "Calidris alpina", rarity: "R", category: "bird", season: "9-5月", image: "assets/images/dunlin.jpg", found: false, description: "深圳湾常见的小型迁徙鸻鹬，退潮时会成群在泥滩快速取食。", fact: "繁殖羽腹部有醒目的黑斑，非繁殖羽则以灰褐色为主。" },
+  { id: "redshank", name: "红脚鹬", latin: "Tringa totanus", rarity: "R", category: "bird", season: "9-5月", image: "assets/images/common-redshank.jpg", found: false, description: "常在浅水和潮沟边活动的中型鹬类，橙红色双腿是重要辨识特征。", fact: "受惊时会发出响亮而连续的警戒声，也是湿地环境变化的敏感观察对象。" },
+  { id: "turnstone", name: "翻石鹬", latin: "Arenaria interpres", rarity: "SR", category: "bird", season: "9-5月", image: "assets/images/ruddy-turnstone.jpg", found: false, description: "偏爱岩岸和潮池的小型鸻鹬，会翻动石块、贝壳和海藻寻找食物。", fact: "它的中文名直接来自独特的翻石取食动作。" }
 ];
 
 const birdSounds = {
@@ -57,13 +58,13 @@ const blindBoxPool = [
   { id: "egret", name: "鹭小白", species: "白鹭", rarity: "N", weight: 21.13, fragments: 10, image: "assets/images/blind-box/10-egret-n.webp" },
   { id: "stint", name: "鹬小圆", species: "红颈滨鹬", rarity: "N", weight: 15.85, fragments: 10, image: "assets/images/blind-box/11-red-necked-stint-n.webp" },
   { id: "pond-heron", name: "鹭小红", species: "池鹭", rarity: "N", weight: 12.67, fragments: 10, image: "assets/images/blind-box/12-pond-heron-n.webp" },
-  { id: "golden-spoonbill", name: "金琵小鹭", species: "黑脸琵鹭金色变体", rarity: "CHASE", weight: 0.01, fragments: 100, image: "assets/images/blind-box/13-golden-spoonbill-chase.webp" }
+  { id: "tuantuan", name: "团团", species: "特别联动", rarity: "CHASE", weight: 0.01, fragments: 100, image: "assets/images/blind-box/tuantuan-collab.jpg" }
 ];
 
 const blindBoxPools = [
   { id: "standard-atlas", title: "潮间万象", subtitle: "深圳湿地物种典藏 · 不限时开放", upIds: [], carryOver: false, copy: "潮来潮往，滩涂上的每一次相遇，都值得被记住。", items: blindBoxPool, accent: "#dff47b", heroBadge: "常驻典藏", heroSpecies: "全系列收录 · 不限时开放" },
   { id: "tide-watch", title: "潮有信", subtitle: "黑脸琵鹭、普通翠鸟获取概率提升", upIds: ["spoonbill", "kingfisher"], carryOver: true, copy: "白羽循潮而至，翠影掠水而行。", accent: "#8de5d1", heroBadge: "本期主推 · 黑脸琵鹭", heroSpecies: "黑脸琵鹭 · 普通翠鸟", items: blindBoxPool },
-  { id: "mangrove-echo", title: "暮栖红林", subtitle: "池鹭、白鹭、金色琵鹭获取概率提升", upIds: ["pond-heron", "egret", "golden-spoonbill"], carryOver: true, copy: "潮声入林，白羽与暮色一同栖下。", accent: "#f2b56b", heroBadge: "本期主推 · 金色琵鹭", heroSpecies: "池鹭 · 白鹭 · 金色琵鹭", items: blindBoxPool }
+  { id: "mangrove-echo", title: "团团联动", subtitle: "团团特别联动 · 团魂光环限时登场", upIds: ["tuantuan"], carryOver: true, copy: "身披红围巾的团宠核心，每位成员的能量来源。遇到困难时，团团的笑容就是最好的 BUFF。", accent: "#ff3b35", heroBadge: "特别联动 · 团团", heroSpecies: "亲和力 · 元气值 · 战斗力 · 幸运值", items: blindBoxPool }
 ];
 let activeBlindBoxPool = "standard-atlas";
 let blindBoxRevealIndex = 0;
@@ -75,12 +76,12 @@ const BLIND_BOX_CARRY_KEY = "shared-up";
 const getBlindBoxStateKey = pool => pool.carryOver ? BLIND_BOX_CARRY_KEY : pool.id;
 
 const sites = [
-  { name: "福田红树林", short: "福田", feature: "黑脸琵鹭越冬栖息地", lat: 22.51187, lng: 114.04258, limited: "黑脸琵鹭限定", habitat: "潮间带 · 红树林", season: "候鸟季 11-3月", description: "从红树与浅水交界开始，辨认匙状长嘴、白色涉禽和泥滩上的微小生命。", targets: ["spoonbill", "egret", "kandelia", "fiddler", "snail"] },
-  { name: "深圳湾公园", short: "深圳湾", feature: "城市滨海候鸟长廊", lat: 22.51897, lng: 113.97260, limited: "候鸟观察路线", habitat: "滨海浅水 · 草坡", season: "全年可观察", description: "沿城市海岸寻找停栖与觅食的水鸟，用距离和耐心换取更自然的观察。", targets: ["egret", "spoonbill", "heron", "kingfisher"] },
+  { name: "福田红树林", short: "福田", feature: "黑脸琵鹭越冬栖息地", lat: 22.51187, lng: 114.04258, limited: "黑脸琵鹭限定", habitat: "潮间带 · 红树林", season: "候鸟季 11-3月", description: "从红树与浅水交界开始，辨认匙状长嘴、白色涉禽和泥滩上的微小生命。", targets: ["spoonbill", "egret", "dunlin", "kandelia", "fiddler", "snail"] },
+  { name: "深圳湾公园", short: "深圳湾", feature: "城市滨海候鸟长廊", lat: 22.51897, lng: 113.97260, limited: "候鸟观察路线", habitat: "滨海浅水 · 草坡", season: "全年可观察", description: "沿城市海岸寻找停栖与觅食的水鸟，用距离和耐心换取更自然的观察。", targets: ["egret", "spoonbill", "heron", "kingfisher", "redshank"] },
   { name: "西湾红树林", short: "西湾", feature: "红树林与海上日落", lat: 22.59626, lng: 113.83211, limited: "弹涂鱼限定", habitat: "泥滩 · 红树边缘", season: "退潮前后", description: "退潮后的开阔泥滩会留下洞穴和爬痕，适合观察弹涂鱼与底栖生物。", targets: ["mudskipper", "fiddler", "snail", "kandelia"] },
   { name: "海上田园", short: "田园", feature: "鱼塘红树林生态", lat: 22.72819, lng: 113.76665, limited: "亲子生态研学", habitat: "鱼塘 · 芦苇 · 红树", season: "全年可观察", description: "鱼塘、芦苇和红树林形成多层栖息地，留意水边静候的小型鸟类。", targets: ["kingfisher", "egret", "heron", "kandelia", "fiddler"] },
   { name: "坝光银叶树", short: "坝光", feature: "深圳古老红树群落", lat: 22.65986, lng: 114.54395, limited: "古树守护卡", habitat: "古红树群落", season: "全年可观察", description: "在成熟红树群落里观察叶片、呼吸根和潮水留下的生态分层。", targets: ["avicenna", "kandelia", "snail", "kingfisher"] },
-  { name: "东涌湿地", short: "东涌", feature: "原始海岸与潮池", lat: 22.49256, lng: 114.59048, limited: "潮池生物限定", habitat: "河口 · 潮池 · 海岸", season: "低潮时段", description: "从河口走向潮池，寻找咸淡水交汇处的鸟类、螺类与两栖泥滩生物。", targets: ["mudskipper", "snail", "egret", "kingfisher", "avicenna"] }
+  { name: "东涌湿地", short: "东涌", feature: "原始海岸与潮池", lat: 22.49256, lng: 114.59048, limited: "潮池生物限定", habitat: "河口 · 潮池 · 海岸", season: "低潮时段", description: "从河口走向潮池，寻找咸淡水交汇处的鸟类、螺类与两栖泥滩生物。", targets: ["mudskipper", "snail", "egret", "kingfisher", "turnstone", "avicenna"] }
 ];
 
 const badges = [
@@ -107,15 +108,12 @@ let scanTimers = [];
 let cameraStream = null;
 let cameraFacingMode = "environment";
 let cameraRequestId = 0;
-let modelPromise = null;
-let birdModelPromise = null;
 let recognitionResult = null;
 let captureSource = null;
 let interactiveMap = null;
 let interactiveMapLayers = null;
 let blindBoxDrawing = false;
 let showroomInitialized = false;
-let recognitionRuntimePromise = null;
 let interactiveMapPromise = null;
 let gameRuntimePromise = null;
 let panoramaObserver = null;
@@ -128,6 +126,12 @@ function readState() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
     const migrated = { ...initialState, ...saved };
+    let shouldPersist = false;
+    if (saved.demoPointsVersion !== DEMO_POINTS_VERSION) {
+      migrated.points = Math.max(Number(migrated.points) || 0, INITIAL_POINTS);
+      migrated.demoPointsVersion = DEMO_POINTS_VERSION;
+      shouldPersist = true;
+    }
     const hasLegacyCapture = Object.prototype.hasOwnProperty.call(saved, "captured");
     if (saved.captured || saved.aiIdentified) {
       migrated.siteProgress = emptySiteProgress();
@@ -150,7 +154,7 @@ function readState() {
     delete migrated.aiIdentified;
     delete migrated.quizDone;
     delete migrated.captured;
-    if (hasLegacyCapture || Object.prototype.hasOwnProperty.call(saved, "aiIdentified")) localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
+    if (shouldPersist || hasLegacyCapture || Object.prototype.hasOwnProperty.call(saved, "aiIdentified")) localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
     return migrated;
   }
   catch { return { ...initialState }; }
@@ -200,13 +204,6 @@ function loadStylesheetOnce(href) {
     link.addEventListener("error", reject, { once: true });
     document.head.append(link);
   });
-}
-function ensureRecognitionRuntime() {
-  if (!recognitionRuntimePromise) recognitionRuntimePromise = Promise.all([
-    loadScriptOnce("assets/vendor/tf.min.js").then(() => loadScriptOnce("assets/vendor/mobilenet.min.js")),
-    loadScriptOnce("assets/vendor/onnxruntime-web.min.js")
-  ]).catch(error => { recognitionRuntimePromise = null; throw error; });
-  return recognitionRuntimePromise;
 }
 function ensureGameRuntime() {
   if (!gameRuntimePromise) gameRuntimePromise = import("./game.js").then(() => import("./arena.js")).catch(error => { gameRuntimePromise = null; throw error; });
@@ -519,6 +516,9 @@ function selectShowroomModel(button) {
   viewer.setAttribute("alt", `${button.dataset.modelName}立体模型`);
   document.getElementById("showroomName").textContent = button.dataset.modelName;
   document.getElementById("showroomSpecies").textContent = button.dataset.modelSpecies;
+  document.getElementById("showroomLore").textContent = button.dataset.modelLore;
+  document.getElementById("showroomIndex").textContent = String([...document.querySelectorAll("[data-model-src]")].indexOf(button) + 1).padStart(2, "0") + " / 04";
+  document.getElementById("blindBoxModelPanel").style.setProperty("--showroom-accent", button.dataset.modelAccent);
   document.getElementById("showroomStatus").textContent = "正在载入立体模型…";
   document.getElementById("showroomLoader").style.setProperty("--progress", "0%");
   viewer.setAttribute("src", button.dataset.modelSrc);
@@ -649,7 +649,7 @@ function renderTasks() {
   const nextTarget = species.find(item => item.id === sites[activeSite].targets[0]);
   const tasks = taskMode === "daily" ? [
     { icon: "layers-3", title: "翻看一张卡背", note: "打开已发现卡片，阅读生态知识", done: state.daily.viewedCard, action: "atlas", reward: "+5" },
-    { icon: "scan-line", title: "完成一次有效识别", note: "相机或相册均可，本地完成推理", done: state.daily.identified, action: "capture", reward: "+10" },
+    { icon: "scan-line", title: "完成一次有效识别", note: "相机或相册均可，需保持网络连接", done: state.daily.identified, action: "capture", reward: "+10" },
     { icon: "package-open", title: "领取今日生态补给", note: "连续第 7 天含稀有卡框碎片", done: state.daily.supplyClaimed, action: "supply", reward: "+20" }
   ] : [
     { icon: "panels-top-left", title: `查看${sites[activeSite].short}目标`, note: "先认识这里可能遇见的物种", done: progress.targetsViewed, action: "site", reward: "+10" },
@@ -788,7 +788,7 @@ function resetCapture() {
   recognitionResult = null;
   document.getElementById("scanner").classList.remove("is-running");
   document.getElementById("captureResult").hidden = true;
-  document.getElementById("cameraStatus").textContent = "设备端物种辅助识别";
+  document.getElementById("cameraStatus").textContent = "云端 AI 物种辅助识别";
   document.getElementById("scanProgress").hidden = true;
   document.getElementById("locationReadout").classList.remove("is-complete", "is-warning");
   document.getElementById("locationReadout").innerHTML = `<span>${icon("map-pin")}</span><p><b>GPS 点位校验</b><small>拍照后请求定位</small></p><em>GPS</em>`;
@@ -877,7 +877,7 @@ async function startCamera() {
   const requestId = cameraRequestId;
   empty.hidden = false;
   empty.querySelector("h2").textContent = "正在请求相机权限";
-  empty.querySelector("p").textContent = "请选择允许。画面只在当前设备中处理。";
+  empty.querySelector("p").textContent = "请选择允许。相机预览不会上传，识别时仅发送压缩照片。";
   image.hidden = true;
   video.hidden = true;
   setCaptureReady(false, "等待相机");
@@ -899,7 +899,7 @@ async function startCamera() {
     reopen.hidden = true;
     const devices = await navigator.mediaDevices.enumerateDevices();
     document.getElementById("switchCamera").hidden = devices.filter(device => device.kind === "videoinput").length < 2;
-    document.getElementById("cameraStatus").textContent = cameraFacingMode === "environment" ? "后置相机 · 设备端识别" : "前置相机 · 设备端识别";
+    document.getElementById("cameraStatus").textContent = cameraFacingMode === "environment" ? "后置相机 · 云端 AI 识别" : "前置相机 · 云端 AI 识别";
     document.getElementById("featureReadout").querySelector("small").textContent = "相机就绪，拍照后识别";
     setCaptureReady(true, "拍照并识别");
   } catch (error) {
@@ -936,135 +936,51 @@ async function snapshotCamera() {
   return image;
 }
 
-async function loadRecognitionModel() {
-  if (!modelPromise) {
-    modelPromise = (async () => {
-      if (!window.tf || !window.mobilenet) throw new Error("识别组件未加载");
-      await tf.ready();
-      return mobilenet.load({ version: 2, alpha: .5, modelUrl: MOBILE_NET_MODEL_URL, inputRange: [-1, 1] });
-    })().catch(error => {
-      modelPromise = null;
-      throw error;
-    });
-  }
-  return modelPromise;
-}
-
-async function loadBirdRecognitionModel() {
-  if (!birdModelPromise) {
-    birdModelPromise = (async () => {
-      if (!window.ort) throw new Error("鸟类识别组件未加载");
-      ort.env.wasm.numThreads = 1;
-      ort.env.wasm.wasmPaths = new URL("assets/vendor/", document.baseURI).href;
-      const [session, response] = await Promise.all([
-        ort.InferenceSession.create(BIRD_MODEL_URL, { executionProviders: ["wasm"], graphOptimizationLevel: "all" }),
-        fetch(BIRD_CONFIG_URL)
-      ]);
-      if (!response.ok) throw new Error("鸟类标签加载失败");
-      const config = await response.json();
-      return { session, labels: config.id2label };
-    })().catch(error => {
-      birdModelPromise = null;
-      throw error;
-    });
-  }
-  return birdModelPromise;
-}
-
-function birdInputTensor(input) {
+function prepareRecognitionImage(input) {
+  const maxDimension = 768;
+  const scale = Math.min(1, maxDimension / Math.max(input.naturalWidth, input.naturalHeight));
   const canvas = document.createElement("canvas");
-  canvas.width = BIRD_IMAGE_SIZE;
-  canvas.height = BIRD_IMAGE_SIZE;
-  const context = canvas.getContext("2d", { willReadFrequently: true });
-  context.imageSmoothingEnabled = false;
-  context.drawImage(input, 0, 0, BIRD_IMAGE_SIZE, BIRD_IMAGE_SIZE);
-  const pixels = context.getImageData(0, 0, BIRD_IMAGE_SIZE, BIRD_IMAGE_SIZE).data;
-  const planeSize = BIRD_IMAGE_SIZE * BIRD_IMAGE_SIZE;
-  const values = new Float32Array(planeSize * 3);
-  for (let index = 0; index < planeSize; index += 1) {
-    const pixelIndex = index * 4;
-    values[index] = (pixels[pixelIndex] / 255 - BIRD_MEAN[0]) / BIRD_STD[0];
-    values[planeSize + index] = (pixels[pixelIndex + 1] / 255 - BIRD_MEAN[1]) / BIRD_STD[1];
-    values[planeSize * 2 + index] = (pixels[pixelIndex + 2] / 255 - BIRD_MEAN[2]) / BIRD_STD[2];
-  }
-  return new ort.Tensor("float32", values, [1, 3, BIRD_IMAGE_SIZE, BIRD_IMAGE_SIZE]);
+  canvas.width = Math.max(1, Math.round(input.naturalWidth * scale));
+  canvas.height = Math.max(1, Math.round(input.naturalHeight * scale));
+  canvas.getContext("2d").drawImage(input, 0, 0, canvas.width, canvas.height);
+  return new Promise((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error("无法压缩照片，请换一张图片")), "image/jpeg", .8));
 }
 
-async function classifyBird(input, model) {
-  const feeds = { [model.session.inputNames[0]]: birdInputTensor(input) };
-  const output = await model.session.run(feeds);
-  const logits = Array.from(output[model.session.outputNames[0]].data);
-  const maxLogit = Math.max(...logits);
-  const probabilities = logits.map(value => Math.exp(value - maxLogit));
-  const total = probabilities.reduce((sum, value) => sum + value, 0);
-  return probabilities
-    .map((value, index) => ({ className: model.labels[index], probability: value / total, model: "bird" }))
-    .sort((left, right) => right.probability - left.probability)
-    .slice(0, 5);
+async function requestCloudRecognition(blob) {
+  if (!navigator.onLine) throw new Error("当前设备离线，请联网后重试");
+  const form = new FormData();
+  form.append("image", blob, "wetland-observation.jpg");
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 25000);
+  try {
+    const response = await fetch("/api/identify", { method: "POST", body: form, signal: controller.signal });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      if (response.status === 413) throw new Error("照片文件过大，请换一张图片");
+      if (response.status === 429) throw new Error("今日识别次数较多，请稍后再试");
+      throw new Error("云端识别暂时繁忙，请重新识别");
+    }
+    if (!payload.result) throw new Error("云端没有返回有效结果，请重试");
+    return payload.result;
+  } catch (error) {
+    if (error.name === "AbortError") throw new Error("云端识别等待超时，请检查网络后重试");
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
-function resolveRecognition(mobilePredictions, birdPredictions) {
-  const mobileTop = mobilePredictions[0];
-  const birdTop = birdPredictions[0];
-  if (!mobileTop || !birdTop) return null;
-  const mobileName = mobileTop.className.toLowerCase();
-  const spoonbill = birdPredictions.find(item => item.className === "BLACK FACED SPOONBILL");
-  if (mobileName === "spoonbill" && mobileTop.probability >= .45 && spoonbill?.probability >= .08) {
-    return {
-      speciesId: "spoonbill",
-      title: "黑脸琵鹭（双模型辅助确认）",
-      description: "通用模型识别到琵鹭，鸟类模型的前五候选包含黑脸琵鹭。请再结合黑色脸部、匙状长嘴和观察地点人工确认。",
-      probability: mobileTop.probability,
-      confidenceText: `通用 ${(mobileTop.probability * 100).toFixed(1)}% · 专用 ${(spoonbill.probability * 100).toFixed(1)}%`
-    };
-  }
-
-  const birdIsReliable = birdTop.probability >= .35 && birdTop.probability - birdPredictions[1].probability >= .15;
-  if (birdIsReliable && birdTop.className === "BLACK FACED SPOONBILL") {
-    return { speciesId: "spoonbill", title: "黑脸琵鹭", description: "鸟类专用模型可靠命中黑脸琵鹭。请结合黑色脸部、匙状长嘴和观察地点进行人工复核。", probability: birdTop.probability };
-  }
-  if (birdIsReliable && birdTop.className === "SNOWY EGRET") {
-    return { speciesId: "egret", title: "白鹭类（接近白鹭）", description: "模型识别到白色小型鹭类。训练标签为雪鹭，请结合黑腿、黄趾和深圳本地物种信息复核是否为白鹭。", probability: birdTop.probability };
-  }
-  if (birdIsReliable && birdTop.className.includes("KINGFISHER")) {
-    return { title: "检测到翠鸟类", description: `最接近 ${birdTop.className}，但模型没有普通翠鸟的精确标签，需人工确认后再记录。`, probability: birdTop.probability, candidateOnly: true };
-  }
-  if (birdIsReliable && birdTop.className === "BLUE HERON") {
-    return { speciesId: "heron", title: "夜鹭类（Blue Heron 近似标签）", description: "模型可靠识别到 Blue Heron 训练标签，并映射为当前图鉴的夜鹭类观察。请结合灰黑色背部、红眼和昼伏夜出习性人工复核。", probability: birdTop.probability };
-  }
-  if (birdIsReliable && (birdTop.className.includes("HERON") || birdTop.className.includes("EGRET"))) {
-    return { title: "检测到鹭类", description: `最接近 ${birdTop.className}，但模型没有夜鹭的精确标签，不会自动收入夜鹭卡。`, probability: birdTop.probability, candidateOnly: true };
-  }
-  if (birdIsReliable) {
-    return { title: "检测到鸟类", description: `鸟类模型最接近 ${birdTop.className}。该类别不在当前深圳湿地图鉴中，仅作为观察候选。`, probability: birdTop.probability, candidateOnly: true };
-  }
-
-  const nonBirdMappings = [
-    { name: "fiddler crab", threshold: .55, speciesId: "fiddler", title: "招潮蟹", description: "模型识别到招潮蟹特征，雄蟹常有一只特别醒目的大螯。" },
-    { name: "snail", threshold: .55, speciesId: "snail", title: "湿地螺类", description: "模型识别到螺类特征，具体种类仍需结合壳形和栖息环境判断。" }
-  ];
-  const mapping = nonBirdMappings.find(item => mobileName === item.name && mobileTop.probability >= item.threshold);
-  return mapping ? { ...mapping, probability: mobileTop.probability } : null;
-}
-
-const predictionLabels = [
-  ["spoonbill", "琵鹭类"], ["egret", "白鹭类"], ["heron", "鹭类"], ["fiddler crab", "招潮蟹"],
-  ["snail", "螺类"], ["crab", "蟹类"], ["lakeside", "湖岸场景"], ["seashore", "海岸场景"], ["valley", "山谷场景"]
-];
-
-function displayPredictionName(className) {
-  const lower = className.toLowerCase();
-  const label = predictionLabels.find(([key]) => lower.includes(key));
-  return label ? label[1] : className.split(",")[0];
-}
-
-function displayBirdPredictionName(className) {
-  if (className === "BLACK FACED SPOONBILL") return "黑脸琵鹭";
-  if (className === "SNOWY EGRET") return "白色鹭类（雪鹭标签）";
-  if (className === "BLUE HERON") return "夜鹭类候选 · BLUE HERON";
-  if (className.includes("KINGFISHER")) return `翠鸟类 · ${className}`;
-  if (className.includes("HERON") || className.includes("EGRET")) return `鹭类 · ${className}`;
-  return `鸟类候选 · ${className}`;
+function resolveCloudRecognition(result) {
+  const item = species.find(entry => entry.id === result.speciesId);
+  if (!item) return null;
+  const probability = Math.max(0, Math.min(1, Number(result.confidence) || 0));
+  return {
+    speciesId: item.id,
+    title: item.name,
+    description: result.reason || "云端视觉模型发现了相符特征，请结合形态、地点和季节人工复核。",
+    probability,
+    candidateOnly: probability < .5
+  };
 }
 
 async function identify() {
@@ -1075,41 +991,41 @@ async function identify() {
   document.getElementById("scanner").classList.add("is-running");
   const readout = document.getElementById("featureReadout");
   readout.classList.remove("is-complete");
-  readout.querySelector("small").textContent = "正在加载模型并分析画面";
-  document.getElementById("cameraStatus").textContent = "正在设备端分析";
+  readout.querySelector("small").textContent = "正在连接云端视觉服务";
+  document.getElementById("cameraStatus").textContent = "正在通过 Cloudflare AI 分析";
   try {
-    await ensureRecognitionRuntime();
     updateScanProgress(8, "正在检查照片清晰度");
     let input = document.getElementById("captureImage");
     if (captureSource === "camera") input = await snapshotCamera();
     if (input.hidden || !input.naturalWidth) throw new Error("没有可识别的照片");
-    updateScanProgress(22, "正在加载鸟类专用模型 · 新增约 28 MB");
-    const [model, birdModel, location] = await Promise.all([loadRecognitionModel(), loadBirdRecognitionModel(), verifyLocation()]);
+    const locationPromise = verifyLocation();
+    updateScanProgress(28, "正在压缩观察照片");
+    const blob = await prepareRecognitionImage(input);
+    updateScanProgress(52, "正在加密发送至 Cloudflare AI");
+    const recognitionPromise = requestCloudRecognition(blob);
+    updateScanProgress(72, "正在辨认物种关键特征");
+    const [cloudResult, location] = await Promise.all([recognitionPromise, locationPromise]);
     locationResult = location;
     showLocationResult(location);
-    updateScanProgress(48, "正在匹配通用与鸟类特征");
-    const [mobilePredictions, birdPredictions] = await Promise.all([model.classify(input, 5), classifyBird(input, birdModel)]);
     updateScanProgress(88, "正在核对物种特征");
-    const detectedResult = resolveRecognition(mobilePredictions, birdPredictions);
-    const sceneMatch = detectedResult?.speciesId && sites[activeSite].targets.includes(detectedResult.speciesId);
+    const detectedResult = resolveCloudRecognition(cloudResult);
+    const sceneMatch = detectedResult && !detectedResult.candidateOnly && sites[activeSite].targets.includes(detectedResult.speciesId);
     const sceneReadout = document.getElementById("sceneReadout");
     sceneReadout.classList.toggle("is-complete", Boolean(sceneMatch));
     sceneReadout.classList.toggle("is-warning", Boolean(detectedResult && !sceneMatch));
     sceneReadout.innerHTML = sceneMatch
       ? `<span>${icon("check")}</span><p><b>生态场景匹配</b><small>${detectedResult.title}属于${sites[activeSite].short}目标库</small></p><em>ECO</em>`
-      : `<span>${icon("circle-alert")}</span><p><b>生态场景匹配</b><small>${detectedResult ? (detectedResult.candidateOnly ? "已有鸟类候选，等待人工确认" : "识别有效，但不属于当前点位目标") : "未达到可靠判定阈值"}</small></p><em>ECO</em>`;
+      : `<span>${icon("circle-alert")}</span><p><b>生态场景匹配</b><small>${detectedResult ? (detectedResult.candidateOnly ? "置信度不足，等待重新观察" : "识别有效，但不属于当前点位目标") : "云端未能可靠确认物种"}</small></p><em>ECO</em>`;
     recognitionResult = sceneMatch ? detectedResult : null;
     updateScanProgress(100, recognitionResult ? "扫描完成 · 发现有效目标" : "扫描完成 · 暂未确认目标");
-    const displayBirdPredictions = detectedResult?.candidateOnly || ["spoonbill", "egret", "heron"].includes(detectedResult?.speciesId);
-    const displayPredictions = displayBirdPredictions ? birdPredictions : mobilePredictions;
-    showRecognitionResult(displayPredictions, recognitionResult, detectedResult);
+    showRecognitionResult(recognitionResult, detectedResult, cloudResult);
     readout.classList.toggle("is-complete", Boolean(detectedResult));
     readout.innerHTML = detectedResult
       ? `<span>${icon(recognitionResult ? "check" : "circle-alert")}</span><p><b>物种特征</b><small>${detectedResult.title} · ${(detectedResult.probability * 100).toFixed(1)}%</small></p><em>识别</em>`
-      : `<span>${icon("circle-alert")}</span><p><b>物种特征</b><small>当前模型无法可靠确认</small></p><em>识别</em>`;
+      : `<span>${icon("circle-alert")}</span><p><b>物种特征</b><small>云端 AI 无法可靠确认</small></p><em>识别</em>`;
   } catch (error) {
     recognitionResult = null;
-    showRecognitionError(error.message || "模型加载失败，请稍后重试");
+    showRecognitionError(error.message || "云端识别失败，请稍后重试");
     readout.innerHTML = `<span>${icon("triangle-alert")}</span><p><b>物种特征</b><small>识别失败，请重试</small></p><em>识别</em>`;
     updateScanProgress(100, "扫描未完成");
   } finally {
@@ -1119,16 +1035,18 @@ async function identify() {
   }
 }
 
-function showRecognitionResult(predictions, result, detectedResult = null) {
+function showRecognitionResult(result, detectedResult = null, cloudResult = null) {
   document.getElementById("toast").classList.remove("is-visible");
   const panel = document.getElementById("captureResult");
   const collectButton = document.getElementById("collectButton");
-  document.getElementById("predictionList").innerHTML = predictions.slice(0, 3).map(item => `<li><span>${item.model === "bird" ? displayBirdPredictionName(item.className) : displayPredictionName(item.className)}</span><b>${(item.probability * 100).toFixed(1)}%</b></li>`).join("");
+  document.getElementById("predictionList").innerHTML = detectedResult
+    ? `<li><span>Cloudflare AI · ${detectedResult.title}</span><b>${(detectedResult.probability * 100).toFixed(1)}%</b></li>`
+    : `<li><span>Cloudflare AI · 无法确认</span><b>待重试</b></li>`;
   if (result) {
     const item = species.find(entry => entry.id === result.speciesId);
     const alreadyFound = found(item);
     document.getElementById("resultRarity").className = `rarity ${item.rarity.toLowerCase()}`;
-    document.getElementById("resultRarity").textContent = `${item.rarity} · 模型支持类别`;
+    document.getElementById("resultRarity").textContent = `${item.rarity} · 云端视觉候选`;
     document.getElementById("resultConfidence").textContent = result.confidenceText || `${(result.probability * 100).toFixed(1)}% 匹配`;
     document.getElementById("resultLatin").textContent = item.latin;
     document.getElementById("captureTitle").textContent = result.title;
@@ -1139,8 +1057,8 @@ function showRecognitionResult(predictions, result, detectedResult = null) {
   } else if (detectedResult) {
     document.getElementById("resultRarity").className = "rarity";
     document.getElementById("resultRarity").textContent = "待人工确认";
-    document.getElementById("resultConfidence").textContent = `${(detectedResult.probability * 100).toFixed(1)}% 鸟类候选`;
-    document.getElementById("resultLatin").textContent = "Bird model candidate";
+    document.getElementById("resultConfidence").textContent = `${(detectedResult.probability * 100).toFixed(1)}% 视觉候选`;
+    document.getElementById("resultLatin").textContent = species.find(item => item.id === detectedResult.speciesId)?.latin || "Cloud vision candidate";
     document.getElementById("captureTitle").textContent = detectedResult.title;
     document.getElementById("resultDescription").textContent = detectedResult.description;
     collectButton.hidden = true;
@@ -1148,9 +1066,9 @@ function showRecognitionResult(predictions, result, detectedResult = null) {
     document.getElementById("resultRarity").className = "rarity";
     document.getElementById("resultRarity").textContent = "未确认";
     document.getElementById("resultConfidence").textContent = "未达到湿地类别阈值";
-    document.getElementById("resultLatin").textContent = "General model result";
+    document.getElementById("resultLatin").textContent = "Cloud vision result";
     document.getElementById("captureTitle").textContent = "暂时无法确认物种";
-    document.getElementById("resultDescription").textContent = "请靠近目标、保持画面清晰后重试。结果还必须属于当前点位目标库；未确认内容不会收入图鉴。";
+    document.getElementById("resultDescription").textContent = cloudResult?.reason || "请靠近目标、保持画面清晰后重试。结果还必须属于当前点位目标库；未确认内容不会收入图鉴。";
     collectButton.hidden = true;
   }
   panel.hidden = false;
@@ -1159,9 +1077,9 @@ function showRecognitionResult(predictions, result, detectedResult = null) {
 function showRecognitionError(message) {
   document.getElementById("toast").classList.remove("is-visible");
   document.getElementById("resultRarity").className = "rarity";
-  document.getElementById("resultRarity").textContent = "模型不可用";
+  document.getElementById("resultRarity").textContent = "云端服务不可用";
   document.getElementById("resultConfidence").textContent = "未产生识别结果";
-  document.getElementById("resultLatin").textContent = "Local inference error";
+  document.getElementById("resultLatin").textContent = "Cloud recognition error";
   document.getElementById("captureTitle").textContent = "识别没有完成";
   document.getElementById("resultDescription").textContent = message;
   document.getElementById("predictionList").innerHTML = "";
@@ -1533,10 +1451,10 @@ document.getElementById("photoInput").addEventListener("change", event => {
     document.getElementById("switchCamera").hidden = true;
     document.getElementById("reopenCamera").hidden = false;
     document.getElementById("captureResult").hidden = true;
-    document.getElementById("cameraStatus").textContent = "相册照片 · 设备端识别";
+    document.getElementById("cameraStatus").textContent = "相册照片 · 云端 AI 识别";
     document.getElementById("featureReadout").querySelector("small").textContent = "照片就绪，可以开始识别";
     setCaptureReady(true, "识别这张照片");
-    toast("照片只在当前浏览器本地处理，不会上传");
+    toast("识别时将上传压缩照片至 Cloudflare AI，应用不保存原图");
   };
   image.onload = activateImage;
   image.onerror = () => toast("无法读取这张照片，请换一张图片");
